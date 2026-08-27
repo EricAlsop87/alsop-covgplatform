@@ -1,0 +1,144 @@
+/* ── Compact KPI Strip ─────────────────────────────────────────── */
+.kpiStrip {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.kpiCard {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.kpiCard::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--card-color);
+    opacity: 0;
+    transition: opacity 0.18s;
+}
+
+.kpiCard:hover {
+    transform: translateY(-2px);
+    border-color: var(--card-color, var(--border-default));
+    box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+}
+
+.kpiCard:hover::after {
+    opacity: 1;
+}
+
+.kpiTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.kpiTitle {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpiIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: var(--icon-bg);
+    color: var(--card-color);
+    flex-shrink: 0;
+}
+
+.kpiValue {
+    font-size: 1.625rem;
+    font-weight: 800;
+    color: var(--text-high);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+}
+
+.kpiSub {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Loading Skeletons ─────────────────────────────────────────── */
+.loadingSkeleton {
+    background: var(--border-subtle);
+    background-image: linear-gradient(90deg, var(--border-subtle) 25%, var(--border-default) 50%, var(--border-subtle) 75%);
+    background-size: 400% 100%;
+    animation: shimmer 1.5s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    border-radius: 4px;
+}
+
+.skeletonTitle {
+    height: 10px;
+    width: 70%;
+    margin-bottom: 0.5rem;
+}
+
+.skeletonValue {
+    height: 26px;
+    width: 45%;
+    margin-bottom: 0.3rem;
+}
+
+.skeletonSub {
+    height: 10px;
+    width: 80%;
+}
+
+@keyframes shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* ── Responsive: 3-col on tablet, 2-col on mobile ─────────────── */
+@media (max-width: 1100px) {
+    .kpiStrip {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .kpiStrip {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .kpiCard {
+        padding: 0.75rem;
+    }
+
+    .kpiValue {
+        font-size: 1.375rem;
+    }
+}

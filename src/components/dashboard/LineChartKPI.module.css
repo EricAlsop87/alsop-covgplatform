@@ -1,0 +1,93 @@
+.chartContainer {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 250px;
+}
+
+.chartHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.statValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.svgContainer {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    min-height: 0; /* Important for flex child */
+}
+
+/* SVG Styling */
+.chartLine {
+    fill: none;
+    stroke: var(--accent-primary);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: dipIn 1.5s ease-out forwards;
+}
+
+.chartArea {
+    fill: url(#chartGradient);
+    opacity: 0.2;
+}
+
+.chartPoint {
+    fill: var(--bg-surface);
+    stroke: var(--accent-primary);
+    stroke-width: 2;
+    cursor: pointer;
+    transition: r 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
+}
+
+.chartPoint:hover {
+    r: 6;
+    stroke-width: 3;
+    fill: var(--accent-primary);
+}
+
+.gridLine {
+    stroke: var(--border-light);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.axisText {
+    font-size: 10px;
+    fill: var(--text-muted);
+}
+
+@keyframes dipIn {
+    0% {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+    }
+    100% {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 0;
+    }
+}

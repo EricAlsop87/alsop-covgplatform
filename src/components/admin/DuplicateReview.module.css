@@ -1,0 +1,298 @@
+.workspace {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    position: relative;
+}
+
+@media (min-width: 1024px) {
+    .workspace {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.headerTitle {
+    color: var(--text-high);
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge {
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    color: var(--text-mid);
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Card Styling */
+.card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.cardActiveClient {
+    border-color: rgba(16, 185, 129, 0.5); /* Emerald for Clients */
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%), var(--bg-surface);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+.cardActiveClient:hover {
+    transform: none;
+    border-color: rgba(16, 185, 129, 0.6);
+}
+
+.cardActivePolicy {
+    border-color: rgba(59, 130, 246, 0.5); /* Blue for Policies */
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, transparent 100%), var(--bg-surface);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2), 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+.cardActivePolicy:hover {
+    transform: none;
+    border-color: rgba(59, 130, 246, 0.6);
+}
+
+/* Metadata Bar */
+.metaBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed var(--border-default);
+}
+
+.confidenceScore {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--text-mid);
+}
+
+.confidenceHigh {
+    color: var(--status-success);
+    font-weight: 700;
+}
+
+.dismissButton {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dismissButton:hover {
+    color: var(--text-high);
+    background: var(--bg-surface-raised);
+}
+
+/* Entity Block */
+.entityList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    position: relative;
+}
+
+.entityItem {
+    display: flex;
+    gap: 0.875rem;
+    position: relative;
+}
+
+/* The vertical connecting line */
+.entityList::before {
+    content: '';
+    position: absolute;
+    left: 0.7rem;
+    top: 1rem;
+    bottom: 1rem;
+    width: 2px;
+    background: var(--border-default);
+    z-index: 0;
+}
+
+.iconMarker {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-mid);
+    z-index: 1;
+    margin-top: 0.25rem;
+    flex-shrink: 0;
+}
+
+.iconSurvivorClient {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: var(--status-success);
+}
+.iconSurvivorPolicy {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: var(--status-info);
+}
+
+.iconTarget {
+    background: var(--bg-surface);
+}
+
+.entityDetails {
+    flex: 1;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+
+.entityTitle {
+    color: var(--text-high);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.entitySubtext {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.targetText {
+    opacity: 0.6;
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+    text-decoration-color: rgba(255,255,255,0.3);
+}
+
+/* Action Area */
+.actionFooter {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-default);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.actionButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.actionButton:hover {
+    filter: brightness(1.15);
+    background: var(--accent-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+.actionButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.actionButtonBlue {
+    background: var(--status-info);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+.actionButtonBlue:hover {
+    background: #2563eb; /* hover blue fixed */
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+}
+
+.spinAnimation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty States */
+.emptyState {
+    border: 2px dashed var(--border-default);
+    border-radius: 12px;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: var(--bg-surface-raised);
+    opacity: 0.8;
+}
+
+.emptyState .icon {
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.emptyState:hover {
+    opacity: 1;
+    border-color: var(--border-hover);
+}

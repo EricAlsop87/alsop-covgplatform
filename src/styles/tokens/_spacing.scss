@@ -1,0 +1,21 @@
+// ─── Spacing Tokens ───
+
+// Layout dimensions
+$sidebar-width: var(--sidebar-width);
+$topbar-height: var(--topbar-height);
+$content-max-width: var(--content-max-width);
+$summary-panel-width: var(--summary-panel-width);
+
+// Page padding
+$page-padding: 2rem;
+$page-padding-sm: 1rem;
+
+// Section gaps
+$section-gap: 1.5rem;
+$card-gap: 1rem;
+
+// Component spacing
+$table-cell-padding: 0.5rem 1rem;
+$table-cell-padding-header: 0.625rem 1rem;
+$compact-padding: 0.375rem 0.75rem;
+$sidebar-item-padding: 0.5rem 0.75rem;

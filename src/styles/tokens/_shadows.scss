@@ -1,0 +1,14 @@
+// ─── Shadow Tokens ───
+// Light-mode shadows — soft and subtle
+
+// Focus ring (keyboard navigation)
+$focus-ring: 0 0 0 3px var(--accent-primary-muted);
+
+// Shadows
+$shadow-sm: var(--shadow-sm);
+$shadow-md: var(--shadow-md);
+$shadow-lg: var(--shadow-lg);
+$shadow-overlay: var(--shadow-overlay);
+
+// Legacy aliases
+$shadow-dropdown: var(--shadow-lg);

@@ -1,0 +1,395 @@
+.chartContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chartHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.chartTitle {
+    flex: 1;
+}
+
+.mainTitle {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin-bottom: 0.25rem;
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.chartLegend {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-mid);
+}
+
+.legendDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* === Two-week layout === */
+.weeksRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+}
+
+.weekBlock {
+    flex: 1;
+    min-width: 0;
+}
+
+.weekDivider {
+    height: 1px;
+    background: var(--border-default);
+    margin: 0.75rem 0;
+}
+
+.weekLabel {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.weekCount {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    background: var(--accent-primary-muted);
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+}
+
+/* === Chart bars area === */
+.chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.25rem;
+    height: 130px;
+}
+
+.barGroup {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    height: 100%;
+}
+
+.todayGroup {
+    position: relative;
+}
+
+.clickableBar {
+    cursor: pointer;
+}
+
+.clickableBar:hover .bar {
+    filter: brightness(1.15);
+    transform: scaleY(1.05);
+    transform-origin: bottom;
+}
+
+.clickableBar:hover .barCount {
+    color: var(--accent-primary-hover);
+}
+
+.barCount {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-bottom: 0.25rem;
+    line-height: 1;
+}
+
+.bars {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.bar {
+    width: 36px;
+    min-height: 2px;
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+    background: var(--accent-primary);
+    transition: all 200ms ease;
+}
+
+.bar:hover {
+    filter: brightness(1.15);
+    transform: scaleY(1.03);
+    transform-origin: bottom;
+}
+
+.todayBar {
+    background: linear-gradient(180deg, var(--status-success), #1a8a3a);
+    box-shadow: 0 0 8px rgba(43, 155, 75, 0.3);
+}
+
+.barLabel {
+    font-size: 0.8125rem;
+    color: var(--text-mid);
+    font-weight: 600;
+    text-align: center;
+    margin-top: 0.5rem;
+    line-height: 1;
+}
+
+.todayLabel {
+    color: var(--status-success);
+    font-weight: 700;
+}
+
+.barDateLabel {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.1875rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* === Footer === */
+.chartFooter {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-default);
+    text-align: center;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+    .chartHeader {
+        flex-direction: column;
+    }
+
+    .chart {
+        height: 100px;
+    }
+
+    .bar {
+        width: 20px;
+    }
+
+    .barDateLabel {
+        display: none;
+    }
+}
+
+/* === View Toggle === */
+.headerControls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.viewToggle {
+    display: flex;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    padding: 2px;
+    position: relative;
+    width: 160px; /* Fixed width to allow sliding */
+}
+
+.toggleBtn {
+    flex: 1;
+    padding: 0.35rem 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 999px;
+    z-index: 1;
+    transition: color 0.2s;
+    text-align: center;
+}
+
+.toggleBtnActive {
+    color: var(--text-high);
+}
+
+.toggleIndicator {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === Grid View === */
+.gridContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 0.75rem;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+.gridDaysHeader {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 0.15rem;
+}
+
+.gridDayName {
+    font-size: 0.575rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.gridRow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    flex: 1;
+}
+
+.gridCell {
+    min-height: 40px;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.gridCell:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* subtle */
+    z-index: 2;
+    border-color: var(--text-mid);
+}
+
+.gridCellDate {
+    font-size: clamp(0.5rem, 0.7vw, 0.65rem);
+    font-weight: 600;
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    line-height: 1;
+}
+
+.gridCellCount {
+    font-size: clamp(0.75rem, 1.2vw, 1rem);
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Base level 0 (Empty) */
+.gridCellLevel0 {
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+}
+.gridCellLevel0 .gridCellDate { color: var(--text-muted); opacity: 0.6; }
+.gridCellLevel0 .gridCellCount { color: var(--text-muted); opacity: 0.3; }
+.gridCellLevel0:hover { /* Slight highlight on empty to let users know it's interactive */
+    border-color: var(--text-mid);
+}
+
+/* Active levels */
+.gridCellLevel1 {
+    background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
+}
+.gridCellLevel1 .gridCellDate { color: var(--text-muted); }
+.gridCellLevel1 .gridCellCount { color: var(--text-high); }
+
+.gridCellLevel2 {
+    background: color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, transparent);
+}
+.gridCellLevel2 .gridCellDate { color: var(--text-mid); }
+.gridCellLevel2 .gridCellCount { color: var(--text-high); }
+
+.gridCellLevel3 {
+    background: color-mix(in srgb, var(--accent-primary) 65%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 75%, transparent);
+}
+.gridCellLevel3 .gridCellDate { color: rgba(255, 255, 255, 0.8); }
+.gridCellLevel3 .gridCellCount { color: #ffffff; }
+
+.gridCellLevel4 {
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+}
+.gridCellLevel4 .gridCellDate { color: rgba(255, 255, 255, 0.9); }
+.gridCellLevel4 .gridCellCount { color: #ffffff; }
+
+/* Today outline overlay (stronger, inset) */
+.gridCellToday::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 2px solid var(--status-success);
+    border-radius: 5px; /* match or barely exceed cell radius */
+    pointer-events: none;
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.slideRight { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.slideLeft { animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }

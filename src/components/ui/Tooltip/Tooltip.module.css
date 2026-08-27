@@ -1,0 +1,85 @@
+.tooltipContainer {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tooltipContent {
+    position: absolute;
+    bottom: calc(100% + 8px); /* 8px spacing */
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background-color: var(--bg-inverse, #1f2937); /* Fallback to dark gray */
+    color: var(--text-inverse, #f9fafb);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+    z-index: 50;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    pointer-events: none; /* Tooltip doesn't block hover on things underneath */
+}
+
+/* Add a small arrow/triangle */
+.tooltipContent::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--bg-inverse, #1f2937) transparent transparent transparent;
+}
+
+.tooltipContainer:hover .tooltipContent {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Configurable positioning variants */
+.positionTop {
+    bottom: calc(100% + 8px);
+    top: auto;
+}
+
+.positionBottom {
+    top: calc(100% + 8px);
+    bottom: auto;
+}
+.positionBottom::after {
+    top: auto;
+    bottom: 100%;
+    border-color: transparent transparent var(--bg-inverse, #1f2937) transparent;
+}
+
+.positionRight {
+    left: calc(100% + 8px);
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%) translateX(-4px);
+}
+.positionRight::after {
+    top: 50%;
+    right: 100%;
+    left: auto;
+    margin-top: -5px;
+    margin-left: 0;
+    border-color: transparent var(--bg-inverse, #1f2937) transparent transparent;
+}
+.tooltipContainer:hover .positionRight {
+    transform: translateY(-50%) translateX(0);
+}
+
+/* Allow text wrapping for rich content tooltips */
+.richContent {
+    white-space: normal;
+    min-width: 200px;
+    max-width: 320px;
+}

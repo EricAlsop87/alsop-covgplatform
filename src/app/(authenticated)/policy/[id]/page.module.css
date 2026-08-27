@@ -1,0 +1,691 @@
+.container {
+    padding: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Property Banner */
+.propertyBanner {
+    position: relative;
+    width: 100%;
+    height: 450px;
+    overflow: hidden;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    margin-bottom: 2rem;
+    cursor: pointer;
+    transition: opacity 150ms ease;
+}
+
+.propertyBanner:hover {
+    opacity: 0.95;
+}
+
+.bannerImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.bannerOverlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+    padding: 2rem;
+}
+
+.bannerContent {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.bannerTitle {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.bannerSubtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   Policy Command Header — Design System
+   Spacing: 1.5rem horizontal, 0.75rem vertical gaps
+   ══════════════════════════════════════════════════════════════ */
+
+.header {
+    padding: 0 1.5rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+/* ── Back Button ── */
+.backButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 0.5rem;
+}
+
+.backButton:hover {
+    color: var(--text-high);
+    border-color: var(--border-strong);
+}
+
+/* ── Action Buttons — Unified System ── */
+.actionCluster {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 1.5rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+
+.contextLabel {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+.contextGroup {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-surface-raised, #f1f5f9);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.contextLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.contextLink:hover {
+    color: var(--text-high);
+    background: var(--bg-surface, #ffffff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-color: var(--border-subtle, rgba(148,163,184,0.1));
+}
+/* Copy button (inline, tiny) */
+.copyBtn {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xs);
+    padding: 0.15rem 0.3rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+/* ── Section Layout ── */
+.commandSection {
+    padding: 0 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Deprecated: old .actionRow / .actionButton ── */
+.actionRow { display: none; }
+.actionButton { display: none; }
+.outlineAction { display: none; }
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0 1.5rem 2rem 1.5rem;
+}
+
+.tabsWrapper {
+    margin-bottom: 1.25rem;
+    padding: 0 1.5rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Modal Styles */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    animation: fadeInModal 0.2s ease-out;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modalContent {
+    position: relative;
+    max-width: 75vw;
+    max-height: 75vh;
+}
+
+.modalImage {
+    max-width: 100%;
+    max-height: 75vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.closeButton {
+    position: absolute;
+    top: -3.5rem;
+    right: 0;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-high);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: all 150ms ease;
+}
+
+.closeButton:hover {
+    background: var(--bg-surface-overlay);
+}
+
+/* ─── Skeleton Loading ─── */
+
+.skeletonC.container {
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* Unified Hero Header                                           */
+/* ═══════════════════════════════════════════════════════════════ */
+.heroCard {
+    background: var(--bg-surface, #ffffff);
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle, rgba(148,163,184,0.15));
+    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.heroNavRow {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0.65rem 1.5rem 0.25rem 1.5rem;
+    background: var(--bg-surface, #ffffff);
+}
+
+.heroStatusBarRow {
+    padding: 0.25rem 1.5rem 0.85rem 1.5rem;
+    background: var(--bg-surface, #ffffff);
+    border-bottom: 1px solid var(--border-subtle, rgba(148,163,184,0.1));
+    width: 100%;
+}
+
+.heroMain {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem;
+    gap: 2rem;
+}
+
+.heroIdentity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.heroMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.heroActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+.heroFooter {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.65rem 1.5rem;
+    border-top: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.15));
+    background: var(--bg-surface-raised, #f8fafc);
+}
+
+.docTrayHeader {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.docTrayIcon {
+    color: var(--text-muted, #64748b);
+}
+
+.docTrayLabel {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #64748b);
+    user-select: none;
+    white-space: nowrap;
+}
+
+.docTrayItems {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.docChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-high, #0f172a);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    outline: none;
+}
+
+.docChip:hover {
+    border-color: var(--accent-primary, #6366f1);
+    color: var(--accent-primary, #6366f1);
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.1);
+    transform: translateY(-1px);
+}
+
+.docChip:active {
+    transform: translateY(0);
+}
+
+.docChip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.docChipEmpty {
+    border-style: dashed;
+    border-color: #cbd5e1;
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    font-weight: 500;
+}
+
+.docChipEmpty:hover {
+    border-color: var(--accent-primary, #6366f1);
+    background: rgba(99, 102, 241, 0.04);
+    color: var(--accent-primary, #6366f1);
+}
+
+.uploadDocBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent-primary, #2563eb);
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    outline: none;
+    margin-left: 0.25rem;
+}
+
+.uploadDocBtn:hover {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: var(--accent-primary, #2563eb);
+    color: var(--accent-primary, #2563eb);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(37, 99, 235, 0.15);
+}
+
+.uploadDocBtn:active {
+    transform: translateY(0);
+}
+
+.heroTitle {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-high);
+    line-height: 1.2;
+    margin: 0;
+    transition: color 0.15s ease;
+}
+
+.heroTitle:hover {
+    color: var(--accent-primary);
+}
+
+.skeletonContainer {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.skeletonBanner {
+    width: 100%;
+    height: 200px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(110deg, var(--bg-surface) 30%, var(--bg-surface-raised) 50%, var(--bg-surface) 70%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    margin-bottom: 1.5rem;
+}
+
+.skeletonHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.skeletonLine {
+    height: 14px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(110deg, var(--bg-surface) 30%, var(--bg-surface-raised) 50%, var(--bg-surface) 70%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonLine.wide {
+    width: 45%;
+    height: 28px;
+    border-radius: var(--radius-md);
+}
+
+.skeletonLine.medium {
+    width: 30%;
+}
+
+.skeletonLine.narrow {
+    width: 18%;
+}
+
+.skeletonCards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.skeletonCard {
+    height: 100px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(110deg, var(--bg-surface) 30%, var(--bg-surface-raised) 50%, var(--bg-surface) 70%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    border: 1px solid var(--border-default);
+}
+
+.skeletonTabs {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.skeletonTab {
+    width: 80px;
+    height: 12px;
+    border-radius: var(--radius-xs);
+    background: linear-gradient(110deg, var(--bg-surface) 30%, var(--bg-surface-raised) 50%, var(--bg-surface) 70%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonContent {
+    height: 300px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(110deg, var(--bg-surface) 30%, var(--bg-surface-raised) 50%, var(--bg-surface) 70%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    border: 1px solid var(--border-default);
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Flag Indicator Pill */
+.flagIndicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    margin-top: 0.5rem;
+    background: var(--bg-error-subtle);
+    border: 1px solid var(--status-error);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 150ms ease;
+    color: var(--status-error);
+}
+
+.flagIndicator:hover {
+    background: rgba(191, 25, 50, 0.12);
+}
+
+.flagIndicatorTotal {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-high);
+}
+
+.flagDotCritical,
+.flagDotHigh,
+.flagDotWarning,
+.flagDotInfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.flagDotCritical {
+    background: var(--bg-error-subtle);
+    color: var(--status-error);
+}
+
+.flagDotHigh {
+    background: var(--bg-warning-subtle);
+    color: var(--status-warning);
+}
+
+.flagDotWarning {
+    background: var(--bg-warning-subtle);
+    color: var(--status-warning);
+}
+
+.flagDotInfo {
+    background: var(--bg-info-subtle);
+    color: var(--status-info);
+}
+
+/* ── Flag Alert Banner Wrapper ──────────────────────────────── */
+.flagBannerWrapper {
+    padding: 0 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 767px) {
+    .propertyBanner {
+        height: 200px;
+        margin-bottom: 1rem;
+        border-radius: 0;
+    }
+
+    .bannerOverlay {
+        padding: 0.5rem;
+    }
+
+    .bannerTitle {
+        font-size: 1.25rem;
+    }
+
+    .bannerSubtitle {
+        font-size: 0.875rem;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0 0.5rem;
+    }
+
+    .actionCluster {
+        padding-top: 0;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 0.375rem;
+    }
+
+    .title {
+        font-size: 1.2rem;
+    }
+
+    .commandSection {
+        padding: 0 0.5rem;
+    }
+
+    .content {
+        padding: 0 0.5rem 1rem 0.5rem;
+        gap: 1rem;
+    }
+
+    .tabsWrapper {
+        padding: 0 0.5rem;
+    }
+
+    .flagBannerWrapper {
+        padding: 0 0.5rem;
+    }
+
+    /* Modals */
+    .modalOverlay {
+        padding: 0.5rem;
+    }
+
+    .modalContent {
+        max-width: 95vw;
+        max-height: 80vh;
+    }
+
+    .modalImage {
+        max-height: 80vh;
+    }
+
+    /* Skeleton */
+    .skeletonContainer {
+        padding: 0.5rem;
+    }
+
+    .skeletonCards {
+        grid-template-columns: 1fr;
+    }
+
+    .skeletonBanner {
+        height: 120px;
+    }
+}

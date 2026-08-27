@@ -1,0 +1,692 @@
+/* ── Flagged Policies Worklist ─────────────────────────────── */
+
+.flagsPage {
+    padding: 1.5rem;
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+
+.pageHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-high);
+}
+
+.headerLeft h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.flagCount {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    font-weight: 500;
+}
+
+/* ── Severity Summary ─────────────────────────────────────── */
+
+.severitySummary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.sevCard {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: inherit;
+    font-family: inherit;
+}
+
+.sevCard:hover {
+    background: var(--bg-surface-raised);
+    border-color: var(--border-strong);
+}
+
+.sevValue {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-high);
+}
+
+.sevLabel {
+    font-size: 0.67rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.activeSevCard {
+    background: var(--accent-primary-muted);
+    border-color: var(--accent-primary);
+}
+
+/* ── Toolbar ──────────────────────────────────────────────── */
+
+.toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.filterRow {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    flex: 1;
+    max-width: 360px;
+    color: var(--text-muted);
+}
+
+.searchBox input {
+    background: none;
+    border: none;
+    color: var(--text-high);
+    font-size: 0.8rem;
+    outline: none;
+    width: 100%;
+}
+
+.searchBox input::placeholder {
+    color: var(--text-muted);
+}
+
+.filterSelect {
+    padding: 0.35rem 0.5rem;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-high);
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.filterSelect option {
+    background: var(--bg-surface-raised);
+    color: var(--text-high);
+}
+
+.clearBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    color: var(--text-mid);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.clearBtn:hover {
+    color: var(--status-error);
+    border-color: var(--status-error);
+}
+
+/* ── Renewal chips ────────────────────────────────────────── */
+
+.renewalChips {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+.chipIcon {
+    color: var(--text-muted);
+}
+
+.chipLabel {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: 0.125rem;
+}
+
+.chip {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.chip:hover {
+    background: var(--bg-surface-raised);
+    color: var(--text-high);
+}
+
+.chipActive {
+    background: var(--accent-primary-muted) !important;
+    border-color: var(--accent-primary) !important;
+    color: var(--accent-primary) !important;
+    font-weight: 600;
+}
+
+/* ── Active Filter Chips ──────────────────────────────────── */
+
+.activeFilters {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: var(--accent-primary-muted);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+}
+
+.activeFilterIcon {
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.activeChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--accent-primary);
+    background: var(--accent-primary-subtle);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: capitalize;
+}
+
+.activeChip:hover {
+    background: var(--bg-error-subtle);
+    border-color: var(--status-error);
+    color: var(--status-error);
+}
+
+.clearAllBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.clearAllBtn:hover {
+    color: var(--status-error);
+    border-color: var(--status-error);
+    background: var(--bg-error-subtle);
+}
+
+/* ── Policy List ──────────────────────────────────────────── */
+
+.policyList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.loadingState {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* ── Empty State ──────────────────────────────────────────── */
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 4rem 1.5rem;
+    text-align: center;
+    color: var(--status-success);
+}
+
+.emptyState h3 {
+    color: var(--text-high);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.emptyState p {
+    color: var(--text-mid);
+    font-size: 0.85rem;
+    max-width: 400px;
+}
+
+.clearFiltersBtn {
+    margin-top: 0.5rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.78rem;
+    color: var(--accent-primary);
+    background: var(--accent-primary-muted);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.clearFiltersBtn:hover {
+    background: var(--accent-primary-subtle);
+}
+
+/* ── Policy Row (main) ────────────────────────────────────── */
+
+.policyRow {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.policyRow:hover {
+    border-color: var(--border-strong);
+}
+
+.policyRowExpanded {
+    border-color: var(--accent-primary);
+}
+
+.policyRowMain {
+    display: flex;
+    align-items: stretch;
+}
+
+.policyRowLeft {
+    width: 3px;
+    flex-shrink: 0;
+    border-left: 3px solid transparent;
+}
+
+.expandBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-right: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.expandBtn:hover {
+    color: var(--text-high);
+    background: var(--accent-primary-subtle);
+}
+
+.policyRowBody {
+    flex: 1;
+    padding: 0.6rem 0.875rem;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 145px 180px 1fr auto;
+    align-items: center;
+    gap: 0 1rem;
+    min-width: 0;
+    transition: background 0.15s;
+}
+
+.policyRowBody:hover {
+    background: var(--accent-primary-subtle);
+}
+
+/* ── Policy meta (left part of row) ───────────────────────── */
+
+.policyMeta {
+    display: contents;
+}
+
+.policyNumber {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-high);
+    white-space: nowrap;
+}
+
+.insuredName {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.expDate {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* Meta extras (office, agent, carrier) — collapse into the renewal column */
+.carrierName,
+.officeBadge,
+.agentBadge {
+    display: none;
+}
+
+.expired {
+    color: var(--status-error) !important;
+    font-weight: 600;
+}
+
+.expiringSoon {
+    color: var(--status-warning) !important;
+    font-weight: 500;
+}
+
+.expiringModerate {
+    color: var(--status-warning) !important;
+}
+
+/* ── Policy flags (right part of row) ─────────────────────── */
+
+.policyFlags {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.375rem;
+    flex-shrink: 0;
+}
+
+.sevCounts {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.totalBadge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    background: var(--accent-primary-subtle);
+    padding: 1px 7px;
+    border-radius: var(--radius-xs);
+}
+
+.sevMini {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.67rem;
+    font-weight: 600;
+}
+
+.flagPreview {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.previewChip {
+    font-size: 0.65rem;
+    color: var(--text-mid);
+    background: var(--bg-surface-raised);
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    border-left: 2px solid transparent;
+    white-space: nowrap;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.moreChip {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ── Expanded Panel ───────────────────────────────────────── */
+
+.expandedPanel {
+    border-top: 1px solid var(--border-default);
+    background: var(--bg-surface-raised);
+    padding: 0.75rem 1rem;
+}
+
+.expandedHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.625rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.openPolicyBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--accent-primary);
+    background: none;
+    border: 1px solid var(--accent-primary);
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.openPolicyBtn:hover {
+    background: var(--accent-primary-muted);
+}
+
+.expandedFlags {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.expandedFlagRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    flex-wrap: wrap;
+}
+
+.flagSevBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+}
+
+.flagTitle {
+    font-weight: 500;
+    color: var(--text-high);
+    font-size: 0.78rem;
+}
+
+.flagCat {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.flagMsg {
+    font-size: 0.7rem;
+    color: var(--text-mid);
+    flex-basis: 100%;
+    padding-left: 3.5rem;
+    line-height: 1.35;
+}
+
+.clientFlagTag {
+    font-size: 0.6rem;
+    color: var(--accent-secondary);
+    background: var(--accent-secondary-muted);
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    font-weight: 500;
+}
+
+/* ── Pagination ──────────────────────────────────────────── */
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    margin-top: 0.5rem;
+}
+
+.pageBtn {
+    padding: 0.4rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.pageBtn:hover:not(:disabled) {
+    background: var(--accent-primary-muted);
+}
+
+.pageBtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: var(--border-default);
+    color: var(--text-muted);
+}
+
+.pageInfo {
+    font-size: 0.75rem;
+    color: var(--text-mid);
+    font-weight: 500;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .policyRowBody {
+        grid-template-columns: 1fr;
+        gap: 0.375rem 0;
+    }
+
+    .policyFlags {
+        align-items: flex-start;
+    }
+
+    .flagPreview {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .severitySummary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .filterRow {
+        flex-direction: column;
+    }
+
+    .searchBox {
+        max-width: 100%;
+    }
+
+    .insuredName {
+        max-width: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .flagsPage {
+        padding: 1rem;
+    }
+
+    .policyMeta {
+        gap: 0.35rem;
+    }
+
+    .insuredName {
+        max-width: 120px;
+    }
+
+    .policyRowBody {
+        grid-template-columns: 1fr;
+    }
+}

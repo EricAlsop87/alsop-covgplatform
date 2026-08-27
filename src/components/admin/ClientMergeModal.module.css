@@ -1,0 +1,722 @@
+/* ════════════════════════════════════════════════════════════════
+   ClientMergeModal — Profile Card Layout
+   ════════════════════════════════════════════════════════════════ */
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    width: 96%;
+    max-width: 1120px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Header ── */
+
+.header {
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    flex-shrink: 0;
+}
+
+.title {
+    color: var(--text-high);
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.candidateCountBadge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg-surface-raised);
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-default);
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.closeButton:hover {
+    background: var(--bg-surface-raised);
+    color: var(--text-high);
+}
+
+/* ── Content ── */
+
+.content {
+    padding: 1.5rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    flex: 1;
+}
+
+/* ── Cards Container ── */
+
+.cardsContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+/* ── Profile Card ── */
+
+.profileCard {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.profileCardSurvivor {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.08);
+}
+
+.profileCardCandidate {
+    border-color: rgba(234, 179, 8, 0.2);
+}
+
+/* Card Header */
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+    gap: 0.5rem;
+}
+
+.cardHeader:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.cardHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.cardHeaderRight {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.roleBadgeSurvivor {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--status-success);
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.roleBadgeCandidate {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--status-warning);
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.cardClientName {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-high);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.cardStats {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.statChip {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg-surface-raised);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-default);
+    white-space: nowrap;
+}
+
+.swapBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--status-info);
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.swapBtn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+.chevron {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* Card Body */
+
+.cardBody {
+    padding: 0 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    animation: expandIn 0.2s ease-out;
+}
+
+@keyframes expandIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.createdDate {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 0.35rem 0.6rem;
+    background: var(--bg-surface-raised);
+    border-radius: 6px;
+    width: fit-content;
+}
+
+/* ── Contact Fields Section ── */
+
+.fieldsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.fieldsSectionTitle {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.15rem;
+}
+
+.fieldRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+}
+
+.fieldRow:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--border-default);
+}
+
+.fieldRowSelected {
+    background: rgba(16, 185, 129, 0.04);
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.fieldRowEmpty {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.fieldRowEmpty:hover {
+    background: transparent;
+    border-color: transparent;
+}
+
+.fieldIcon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    width: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fieldContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.fieldLabel {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    line-height: 1;
+    margin-bottom: 0.15rem;
+}
+
+.fieldValue {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-high);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.noData {
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.selectionIndicator {
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 50%;
+    border: 2px solid var(--border-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.selectionIndicatorActive {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+/* ── Policy Inventory ── */
+
+.policyInventory {
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.policyInventoryHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(59, 130, 246, 0.03);
+    border-bottom: 1px solid var(--border-default);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-high);
+}
+
+.policyChipCount {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-surface-raised);
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    margin-left: auto;
+    border: 1px solid var(--border-default);
+}
+
+.noPolicies {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.policyRows {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Policy Migration Label ── */
+
+.policyMigrateLabel {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: rgba(16, 185, 129, 0.03);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.policyKeptLabel {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.65rem;
+    color: var(--status-success);
+    background: rgba(16, 185, 129, 0.03);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 600;
+}
+
+.policyRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border-default);
+    transition: all 0.15s;
+}
+
+.policyRow:last-child {
+    border-bottom: none;
+}
+
+.policyRowExcluded {
+    opacity: 0.35;
+}
+
+.policyRowExcluded .policyNum {
+    text-decoration: line-through;
+}
+
+.migrateCheckbox {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 3px;
+    border: 1.5px solid var(--border-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.migrateCheckboxChecked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.survivorPolicyIcon {
+    color: var(--status-success);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    opacity: 0.6;
+}
+
+.policyRowContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.policyRowTop {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.policyNum {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-high);
+    font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+    letter-spacing: 0.02em;
+}
+
+.policyCarrier {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.policyAddr {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.policyTermInfo {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.policyTermInfo span {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ── Merge Summary ── */
+
+.summarySection {
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.summaryTitle {
+    padding: 0.65rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-high);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border-default);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+.summaryBlock {
+    padding: 0.75rem 1rem;
+}
+
+.summaryBlock:first-child {
+    border-right: 1px solid var(--border-default);
+}
+
+.summaryBlockLabel {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.summaryFieldRow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0;
+    font-size: 0.72rem;
+}
+
+.summaryFieldIcon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    width: 0.85rem;
+    display: flex;
+    align-items: center;
+}
+
+.summaryFieldLabel {
+    color: var(--text-muted);
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 5.5rem;
+}
+
+.summaryFieldValue {
+    color: var(--text-high);
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.summaryFieldSource {
+    color: var(--text-muted);
+    font-size: 0.6rem;
+    font-style: italic;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.summaryStatRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    font-size: 0.75rem;
+    color: var(--text-mid);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.summaryStatWarn {
+    color: var(--status-warning);
+}
+
+.accentGreen {
+    color: var(--status-success);
+}
+
+.summaryStatTotal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0 0.15rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-high);
+    border-top: 1px solid var(--border-default);
+    margin-top: 0.25rem;
+}
+
+/* ── Footer ── */
+
+.footer {
+    padding: 1rem 1.75rem;
+    border-top: 1px solid var(--border-default);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.01);
+    flex-shrink: 0;
+}
+
+.btnCancel {
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    background: transparent;
+    color: var(--text-mid);
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnCancel:hover {
+    background: var(--bg-surface-raised);
+    color: var(--text-high);
+}
+
+.btnConfirm {
+    padding: 0.55rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.btnConfirm:hover {
+    filter: brightness(1.15);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+    transform: translateY(-1px);
+}
+
+.btnConfirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.spinAnimation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

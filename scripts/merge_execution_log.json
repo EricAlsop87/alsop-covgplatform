@@ -1,0 +1,297 @@
+{
+  "success": 58,
+  "failed": 0,
+  "skipped": 7,
+  "logs": [
+    {
+      "status": "success",
+      "survivorId": "0c2b0fdc-d8f5-4cf8-a035-0111841b353c",
+      "duplicateId": "add802f9-cef7-4f58-a76e-4bfac7f7b6f9"
+    },
+    {
+      "status": "success",
+      "survivorId": "1a538a4a-892c-4967-8a2c-a74d07e87ead",
+      "duplicateId": "3024d4b5-0add-4a6a-bdc7-475b2fa30b92"
+    },
+    {
+      "status": "success",
+      "survivorId": "37b4eccc-032d-4edc-8ca8-d7b5f294c62d",
+      "duplicateId": "bfe29868-3525-4160-91f4-793ec9686aea"
+    },
+    {
+      "status": "success",
+      "survivorId": "3f4b7132-0711-4aa0-b7fc-6a20a99b4d57",
+      "duplicateId": "5107c8a1-210a-4020-a98f-22fad2a694a3"
+    },
+    {
+      "status": "success",
+      "survivorId": "f1b9b5f6-e766-4da6-94ec-f06ed369e010",
+      "duplicateId": "443a58fb-9ab0-4de5-96d1-b01e1969a55a"
+    },
+    {
+      "status": "success",
+      "survivorId": "45706329-6c92-4c1b-8280-6e2576358e0e",
+      "duplicateId": "86ff7d7f-777c-4bc6-91ef-d23e1fe56322"
+    },
+    {
+      "status": "success",
+      "survivorId": "50cb4b81-f4b9-4696-b4c5-0d82bd3b3733",
+      "duplicateId": "de0d27bd-1156-463b-bec7-71081c42b5af"
+    },
+    {
+      "status": "success",
+      "survivorId": "50cb4b81-f4b9-4696-b4c5-0d82bd3b3733",
+      "duplicateId": "a2aaa2c6-3c5b-4833-b7f3-1333169f1da1"
+    },
+    {
+      "status": "success",
+      "survivorId": "b85e2996-79df-4378-b558-c3524724a8bd",
+      "duplicateId": "74d97141-bcdb-4a58-b18a-fd35e5ce5e02"
+    },
+    {
+      "status": "success",
+      "survivorId": "e24dc547-739e-4538-8d7f-0a21fa326421",
+      "duplicateId": "d5288200-eade-4ff9-8c11-17b0ac862d74"
+    },
+    {
+      "status": "success",
+      "survivorId": "d808069d-2ee9-47f8-9288-205a068ed282",
+      "duplicateId": "aff04e13-b641-4685-b84e-22266c06d476"
+    },
+    {
+      "status": "success",
+      "survivorId": "f5978e5f-1e6e-43e6-a968-409e5ffcfe4b",
+      "duplicateId": "f337a255-46d0-4325-a655-8af1b652179c"
+    },
+    {
+      "status": "success",
+      "survivorId": "4a1445f2-85ae-487a-90dc-030bda4aa80b",
+      "duplicateId": "10cb3972-9e3e-4bde-b698-cda47f3d3b2b"
+    },
+    {
+      "status": "success",
+      "survivorId": "2f62947a-b7dd-437e-a272-621e19b91299",
+      "duplicateId": "10f99241-ec54-4119-8e7b-2cea6bf5257b"
+    },
+    {
+      "status": "success",
+      "survivorId": "9a4f5a27-f8bb-430e-9eba-559b2ad3ae15",
+      "duplicateId": "13ee1271-ab35-4d21-853f-00d126a17cbb"
+    },
+    {
+      "status": "success",
+      "survivorId": "8f73be6d-dcea-4561-846a-f3dd1fffdde5",
+      "duplicateId": "62f27e73-1159-44fc-822e-5f8aaba541e2"
+    },
+    {
+      "status": "success",
+      "survivorId": "e3c65d2a-f220-41e3-9ff6-4fcfd46e8702",
+      "duplicateId": "654cf251-3d12-4f96-801b-1044220b1a00"
+    },
+    {
+      "status": "success",
+      "survivorId": "723a222e-5434-487f-91fc-8ccd80f81782",
+      "duplicateId": "c6ab33c2-7470-4c06-bea6-37052d43a324"
+    },
+    {
+      "status": "success",
+      "survivorId": "82782072-e485-4b9e-b4c5-c3d7340b578c",
+      "duplicateId": "fb94d724-fccc-4890-91c3-391e21439b3f"
+    },
+    {
+      "status": "success",
+      "survivorId": "8f0673cb-b697-4a23-9013-8906e6f16a2c",
+      "duplicateId": "edb02b80-ff1a-4b1a-a4be-5add574a2cd7"
+    },
+    {
+      "status": "success",
+      "survivorId": "d477832b-205c-48ff-9273-8a2b752d9b63",
+      "duplicateId": "a62b3371-c14b-47ed-b504-50b03d850c57"
+    },
+    {
+      "status": "success",
+      "survivorId": "a8637b97-ec18-4ad1-8382-249f502b6031",
+      "duplicateId": "ed18bdbd-bc14-43af-9feb-d2763304c3a9"
+    },
+    {
+      "status": "success",
+      "survivorId": "dc942a6b-db42-4eb8-aff2-08fc0dbe7f94",
+      "duplicateId": "a8b279b4-ba56-447d-a4bf-a67b55533c5b"
+    },
+    {
+      "status": "success",
+      "survivorId": "e1117e1b-92c0-466a-8f2f-e5e981896c08",
+      "duplicateId": "b3ce1791-cb6f-4c81-b520-d580a85f4b3b"
+    },
+    {
+      "status": "success",
+      "survivorId": "c92e1f94-748f-4fb7-8432-26a0e5fab2a4",
+      "duplicateId": "faeec724-ad70-4bd6-930c-86bb691ab397"
+    },
+    {
+      "status": "success",
+      "survivorId": "cada9430-3a30-477e-a264-2751f3cc3647",
+      "duplicateId": "d9b22f2a-b95f-4487-bda7-89dbc1f63488"
+    },
+    {
+      "status": "success",
+      "survivorId": "d52ff2cb-0c1a-4f1b-a9e8-08d04b8c3037",
+      "duplicateId": "f32361f0-ceb7-49ec-ae77-10d17fc04e5f"
+    },
+    {
+      "status": "success",
+      "survivorId": "d9123b63-63b7-4182-add7-de4c6826ebe1",
+      "duplicateId": "ed7c6bfc-b978-4bde-8474-d00cfda4138a"
+    },
+    {
+      "status": "success",
+      "survivorId": "2c889cec-5dd3-4cd1-a8f9-66db6fba150c",
+      "duplicateId": "de3bf2df-2359-4f31-97b8-5e50fc94ef37"
+    },
+    {
+      "status": "success",
+      "survivorId": "5efb569d-4794-42ab-adf5-ca1acd17b9b6",
+      "duplicateId": "447d4f64-e4d5-4d32-8cb3-8cef98d63994"
+    },
+    {
+      "status": "success",
+      "survivorId": "e5a88db7-36b9-47a7-bea4-14c688745e5d",
+      "duplicateId": "cc82c96b-5efa-46e3-91a2-66fff71dcc67"
+    },
+    {
+      "status": "success",
+      "survivorId": "12fa9d61-0739-4603-abc9-8f38308d0e38",
+      "duplicateId": "54901135-e335-4ff4-b321-1747e825b521"
+    },
+    {
+      "status": "success",
+      "survivorId": "38283396-be96-4616-8c00-f0f6349ab8f6",
+      "duplicateId": "e4c7f339-29ed-4050-9a77-9ffaf5a2dae2"
+    },
+    {
+      "status": "success",
+      "survivorId": "a139720e-c975-4093-b5cd-945900684171",
+      "duplicateId": "1bae6ac2-75fe-43cf-9ae9-b78219af3846"
+    },
+    {
+      "status": "success",
+      "survivorId": "7b584d47-6c83-4b0b-9dc4-b3859f3ca4b0",
+      "duplicateId": "e4f5cbc4-9dc4-45a4-87f1-7cd6170205bb"
+    },
+    {
+      "status": "success",
+      "survivorId": "9885ff89-e2d7-4212-b977-1246a2e9290f",
+      "duplicateId": "b87df981-2e25-47ac-88a0-f172fe60dc68"
+    },
+    {
+      "status": "success",
+      "survivorId": "717f616b-6718-4cc8-b117-8dc507fb2ef1",
+      "duplicateId": "aa6bac46-f05d-4ffc-bd21-6d9770e2b051"
+    },
+    {
+      "status": "success",
+      "survivorId": "482e3428-23e4-40d9-a0ca-27054a061f21",
+      "duplicateId": "11948cd4-825c-4617-a221-3cebd493dbf7"
+    },
+    {
+      "status": "success",
+      "survivorId": "3ab5a5d3-9d8e-467f-a713-a4f2d2fa6684",
+      "duplicateId": "cb4cca28-60fd-4024-8f67-2829554759a6"
+    },
+    {
+      "status": "success",
+      "survivorId": "9ab882b6-903f-4de2-8875-70d0e8a98dd9",
+      "duplicateId": "570d9abb-71d5-4fc9-b329-2305f6402260"
+    },
+    {
+      "status": "success",
+      "survivorId": "c61edd99-45bf-4734-ac6a-7051e953fc27",
+      "duplicateId": "0a64d661-9984-4c2a-8142-377f93d7bd94"
+    },
+    {
+      "status": "success",
+      "survivorId": "274cee7d-a17a-4c53-b87a-9f667d2104fa",
+      "duplicateId": "e60b1e0a-6822-4142-b4fd-e11726607025"
+    },
+    {
+      "status": "success",
+      "survivorId": "6eb50e63-1ef4-4fd1-8e5f-e385c42832fe",
+      "duplicateId": "0c57c620-d1fc-4e88-9d4d-f72601b2caa8"
+    },
+    {
+      "status": "success",
+      "survivorId": "9ac27746-87cf-4bb8-a210-e594c9f1e7c4",
+      "duplicateId": "1f60881b-9b96-4529-bca5-ce00063f0f8a"
+    },
+    {
+      "status": "success",
+      "survivorId": "a5eb75ca-e5bb-4b4d-862a-11cbd7ea9cdf",
+      "duplicateId": "21629d45-def6-4d0f-9fdd-80ce5b533f5f"
+    },
+    {
+      "status": "success",
+      "survivorId": "9341058c-3a2d-430f-a710-a0a96ab6f2e3",
+      "duplicateId": "93151fc6-3e60-40a4-bdb7-cd3bcfe09f33"
+    },
+    {
+      "status": "success",
+      "survivorId": "e653c0af-45cd-4e3b-ba49-927e397300e6",
+      "duplicateId": "cc9ce9d8-38c6-4524-994b-a952cf5931be"
+    },
+    {
+      "status": "success",
+      "survivorId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+      "duplicateId": "a4208e5c-d46c-43c2-8fde-25c60276dc01"
+    },
+    {
+      "status": "success",
+      "survivorId": "17b16931-1470-46a0-a926-df55ea06c3fc",
+      "duplicateId": "4c3ef335-a1c8-4be8-afef-2f3f7e75b32e"
+    },
+    {
+      "status": "success",
+      "survivorId": "c9113521-d68f-48e4-86c9-50b610d09d37",
+      "duplicateId": "31ae8733-bc6d-4e53-9a31-9d495ed7a94f"
+    },
+    {
+      "status": "success",
+      "survivorId": "ee73c56b-a1f5-4aed-a0a8-c2d14616068f",
+      "duplicateId": "d7bc85cf-9ad7-46be-80e7-1f28ea717b00"
+    },
+    {
+      "status": "success",
+      "survivorId": "17b16931-1470-46a0-a926-df55ea06c3fc",
+      "duplicateId": "468830e9-5913-4bcc-9f6c-f3f29cf52b97"
+    },
+    {
+      "status": "success",
+      "survivorId": "9e6400d2-cad1-4462-bea8-d03223207357",
+      "duplicateId": "9d33f5f3-6b2f-4328-9442-b690cf4bb665"
+    },
+    {
+      "status": "success",
+      "survivorId": "5d8bdd4a-2c40-4eb4-aa7b-d7876bf60738",
+      "duplicateId": "36a24cf1-1f59-4f52-bf78-4aa4e70ae62c"
+    },
+    {
+      "status": "success",
+      "survivorId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+      "duplicateId": "23ee403d-b68a-45ff-9ff0-c99de0f2dd46"
+    },
+    {
+      "status": "success",
+      "survivorId": "a5743a84-57c3-46bd-b259-9f8bf49d54c6",
+      "duplicateId": "c20ef48c-3b13-47b3-ae5f-ae6c82c2e3b8"
+    },
+    {
+      "status": "success",
+      "survivorId": "70177e03-4498-4cee-bb32-23656d717a03",
+      "duplicateId": "bbab5c37-a442-4f91-a3c8-5a59bf9b8540"
+    },
+    {
+      "status": "success",
+      "survivorId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+      "duplicateId": "c5926255-e925-466e-bb78-5684f9736c46"
+    }
+  ]
+}

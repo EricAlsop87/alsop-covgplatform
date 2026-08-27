@@ -1,0 +1,53 @@
+// ─── Color Tokens ───
+// SCSS variable aliases for CSS custom properties defined in theme.scss.
+// Use these in SCSS modules. Change values only in theme.scss.
+
+// Background hierarchy
+$bg-base: var(--bg-base);
+$bg-surface: var(--bg-surface);
+$bg-surface-raised: var(--bg-surface-raised);
+$bg-surface-overlay: var(--bg-surface-overlay);
+
+// Border
+$border-default: var(--border-default);
+$border-subtle: var(--border-subtle);
+$border-strong: var(--border-strong);
+
+// Accent: Primary (Dazzling Blue)
+$accent-primary: var(--accent-primary);
+$accent-primary-hover: var(--accent-primary-hover);
+$accent-primary-muted: var(--accent-primary-muted);
+$accent-primary-subtle: var(--accent-primary-subtle);
+
+// Accent: Secondary (Imperial Purple)
+$accent-secondary: var(--accent-secondary);
+$accent-secondary-hover: var(--accent-secondary-hover);
+$accent-secondary-muted: var(--accent-secondary-muted);
+
+// Accent: Soft (Lavender Fog)
+$accent-soft: var(--accent-soft);
+$accent-soft-bg: var(--accent-soft-bg);
+
+// Text hierarchy
+$text-high: var(--text-high);
+$text-mid: var(--text-mid);
+$text-muted: var(--text-muted);
+$text-accent: var(--text-accent);
+$text-inverse: var(--text-inverse);
+
+// Status
+$status-success: var(--status-success);
+$status-warning: var(--status-warning);
+$status-error: var(--status-error);
+$status-info: var(--status-info);
+
+// Status backgrounds
+$bg-success-subtle: var(--bg-success-subtle);
+$bg-warning-subtle: var(--bg-warning-subtle);
+$bg-error-subtle: var(--bg-error-subtle);
+$bg-info-subtle: var(--bg-info-subtle);
+
+// Supplementary
+$color-bison: var(--color-bison);
+$color-rose-quartz: var(--color-rose-quartz);
+$color-lemon-drop: var(--color-lemon-drop);

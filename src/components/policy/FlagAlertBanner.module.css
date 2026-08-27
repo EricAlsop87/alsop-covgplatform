@@ -1,0 +1,349 @@
+/* ── Flag Alert Banner ──────────────────────────────────────── */
+/* Severity-driven theming: entire banner adapts to worst flag */
+
+.banner {
+    display: flex;
+    align-items: stretch;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    animation: bannerSlideIn 0.3s ease-out;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@keyframes bannerSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── CRITICAL severity theme ─────────────────────────────────── */
+.bannerCritical {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 2.5px solid #BF1932;
+    box-shadow: 0 4px 16px rgba(191, 25, 50, 0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerCritical:hover {
+    box-shadow: 0 6px 24px rgba(191, 25, 50, 0.2), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerCritical .countBadge {
+    background: rgba(191, 25, 50, 0.12);
+    border-color: #BF1932;
+}
+.bannerCritical .countNumber,
+.bannerCritical .countIcon {
+    color: #BF1932;
+}
+.bannerCritical .accentBar {
+    background: linear-gradient(180deg, #BF1932, #991428);
+    box-shadow: 0 0 14px rgba(191, 25, 50, 0.35);
+}
+
+/* ── HIGH severity theme ────────────────────────────────────── */
+.bannerHigh {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border: 2.5px solid #c7580a;
+    box-shadow: 0 4px 16px rgba(199, 88, 10, 0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerHigh:hover {
+    box-shadow: 0 6px 24px rgba(199, 88, 10, 0.2), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerHigh .countBadge {
+    background: rgba(199, 88, 10, 0.12);
+    border-color: #c7580a;
+}
+.bannerHigh .countNumber,
+.bannerHigh .countIcon {
+    color: #c7580a;
+}
+.bannerHigh .accentBar {
+    background: linear-gradient(180deg, #c7580a, #a04808);
+    box-shadow: 0 0 12px rgba(199, 88, 10, 0.3);
+}
+
+/* ── WARNING severity theme ─────────────────────────────────── */
+.bannerWarning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 2.5px solid #b45309;
+    box-shadow: 0 4px 16px rgba(180, 83, 9, 0.10), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerWarning:hover {
+    box-shadow: 0 6px 24px rgba(180, 83, 9, 0.18), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerWarning .countBadge {
+    background: rgba(180, 83, 9, 0.1);
+    border-color: #b45309;
+}
+.bannerWarning .countNumber,
+.bannerWarning .countIcon {
+    color: #b45309;
+}
+.bannerWarning .accentBar {
+    background: linear-gradient(180deg, #d97706, #b45309);
+}
+
+/* ── INFO severity theme ────────────────────────────────────── */
+.bannerInfo {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2.5px solid #2243B6;
+    box-shadow: 0 4px 16px rgba(34, 67, 182, 0.10), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerInfo:hover {
+    box-shadow: 0 6px 24px rgba(34, 67, 182, 0.18), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.bannerInfo .countBadge {
+    background: rgba(34, 67, 182, 0.1);
+    border-color: #2243B6;
+}
+.bannerInfo .countNumber,
+.bannerInfo .countIcon {
+    color: #2243B6;
+}
+.bannerInfo .accentBar {
+    background: linear-gradient(180deg, #2243B6, #1a3699);
+}
+
+/* ── Accent Bar (left edge) ────────────────────────────────── */
+
+.accentBar {
+    width: 6px;
+    flex-shrink: 0;
+    background: #BF1932;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.accentBarCritical {
+    background: linear-gradient(180deg, #BF1932, #991428);
+    animation: accentPulse 2.5s ease-in-out infinite;
+    box-shadow: 0 0 14px rgba(191, 25, 50, 0.35);
+}
+
+.accentBarHigh {
+    background: linear-gradient(180deg, #c7580a, #a04808);
+    animation: accentPulse 3s ease-in-out infinite;
+    box-shadow: 0 0 12px rgba(199, 88, 10, 0.3);
+}
+
+.accentBarWarning {
+    background: linear-gradient(180deg, #d97706, #b45309);
+}
+
+.accentBarInfo {
+    background: linear-gradient(180deg, #2243B6, #1a3699);
+}
+
+@keyframes accentPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.65;
+    }
+}
+
+/* ── Body ──────────────────────────────────────────────────── */
+
+.body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    min-width: 0;
+}
+
+.bodyLeft {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1;
+}
+
+/* ── Count Badge ───────────────────────────────────────────── */
+
+.countBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0 0.85rem;
+    min-width: 65px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    background: rgba(191, 25, 50, 0.1);
+    border: 1.5px solid #BF1932;
+    flex-shrink: 0;
+}
+
+.countNumber {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #BF1932;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.countIcon {
+    color: #BF1932;
+    flex-shrink: 0;
+}
+
+/* ── Info Area ─────────────────────────────────────────────── */
+
+.infoArea {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.infoTopRow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.infoTitle {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-high);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+/* ── Severity Chips ────────────────────────────────────────── */
+
+.severityChips {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.severityChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.chipCritical {
+    background: rgba(191, 25, 50, 0.12);
+    color: #BF1932;
+    border: 1px solid #BF1932;
+}
+
+.chipHigh {
+    background: rgba(199, 88, 10, 0.12);
+    color: #c7580a;
+    border: 1px solid #c7580a;
+}
+
+.chipWarning {
+    background: rgba(180, 83, 9, 0.1);
+    color: #b45309;
+    border: 1px solid #b45309;
+}
+
+.chipInfo {
+    background: rgba(34, 67, 182, 0.1);
+    color: #2243B6;
+    border: 1px solid #2243B6;
+}
+
+/* ── Flag Previews ─────────────────────────────────────────── */
+
+.flagPreviews {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.flagPreview {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 0;
+    font-size: 0.78rem;
+    color: var(--text-mid);
+    line-height: 1.35;
+    min-width: 0;
+}
+
+.flagPreviewDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.flagPreviewText {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+    color: var(--text-high);
+    font-weight: 500;
+}
+
+.flagPreviewMore {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    padding-left: 0.25rem;
+}
+
+.previewSeparator {
+    color: var(--border-strong);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* ── CTA Button ────────────────────────────────────────────── */
+
+.ctaButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 34px;
+    padding: 0 1rem;
+    background: var(--accent-primary);
+    border: 1.5px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-inverse);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 150ms ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ctaButton:hover {
+    background: var(--accent-primary-hover);
+    border-color: var(--accent-primary-hover);
+    transform: translateX(2px);
+}
+
+/* Wrapper on the page */
+.flagBannerWrapper {
+    padding: 0 2rem;
+    margin-bottom: 1rem;
+}

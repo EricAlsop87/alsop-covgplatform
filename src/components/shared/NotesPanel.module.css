@@ -1,0 +1,484 @@
+.container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    animation: slideIn 0.2s ease-out;
+}
+
+.toast.success {
+    background: var(--bg-success-subtle);
+    color: var(--status-success);
+    border: 1px solid var(--status-success);
+}
+
+.toast.error {
+    background: var(--bg-error-subtle);
+    color: var(--status-error);
+    border: 1px solid var(--status-error);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Filter Bar */
+.filterBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-surface-raised);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tagsFilter {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.filterLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.filterChip {
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-mid);
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.filterChip:hover {
+    background: var(--bg-surface);
+    color: var(--text-high);
+}
+
+.activeFilter {
+    background: var(--accent-primary-muted);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* New Note Area */
+.newNote {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--bg-surface-raised);
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+}
+
+.newNoteInputWrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.newNoteIcon {
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.newNoteTextarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-high);
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: none;
+    min-height: 1.5rem;
+    padding: 0.25rem 0;
+}
+
+.newNoteTextarea::placeholder {
+    color: var(--text-muted);
+}
+
+.newNoteTextarea:focus {
+    outline: none;
+}
+
+.addBtn {
+    align-self: flex-end;
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.addBtn:hover:not(:disabled) {
+    background: var(--accent-primary-hover);
+}
+
+.addBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toggle */
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle input {
+    accent-color: var(--accent-primary);
+}
+
+/* Section labels */
+.sectionLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.sectionSub {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* Notes List */
+.notesList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Note card */
+.note {
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    transition: border-color 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.note:hover {
+    border-color: var(--border-strong);
+}
+
+.note.pinned {
+    border-left: 3px solid var(--status-warning);
+}
+
+.note.archived {
+    opacity: 0.55;
+    background: var(--bg-surface);
+}
+
+.noteHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.noteAuthor {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-high);
+}
+
+.authorIcon {
+    color: var(--text-muted);
+}
+
+.pinIcon {
+    color: var(--status-warning);
+    margin-left: 0.2rem;
+}
+
+.noteActions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.note:hover .noteActions {
+    opacity: 1;
+}
+
+.noteAction {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.2rem;
+    border-radius: var(--radius-xs);
+    display: flex;
+    align-items: center;
+    transition: color 0.15s, background 0.15s;
+}
+
+.noteAction:hover {
+    color: var(--text-high);
+    background: var(--accent-primary-subtle);
+}
+
+.noteBody {
+    color: var(--text-mid);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+}
+
+/* Note Footer */
+.noteFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 0.25rem;
+}
+
+.tagSelector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding-top: 0.25rem;
+}
+
+.tagOption {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-muted);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-xs);
+    font-size: 0.65rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.tagOption:hover {
+    border-color: var(--border-strong);
+    color: var(--text-mid);
+}
+
+.tagSelected {
+    background: var(--accent-secondary-muted);
+    border-color: var(--accent-secondary);
+    color: var(--accent-secondary);
+}
+
+.tagsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: var(--accent-secondary-muted);
+    color: var(--accent-secondary);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-xs);
+    font-size: 0.65rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.tag:hover {
+    background: var(--accent-primary-muted);
+}
+
+.policyBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-xs);
+    font-size: 0.65rem;
+    font-weight: 500;
+}
+
+.archivedBadge {
+    background: var(--accent-primary-subtle);
+    color: var(--text-muted);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-xs);
+    font-size: 0.65rem;
+}
+
+.noteTimeContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* Edit mode */
+.editArea {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.editActions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.saveBtn {
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.saveBtn:hover:not(:disabled) {
+    background: var(--accent-primary-hover);
+}
+
+.saveBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cancelBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: none;
+    border: 1px solid var(--border-default);
+    color: var(--text-mid);
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.cancelBtn:hover {
+    border-color: var(--border-strong);
+    color: var(--text-high);
+}
+
+/* Loading / Empty / Load More */
+.loadingContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 2rem 0;
+}
+
+.spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-default);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.empty {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0.5rem 0;
+}
+
+.loadMoreBtn {
+    background: transparent;
+    border: 1px dashed var(--border-default);
+    color: var(--text-mid);
+    padding: 0.6rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 0.5rem;
+}
+
+.loadMoreBtn:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    color: var(--text-high);
+    background: var(--accent-primary-subtle);
+}
+
+.loadMoreBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

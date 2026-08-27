@@ -1,0 +1,1556 @@
+{
+  "timestamp": "2026-08-14T19:39:36.793Z",
+  "totals": {
+    "clients": 2339,
+    "policies": 2621,
+    "terms": 2919,
+    "flags": 4753
+  },
+  "clientDuplicates": {
+    "exact": [
+      {
+        "normalizedName": "michael",
+        "confidence": 95,
+        "survivorId": "07f029dd-97a4-44dc-a6ad-88a45467d36b",
+        "survivorName": "MICHAEL",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "71506879-7d0b-4f71-abdc-e287eecd36d7",
+            "name": "MICHAEL",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "laverne",
+        "confidence": 95,
+        "survivorId": "2a8f1e8a-c275-49ea-a3d0-bb0dd8d878fc",
+        "survivorName": "LAVERNE",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "0a7198aa-abb5-4e56-8ac5-8b6ba38ac42e",
+            "name": "LAVERNE",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "joshua",
+        "confidence": 95,
+        "survivorId": "f746e6c6-f266-4856-a798-356b3ab27a26",
+        "survivorName": "Joshua",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "0a9549dc-0ce0-432d-b210-cb14a5f11f08",
+            "name": "JOSHUA",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "brandon",
+        "confidence": 95,
+        "survivorId": "0be5a25a-2a96-4952-80da-f72472948357",
+        "survivorName": "BRANDON",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "142d4469-3a39-4e70-a5be-bf200f96ac87",
+            "name": "BRANDON",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:09.405987+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "chelsea",
+        "confidence": 95,
+        "survivorId": "b79d05d1-5110-453b-b535-9f67a61351da",
+        "survivorName": "Chelsea",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "0d912ce0-1a10-4f6a-8cfd-bf2ed2574a96",
+            "name": "CHELSEA",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:05.422993+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "christopher",
+        "confidence": 95,
+        "survivorId": "d4a6878b-5058-40ad-b219-0fd546d63326",
+        "survivorName": "Christopher",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "13b33b05-4d84-43dc-8466-279c176a531e",
+            "name": "Christopher",
+            "email": null,
+            "phone": null,
+            "policyCount": 2,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 3
+      },
+      {
+        "normalizedName": "guillermo",
+        "confidence": 95,
+        "survivorId": "1c7c47da-f10c-4f55-99e0-3f5ae630acca",
+        "survivorName": "GUILLERMO",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "f15a7475-fbf5-4cbf-8f4b-5ed18c97d513",
+            "name": "GUILLERMO",
+            "email": null,
+            "phone": null,
+            "policyCount": 2,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 3
+      },
+      {
+        "normalizedName": "patricia",
+        "confidence": 95,
+        "survivorId": "89544704-c9b7-40ee-b507-f024d81df825",
+        "survivorName": "PATRICIA",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "a10dae7d-9421-4e5b-aae6-867cc22585b0",
+            "name": "PATRICIA",
+            "email": null,
+            "phone": null,
+            "policyCount": 2,
+            "createdAt": "2026-04-01T17:34:05.422993+00:00"
+          },
+          {
+            "id": "c3121814-3402-4ba3-9733-7634497e516a",
+            "name": "PATRICIA",
+            "email": null,
+            "phone": null,
+            "policyCount": 2,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          },
+          {
+            "id": "27fcbbb9-2e8f-40c2-b208-ef3e8be4e6a0",
+            "name": "PATRICIA",
+            "email": null,
+            "phone": null,
+            "policyCount": 2,
+            "createdAt": "2026-04-01T17:34:09.405987+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 7
+      },
+      {
+        "normalizedName": "jeffrey",
+        "confidence": 95,
+        "survivorId": "75b04fdf-4e7a-4fc9-bf6d-644e004cd812",
+        "survivorName": "JEFFREY",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "2987da0d-ead5-4c87-a121-eba9ad44fa37",
+            "name": "JEFFREY",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:09.405987+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "maria argueta",
+        "confidence": 95,
+        "survivorId": "3f4b7132-0711-4aa0-b7fc-6a20a99b4d57",
+        "survivorName": "Maria Argueta",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "b4b5cbec-d622-4883-904b-ed77884b8568",
+            "name": "Maria Argueta",
+            "email": null,
+            "phone": null,
+            "policyCount": 0,
+            "createdAt": "2026-08-12T05:06:51.399385+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 1
+      },
+      {
+        "normalizedName": "alejandro",
+        "confidence": 95,
+        "survivorId": "51cbb7c2-e897-4998-ac88-ab44e49e2a39",
+        "survivorName": "Alejandro",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "5aa86376-4f45-45a4-af9a-9d6de5a26464",
+            "name": "Alejandro",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "scott vancea",
+        "confidence": 95,
+        "survivorId": "b85e2996-79df-4378-b558-c3524724a8bd",
+        "survivorName": "Scott Vancea",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "6929a27c-35f6-4bc6-a430-377eb56c485c",
+            "name": "Scott Vancea",
+            "email": null,
+            "phone": null,
+            "policyCount": 0,
+            "createdAt": "2026-08-12T05:12:27.805508+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 1
+      },
+      {
+        "normalizedName": "ddd",
+        "confidence": 95,
+        "survivorId": "a95f1227-8709-4232-ac25-88775a5d973a",
+        "survivorName": "08DD812738D735",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "717147a8-6a58-4fd8-8069-1a136ab57111",
+            "name": "08DD8208D01459",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:09.405987+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "brandon richie",
+        "confidence": 95,
+        "survivorId": "e24dc547-739e-4538-8d7f-0a21fa326421",
+        "survivorName": "BRANDON RICHIE",
+        "survivorEmail": null,
+        "survivorPolicyCount": 3,
+        "duplicates": [
+          {
+            "id": "d7b6eaea-73c0-427c-a14f-a609298e0630",
+            "name": "Brandon Richie",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:03.498911+00:00"
+          },
+          {
+            "id": "7549f39b-7bc2-4b1e-a5bd-1997231a189d",
+            "name": "Brandon Richie",
+            "email": null,
+            "phone": null,
+            "policyCount": 0,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          },
+          {
+            "id": "de1fa73e-2f00-45f5-8b06-240bfc9a8859",
+            "name": "Brandon Richie",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-08-05T16:48:58.167019+00:00"
+          },
+          {
+            "id": "9a70026c-20a7-42f2-bae6-b0a68f25ef07",
+            "name": "Brandon Richie",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-08-05T16:48:58.169171+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 6
+      },
+      {
+        "normalizedName": "daniel",
+        "confidence": 95,
+        "survivorId": "75fafb98-d66f-4a7b-877e-5e8294774268",
+        "survivorName": "DANIEL",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "f72eae0e-d4ce-4b45-a67b-048a7abe26f3",
+            "name": "DANIEL",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "anthony",
+        "confidence": 95,
+        "survivorId": "fa49a7a3-2667-427b-b48b-42a9307db64c",
+        "survivorName": "ANTHONY",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "88a60016-5a8c-449e-8adf-e0f213097d00",
+            "name": "ANTHONY",
+            "email": null,
+            "phone": null,
+            "policyCount": 3,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 4
+      },
+      {
+        "normalizedName": "victoria",
+        "confidence": 95,
+        "survivorId": "a72a9061-5fe7-44b6-b60d-4c2f72d1fca7",
+        "survivorName": "VICTORIA",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "ffbfa912-4740-4690-a715-0bdd6ea565da",
+            "name": "VICTORIA",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "margarita",
+        "confidence": 95,
+        "survivorId": "ae290f6b-05a3-427d-8f09-d7e96ec255fa",
+        "survivorName": "MARGARITA",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "d288d22f-13a1-4d24-9da5-7c5d67c337fb",
+            "name": "MARGARITA",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:09.405987+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 2
+      },
+      {
+        "normalizedName": "francisco",
+        "confidence": 95,
+        "survivorId": "cf9765a2-abc1-4922-a0fc-a878af018606",
+        "survivorName": "FRANCISCO",
+        "survivorEmail": null,
+        "survivorPolicyCount": 2,
+        "duplicates": [
+          {
+            "id": "caf31b82-48d6-4072-8767-aed84acf4955",
+            "name": "Francisco",
+            "email": null,
+            "phone": null,
+            "policyCount": 1,
+            "createdAt": "2026-04-01T17:34:07.459402+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 3
+      },
+      {
+        "normalizedName": "joseph a bender",
+        "confidence": 95,
+        "survivorId": "f1b9b5f6-e766-4da6-94ec-f06ed369e010",
+        "survivorName": "Joseph A. Bender",
+        "survivorEmail": null,
+        "survivorPolicyCount": 1,
+        "duplicates": [
+          {
+            "id": "e46235e0-24b3-4606-913c-18374dfc4874",
+            "name": "Joseph A. Bender",
+            "email": null,
+            "phone": null,
+            "policyCount": 0,
+            "createdAt": "2026-08-10T19:01:28.333263+00:00"
+          }
+        ],
+        "totalPoliciesAffected": 1
+      }
+    ],
+    "fuzzy": [
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "49afe8fa-79e4-406d-8aba-1f25a623cc78",
+        "survivorName": "Susan Chun Ok Kim",
+        "duplicates": [
+          {
+            "id": "010bacd7-9e89-4e76-b4a8-b64ed172e3f9",
+            "name": "SUSAN KIM",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "1fbe2b3b-1660-4b53-976f-871f70c02fbc",
+        "survivorName": "Henry M. Schumm",
+        "duplicates": [
+          {
+            "id": "021c7581-0c85-4251-a4c5-343dc159c875",
+            "name": "Henry Schumm",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "0369f271-fa19-4f1c-a250-3992fb37be0e",
+        "survivorName": "Brenda Rodriguez",
+        "duplicates": [
+          {
+            "id": "bec9afce-78fe-4210-9827-986d2cf31712",
+            "name": "Brenda Bravo Rodriguez",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "03e14434-f487-4375-aea5-10f860587a5c",
+        "survivorName": "JAIME ORLANDO BRAVO LOPEZ",
+        "duplicates": [
+          {
+            "id": "9c33b61c-fedd-4c4f-871b-acdbaeaee03b",
+            "name": "Jaime O Bravo",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "0a5d0976-30c7-44ce-99f1-f7b5e26f98d3",
+        "survivorName": "JUAN IBARRA",
+        "duplicates": [
+          {
+            "id": "d6258e6e-a080-4f9c-8f78-d4669b775a55",
+            "name": "Juan Ibarra Gonzalez",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "6bee773a-eadb-4a95-8b85-807427d2f90c",
+        "survivorName": "Richard J Osborne",
+        "duplicates": [
+          {
+            "id": "0b1e31b2-b88f-43de-bcf0-cc5f73d0f233",
+            "name": "Richard Osborne",
+            "policyCount": 2
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "0ced03c0-7258-49ea-aadf-2d39fe70de90",
+        "survivorName": "Vidhi Bhavesh Patel",
+        "duplicates": [
+          {
+            "id": "2c18ec1b-55d4-4225-b05e-1d327bdbadc2",
+            "name": "Vidhi Patel",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "0ec711ad-6ec1-4269-90a9-9b97b915c55c",
+        "survivorName": "The James T and Beatrice L Wesdy Family Trust",
+        "duplicates": [
+          {
+            "id": "96375345-ce98-422c-b23b-45a237a8e358",
+            "name": "The James M a",
+            "policyCount": 2
+          },
+          {
+            "id": "8d26a748-85e4-41a7-ac95-edfed800986c",
+            "name": "THE JAMES M",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "136eed25-92c6-42fb-9479-a9196091ed2d",
+        "survivorName": "IVONA PERIC",
+        "duplicates": [
+          {
+            "id": "c5b99c39-e360-4951-9d80-68412b8ff8a0",
+            "name": "Ivona Peric Gonzalez",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "2701d536-8a2b-43d7-8f13-5b571aef2ab1",
+        "survivorName": "Linda Kay",
+        "duplicates": [
+          {
+            "id": "1744f072-ef84-49fa-8d9b-373d189439d3",
+            "name": "Linda J Kay",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "185420e5-3927-4990-bcc0-c37054ecb16a",
+        "survivorName": "ROGELIO C. CHAVEZ",
+        "duplicates": [
+          {
+            "id": "a92d14a6-fa49-427c-a4f9-7e92ee57fad5",
+            "name": "ROGELIO CANELA CHAVEZ",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "1a444f9a-f53a-4b37-9c09-facfa853dd41",
+        "survivorName": "FRANCISCO PADILLA",
+        "duplicates": [
+          {
+            "id": "c486578f-655d-4ff8-8343-19c0b317b8af",
+            "name": "Francisco M Padilla",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "f8b4ec05-054a-4433-8d34-73819279f633",
+        "survivorName": "Jose Juan",
+        "duplicates": [
+          {
+            "id": "1d073c13-762d-4232-9fa4-8801f2a48f15",
+            "name": "Juan Jose",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "221e1aaf-d17b-4858-9305-2e196eff1e5f",
+        "survivorName": "Walz Family Trust",
+        "duplicates": [
+          {
+            "id": "3ef34a92-87a7-4033-851f-a9f27e9f9d80",
+            "name": "Walz Family Trust RWRI 2,677.00",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "2412522b-26b4-421a-894c-371d6faa14ce",
+        "survivorName": "Francisco Pozo",
+        "duplicates": [
+          {
+            "id": "e879b71c-ba61-4052-a59a-ca5ca97390e6",
+            "name": "Francisco Pozo Zambrano",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "26bad5c8-a79d-4822-b8b0-fe500619b6c9",
+        "survivorName": "Paul Rodriguez",
+        "duplicates": [
+          {
+            "id": "f78749f9-ec8f-45fa-85bc-c28955ef34aa",
+            "name": "Ronnie Paul Rodriguez Jr",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "76bcb459-f2e8-4fe8-8bd1-c0e4d44df1b8",
+        "survivorName": "THE HOY TRUST OF 2015",
+        "duplicates": [
+          {
+            "id": "2c4fbdad-1696-4de0-a8e9-9d4540f7b5a6",
+            "name": "The Hoy Trust Of 2015, Barry Hoy",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "30190657-4eb0-4528-8da6-8989a98c9cc3",
+        "survivorName": "Jose Luis",
+        "duplicates": [
+          {
+            "id": "f95b2cff-0b59-4a1f-a4f9-f11e152fa1fb",
+            "name": "Jose luis Magana",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "3369677d-273c-4565-bd18-9ad71d3ca02b",
+        "survivorName": "JD Prince Management",
+        "duplicates": [
+          {
+            "id": "de9ffeb1-1a7c-45c6-81a0-9de8e2e6538f",
+            "name": "JD Prince",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "35209def-83f4-4e87-979a-9d7a70211b18",
+        "survivorName": "Feliza Banez",
+        "duplicates": [
+          {
+            "id": "5f9680f1-4a41-41e2-a060-ce775e101f41",
+            "name": "FELIZA HELEN BANEZ",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "3826dd0a-1de4-42ac-b1ab-ae9cc5bd21da",
+        "survivorName": "IVAN ALECIO",
+        "duplicates": [
+          {
+            "id": "5c8e9ddb-6017-4bdd-87a1-1cad68551492",
+            "name": "IVAN R ALECIO",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "3a4688a2-5502-4285-bf08-44eb7401571c",
+        "survivorName": "Brian Matthew Mansell",
+        "duplicates": [
+          {
+            "id": "42d92963-c4ad-40d6-b3fe-c1f96ba8998b",
+            "name": "Brian M Mansell",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "fa8df3a8-b4b5-41c5-aa70-f5d0cd313d0d",
+        "survivorName": "The McCarley Family Trust dated September 6 2023",
+        "duplicates": [
+          {
+            "id": "3ad1445d-2e9b-4a90-8a7b-bf1db2e8146b",
+            "name": "The McCarley",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "401034c5-58e2-43a1-a4f8-60a4574b035a",
+        "survivorName": "THE BOSWELL FAMILY TRUST DATED MAY 27, 2016",
+        "duplicates": [
+          {
+            "id": "c8e834fc-bbeb-4299-a8c1-926f7a396800",
+            "name": "The Boswell Family Trust",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "422696f4-3186-4354-941f-2af469f121fd",
+        "survivorName": "Sexton Family",
+        "duplicates": [
+          {
+            "id": "c541364c-1448-482c-9a72-61450c78d7bc",
+            "name": "Sexton 2009 FAMILY TRUST",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "db2e3500-d0bb-49c7-9602-43f5c491eb76",
+        "survivorName": "Gustavo A Galindo",
+        "duplicates": [
+          {
+            "id": "51da3900-acf7-415b-8c97-79a5be5b3e99",
+            "name": "Gustavo A Galindo Castillo",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "5668c291-e7c6-44d6-bff7-ccf898675154",
+        "survivorName": "Teya Wong",
+        "duplicates": [
+          {
+            "id": "e98d4bdb-3c20-41ad-9364-af6be339fcec",
+            "name": "TEYA WONG RESC 633.60",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "af8753fe-0a0a-48c2-8868-70cf8fe4988f",
+        "survivorName": "JOSE LOPEZ",
+        "duplicates": [
+          {
+            "id": "59ea6661-8665-4313-96f5-f0cea52025b4",
+            "name": "Jose Loreto Lopez Hernandez",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "67e1bfda-14aa-4c73-a98c-c91dd15b1990",
+        "survivorName": "Trust of the Cardenas Family Trust Oct. 22 2022",
+        "duplicates": [
+          {
+            "id": "b34eb449-f5bc-41c2-a404-85c4dffa178b",
+            "name": "The Survivors Trust of the Kimball Family dated 01",
+            "policyCount": 1
+          },
+          {
+            "id": "5d5970f6-66d6-4a4c-b4da-664c052b3a36",
+            "name": "The family trust of",
+            "policyCount": 2
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "73748acd-c00d-43f1-8f8d-4e565a87b7a8",
+        "survivorName": "Rudy Alvarez",
+        "duplicates": [
+          {
+            "id": "adf6e529-ec0e-4d52-9b25-09e7cb6b4189",
+            "name": "Rudy Alvarez Jr",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "74c85e70-07e6-4140-8d52-89a561377c3a",
+        "survivorName": "STEVEN H SAUTER",
+        "duplicates": [
+          {
+            "id": "f6ab9b20-7ce1-4f1b-8736-aaf074430ba0",
+            "name": "Steven Sauter",
+            "policyCount": 2
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "7554e07d-ca1a-473c-89ba-95aa11aade1a",
+        "survivorName": "The Fonzi Family Trust",
+        "duplicates": [
+          {
+            "id": "df42b7b1-7097-43cb-8ffb-9cb631dae718",
+            "name": "THE FONZI FAMILY TRUST U/A DATED MAY 13, 2015",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "7865c93b-397e-43ea-b421-dac816cda24f",
+        "survivorName": "KUNIKO HIGAKI",
+        "duplicates": [
+          {
+            "id": "b5dd53a4-c1a0-4c71-a419-01c63d808907",
+            "name": "The Kuniko Higaki",
+            "policyCount": 0
+          },
+          {
+            "id": "aea0b45f-0855-4225-86a0-88306031723c",
+            "name": "The Kuniko Higaki Livingtrust , Randy And Terri Varner",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "f427c734-846b-4a29-92de-534551bf9dc9",
+        "survivorName": "Becky Gonzales",
+        "duplicates": [
+          {
+            "id": "7d0cd600-1dfa-4fe4-8c83-f0f7076a3704",
+            "name": "Becky Gonzales RWRI 251.22",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "ffd026ba-1979-4aaa-bb1d-bcf20e3411af",
+        "survivorName": "Joel Flores DeJesus",
+        "duplicates": [
+          {
+            "id": "80159518-7455-4264-9b1d-fe051743b226",
+            "name": "JOEL FLORES",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "80f1fee2-02f7-4c08-a548-0b93588219da",
+        "survivorName": "JOHN TIONGSON & LOURMA TIONGSON 2019 FAMILY TRUST",
+        "duplicates": [
+          {
+            "id": "f1bc3fc4-ba67-4fab-88e5-35e016fde19a",
+            "name": "John R. Tiongson",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "f34fd1d3-4edb-48e7-afaf-fb18c395cace",
+        "survivorName": "The Yahn Family Trust Dated July 15 2021",
+        "duplicates": [
+          {
+            "id": "96ba1769-f477-4e67-8612-e1897bfeb54d",
+            "name": "The Yahn Family",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "a24a2caf-4766-4e82-931d-d8d318d01330",
+        "survivorName": "Syx Group, Llc, N/A",
+        "duplicates": [
+          {
+            "id": "9788147d-fc74-4702-b8fe-024ee658b239",
+            "name": "Syx Group, Llc, N/A N/A",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "fb7bed80-34a2-4797-b06e-9d844be2c0fd",
+        "survivorName": "GREGORIO ARTEMISO MIGUEL JUAN",
+        "duplicates": [
+          {
+            "id": "a2a35b73-f58d-404f-b412-f7dd89a1e9d6",
+            "name": "Gregorio A Miguel Juan",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "b105100e-d87a-4196-a624-b1071c147b5f",
+        "survivorName": "Russell Lawrence",
+        "duplicates": [
+          {
+            "id": "b41b9a1d-1f4e-4d77-b59b-b16228c054c3",
+            "name": "Russell Logan Lawrence",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "b1582cbb-860f-439d-8d15-3976e05e6d1c",
+        "survivorName": "Isaac Pelaez",
+        "duplicates": [
+          {
+            "id": "c5719b03-2cf2-480c-b4d0-0e64a627b1b2",
+            "name": "ISAAC PELAEZ REIN 1,771.00",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "ff4e91d3-7159-4e0c-b5c2-bc4818902fbf",
+        "survivorName": "LUIS OMAR MIRANDA MARTINEZ",
+        "duplicates": [
+          {
+            "id": "c287a6ef-57bc-4c6b-b526-b1c66b0d431e",
+            "name": "LUIS OMAR",
+            "policyCount": 1
+          }
+        ]
+      },
+      {
+        "confidence": 70,
+        "reason": "Token-subset match (name variation)",
+        "survivorId": "ff53fa4d-d9aa-46fe-ba8d-c15d99907115",
+        "survivorName": "Irwin Golds Trust",
+        "duplicates": [
+          {
+            "id": "e1117e1b-92c0-466a-8f2f-e5e981896c08",
+            "name": "Irwin Golds Trust Dated March 12 2018, Irwin Golds",
+            "policyCount": 1
+          }
+        ]
+      }
+    ]
+  },
+  "policyDuplicates": [
+    {
+      "normalizedBase": "CFP 0102279391",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "1083aa6f-ba0a-4fe9-b1d9-8506eaa2b681",
+      "survivorPolicyNumber": "CFP 0102279391",
+      "survivorClientId": "c2378a10-8acf-4073-b1ef-d2728754708f",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "6960a7b0-e8d2-4f68-9df5-6184f76a66f8",
+          "policyNumber": "CFP 0102279391 00",
+          "clientId": "c2378a10-8acf-4073-b1ef-d2728754708f",
+          "address": "2440 Knollwood Dr, Cameron Park, CA 95682",
+          "termCount": 1,
+          "createdAt": "2026-04-23T23:48:10.881222+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100355041",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "13198296-d381-4074-a3ac-854d33c558f0",
+      "survivorPolicyNumber": "CFP 0100355041",
+      "survivorClientId": "ac6776c5-e637-4ff5-8e57-dbe41da86354",
+      "survivorAddress": "52999 SWEET JULIET LN, LAKE ELSINORE, CA 92532",
+      "duplicates": [
+        {
+          "id": "202af600-4ddd-4c65-bed8-d9a814439228",
+          "policyNumber": "CFP 0100355041 09",
+          "clientId": "ac6776c5-e637-4ff5-8e57-dbe41da86354",
+          "address": "52999 SWEET JULIET LN, LAKE ELSINORE, CA 92532",
+          "termCount": 1,
+          "createdAt": "2026-04-25T00:06:53.483177+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102030518",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "e4c9a744-a284-4297-8392-286882e1d1fa",
+      "survivorPolicyNumber": "CFP 0102030518",
+      "survivorClientId": "69b64261-8b55-42e9-9084-9f1c3418ded4",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "148be9e0-d835-4773-a8e5-8f46c9f95dd3",
+          "policyNumber": "CFP 0102030518 00",
+          "clientId": "69b64261-8b55-42e9-9084-9f1c3418ded4",
+          "address": "6301 Corona Ave Unit D, Bell Gardens, CA 90201",
+          "termCount": 1,
+          "createdAt": "2026-04-25T00:01:17.177881+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100450824",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "1c86bf9d-a85c-46b4-8185-7a23e9d40a59",
+      "survivorPolicyNumber": "CFP 0100450824",
+      "survivorClientId": "fd17a754-18ad-4017-83ff-1a48e4c9ec32",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "1a7244d3-dca5-490e-9af6-85f38ea80223",
+          "policyNumber": "CFP 0100450824 02",
+          "clientId": "745996a5-c0bd-4106-9b18-c046dd7ee534",
+          "address": "2442 PONDEROSA ST, SOUTH LAKE TAHOE, CA 96150",
+          "termCount": 1,
+          "createdAt": "2026-04-24T17:41:34.885848+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102280930",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "3b3fd98e-008d-421f-bb1b-4f11af47392c",
+      "survivorPolicyNumber": "CFP 0102280930",
+      "survivorClientId": "8f0673cb-b697-4a23-9013-8906e6f16a2c",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "1d7f9b6e-b077-4ffb-a82d-337ae2200898",
+          "policyNumber": "CFP 0102280930 00",
+          "clientId": "8f0673cb-b697-4a23-9013-8906e6f16a2c",
+          "address": "285 Chana Dr, Auburn, CA 95603",
+          "termCount": 1,
+          "createdAt": "2026-04-25T00:00:36.725788+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100655561",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "200edd20-804f-45f8-a044-03c3a62563d7",
+      "survivorPolicyNumber": "CFP 0100655561",
+      "survivorClientId": "0cb784c7-fbd0-4f9f-adc8-8c5a6db85e6b",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "29d9652b-60bb-465e-a48a-e22f236f7616",
+          "policyNumber": "CFP 0100655561 02",
+          "clientId": "e69d8c21-75e7-49dd-8f9b-588c463616aa",
+          "address": "27657 PENINSULA DR # 126, LAKE ARROWHEAD, CA 92352",
+          "termCount": 1,
+          "createdAt": "2026-04-24T15:45:18.136102+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102119731",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "2696cd94-29aa-4772-af3a-538b114db871",
+      "survivorPolicyNumber": "CFP 0102119731 01",
+      "survivorClientId": "3974307e-68a0-4ad7-8c34-5cf4c300be79",
+      "survivorAddress": "6066 SWEETIE LN, SAN MIGUEL, CA 93451",
+      "duplicates": [
+        {
+          "id": "aaf575fe-355b-467d-afbf-53cd45460396",
+          "policyNumber": "CFP 0102119731",
+          "clientId": "5aa86376-4f45-45a4-af9a-9d6de5a26464",
+          "address": null,
+          "termCount": 1,
+          "createdAt": "2026-04-01T17:34:07.70742+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102312862",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "30f02067-851c-49f1-9c5a-57b9557add1c",
+      "survivorPolicyNumber": "CFP 0102312862",
+      "survivorClientId": "dacfd93e-6f12-4613-9db6-d99a2f5f07ff",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "e9796e61-7621-4554-ab87-c085d27cc1e6",
+          "policyNumber": "CFP 0102312862 00",
+          "clientId": "dacfd93e-6f12-4613-9db6-d99a2f5f07ff",
+          "address": "6839 Green Ave, Riverside, CA 92503",
+          "termCount": 1,
+          "createdAt": "2026-04-23T22:21:14.750044+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102188268",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "349af179-fd94-43ec-867a-8d3f102d610e",
+      "survivorPolicyNumber": "CFP 0102188268",
+      "survivorClientId": "d967bcdf-96fb-4cb7-a839-34a1f2a0a906",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "9e4abd3a-f7fd-4a0b-962f-dc5d2375e3e7",
+          "policyNumber": "CFP 0102188268 00",
+          "clientId": "d967bcdf-96fb-4cb7-a839-34a1f2a0a906",
+          "address": "25369 Wanda Ln, Hemet, CA 92544",
+          "termCount": 1,
+          "createdAt": "2026-04-24T21:36:53.251488+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0101992511",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "35cdd3d8-7ca0-498d-b0a7-f2f398aeaba3",
+      "survivorPolicyNumber": "CFP 0101992511",
+      "survivorClientId": "2574b9f0-87fe-4298-ba06-4d4e7d66c835",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "6cb7d1d6-a753-45a0-b2a2-2301e4e1125a",
+          "policyNumber": "CFP 0101992511 01",
+          "clientId": "ff3f3f29-213d-43c5-bf7f-170605913fd5",
+          "address": "129 LOPEZ WAY, HEMET, CA 92545",
+          "termCount": 1,
+          "createdAt": "2026-04-24T22:13:16.430783+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102242865",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "3c131f9d-43f9-4a7d-b76e-8cce31f40c08",
+      "survivorPolicyNumber": "CFP 0102242865",
+      "survivorClientId": "61820438-3fe7-4202-abd9-90ecbf21a8c7",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "c315cdaf-b050-4023-b9a4-24235af43fc2",
+          "policyNumber": "CFP 0102242865 00",
+          "clientId": "e9210906-8535-4471-b209-5f9892f41c6a",
+          "address": "1101 myrtle ave, big Bear City, CA 92314",
+          "termCount": 1,
+          "createdAt": "2026-04-24T00:02:19.27319+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102289944",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "3cdbe047-0689-497d-b884-9e61d929fd33",
+      "survivorPolicyNumber": "CFP 0102289944",
+      "survivorClientId": "2f62947a-b7dd-437e-a272-621e19b91299",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "d557494e-77d3-4749-a1f8-7647143d4ee0",
+          "policyNumber": "CFP 0102289944 00",
+          "clientId": "2f62947a-b7dd-437e-a272-621e19b91299",
+          "address": "109 Placentia Ave, Pismo Beach, CA 93449",
+          "termCount": 1,
+          "createdAt": "2026-04-24T23:02:39.744246+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102350133",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "87373ff6-548c-4230-b97c-501d1872a319",
+      "survivorPolicyNumber": "CFP 0102350133",
+      "survivorClientId": "9a89a6de-93a1-4de8-b9d8-dbcbb6ee25cf",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "3f313559-4363-4f6c-8e25-365b20d6475f",
+          "policyNumber": "CFP 0102350133 00",
+          "clientId": "9a89a6de-93a1-4de8-b9d8-dbcbb6ee25cf",
+          "address": "5715 Meridian St, Los Angeles, CA 90042",
+          "termCount": 1,
+          "createdAt": "2026-04-24T23:03:50.54172+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0101999569",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "66dc4619-8d34-4b2d-aa51-16735008ff69",
+      "survivorPolicyNumber": "CFP 0101999569",
+      "survivorClientId": "dbb165aa-9c4e-464e-9c1f-69a1e82d0ccc",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "42f56bb0-9506-4e1b-b7c3-2be1debcebf7",
+          "policyNumber": "CFP 0101999569 01",
+          "clientId": "6709c43f-f542-4c15-9794-a62c2d31dd17",
+          "address": "14246 VINCENT WAY, ADELANTO, CA 92301",
+          "termCount": 1,
+          "createdAt": "2026-04-23T23:53:17.657371+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102380647",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "691da422-0a27-416a-8214-c40d065856e1",
+      "survivorPolicyNumber": "CFP 0102380647",
+      "survivorClientId": "17ea8dd7-3e8c-4214-9e1f-3db12ac66a9e",
+      "survivorAddress": "6069 SATTERFIELD WAY, CHINO, CA 91710",
+      "duplicates": [
+        {
+          "id": "471f2b3b-8749-4648-a816-7d33906e2271",
+          "policyNumber": "CFP 0102380647 00",
+          "clientId": "17ea8dd7-3e8c-4214-9e1f-3db12ac66a9e",
+          "address": "6069 Satterfield Way, Chino, CA 91710",
+          "termCount": 1,
+          "createdAt": "2026-04-24T00:44:02.317903+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100517361",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "82d727f6-9508-4cdb-aa38-d4b9c23c1f15",
+      "survivorPolicyNumber": "CFP 0100517361",
+      "survivorClientId": "37b4eccc-032d-4edc-8ca8-d7b5f294c62d",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "51318768-abc6-4de1-9689-2a55813e9796",
+          "policyNumber": "CFP 0100517361 07",
+          "clientId": "9788147d-fc74-4702-b8fe-024ee658b239",
+          "address": "4972 NUCHAM AVE, JOSHUA TREE, CA 92252",
+          "termCount": 1,
+          "createdAt": "2026-04-24T18:56:52.631721+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102401302",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "58048bb9-7547-4718-84a5-c091a4154ed6",
+      "survivorPolicyNumber": "CFP 0102401302",
+      "survivorClientId": "ad80c847-4d98-4d8b-8749-3e88fef1484f",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "a9555cc9-8e75-49a1-ae35-a28fdd50007a",
+          "policyNumber": "CFP 0102401302 00",
+          "clientId": "ad80c847-4d98-4d8b-8749-3e88fef1484f",
+          "address": "4 Juan Cir, Palm Springs, CA 92262",
+          "termCount": 1,
+          "createdAt": "2026-04-27T17:33:53.050126+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102204722",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "6a724d81-a845-46dc-91d8-33b664011026",
+      "survivorPolicyNumber": "CFP 0102204722",
+      "survivorClientId": "3e98fad5-b055-4d21-abd6-7763084ecabb",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "87b41c63-aaf8-462e-8441-67ee4e12e3f1",
+          "policyNumber": "CFP 0102204722 00",
+          "clientId": "3e98fad5-b055-4d21-abd6-7763084ecabb",
+          "address": "24736 Sherwood Rd, Willits, CA 95490",
+          "termCount": 1,
+          "createdAt": "2026-04-24T00:21:02.602276+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102112718",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "70f09efb-89aa-4f2c-896f-d5ba21cdcf2a",
+      "survivorPolicyNumber": "CFP 0102112718",
+      "survivorClientId": "26bad5c8-a79d-4822-b8b0-fe500619b6c9",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "8e3c6ac7-c4f1-476f-99a7-d7784b74b610",
+          "policyNumber": "CFP 0102112718 01",
+          "clientId": "dcd0ead5-8474-49f2-b945-826c3d2a0982",
+          "address": "2789 Tennessee Walker Way, Paso Robles, CA 93446",
+          "termCount": 1,
+          "createdAt": "2026-04-24T20:15:07.300825+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102110044",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "fc138af5-0767-4dd4-8dde-4d6ca03d94f7",
+      "survivorPolicyNumber": "CFP 0102110044",
+      "survivorClientId": "c43cb2c9-da7e-446f-90a4-df2b40e2f165",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "7a5a52c0-2b6b-4d53-9763-00b875cf2936",
+          "policyNumber": "CFP 0102110044 01",
+          "clientId": "f78749f9-ec8f-45fa-85bc-c28955ef34aa",
+          "address": "4655 N STODDARD AVE, SAN BERNARDINO, CA 92407",
+          "termCount": 1,
+          "createdAt": "2026-04-24T00:06:52.112413+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100059633",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "bbb63941-4c47-48b4-a2af-950ec043f828",
+      "survivorPolicyNumber": "CFP 0100059633",
+      "survivorClientId": "41ca6242-951f-4208-8033-94aca7764ca2",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "7a91441e-6c28-4f41-bdbf-3139e282dcc9",
+          "policyNumber": "CFP 0100059633 02",
+          "clientId": "41ca6242-951f-4208-8033-94aca7764ca2",
+          "address": "2544 Hermosa Ave, Montrose, CA 91020",
+          "termCount": 1,
+          "createdAt": "2026-04-24T21:53:48.46299+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102319822",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "b5645fa5-2fdc-488a-bf3b-0d19ee584153",
+      "survivorPolicyNumber": "CFP 0102319822",
+      "survivorClientId": "0b0d55a9-d369-4313-8bde-b932a0b67551",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "92d0fcc4-4f74-47dd-94b6-cfbaa59b3545",
+          "policyNumber": "CFP 0102319822 00",
+          "clientId": "0b0d55a9-d369-4313-8bde-b932a0b67551",
+          "address": "26356 Forest Ln, Twin Peaks, CA 92391",
+          "termCount": 1,
+          "createdAt": "2026-04-24T23:04:16.495527+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100760993",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "93767507-5d75-4cd8-82b2-ea05aed85fd7",
+      "survivorPolicyNumber": "CFP 0100760993",
+      "survivorClientId": "8493869a-e88c-4bbe-8da3-8023d2efa84a",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "bff76750-33fc-4d27-aa51-01acadf60b74",
+          "policyNumber": "CFP 0100760993 02",
+          "clientId": "5f1ccabb-d1a7-4417-a38c-3877df398e9c",
+          "address": "67 CAMINO DE FLORES, AVALON, CA 90704",
+          "termCount": 1,
+          "createdAt": "2026-04-24T22:59:05.194263+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0101945387",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "bf96e5ce-3bd3-4f36-b089-348b11663c2e",
+      "survivorPolicyNumber": "CFP 0101945387",
+      "survivorClientId": "e15f0920-894a-4057-87c5-acc1dedcc550",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "961a623b-4172-4fa2-9d10-1f03b3253f34",
+          "policyNumber": "CFP 0101945387 01",
+          "clientId": "9ec78f5e-20cf-4120-b55a-ef0d1241adc9",
+          "address": "12780 LAKOTA RD, APPLE VALLEY, CA 92308",
+          "termCount": 1,
+          "createdAt": "2026-03-13T20:09:47.66089+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0100113782",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "ccef4641-d057-4b63-9353-6b32342f343a",
+      "survivorPolicyNumber": "CFP 0100113782",
+      "survivorClientId": "c933c0f6-e0a1-452d-b76d-01fb82b086f7",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "980e90a0-15f3-4bb8-8847-759730deab10",
+          "policyNumber": "CFP 0100113782 08",
+          "clientId": "c933c0f6-e0a1-452d-b76d-01fb82b086f7",
+          "address": "1624 OLD BIG CREEK RD, MEADOW VALLEY, CA 95956",
+          "termCount": 1,
+          "createdAt": "2026-04-24T23:40:28.550418+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0102107824",
+      "confidence": 75,
+      "type": "cross-client",
+      "survivorId": "a5219514-bc0a-4f34-a2e6-5d1389513a5d",
+      "survivorPolicyNumber": "CFP 0102107824",
+      "survivorClientId": "eddd788f-607e-4d95-ac31-5e5264e80b80",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "ca62b062-0a89-45e8-95f8-ca377888ebe3",
+          "policyNumber": "CFP 0102107824 01",
+          "clientId": "b20d5ee9-a3ca-4d56-842d-f4e399329017",
+          "address": "17445 MADRONE ST, FONTANA, CA 92337",
+          "termCount": 1,
+          "createdAt": "2026-04-24T18:33:49.552422+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0101696904",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "c99bf21b-1afe-408f-88ed-cdf7bcf9bf50",
+      "survivorPolicyNumber": "CFP 0101696904",
+      "survivorClientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "ea1462a8-310a-4d23-b1fc-50c5b82c7509",
+          "policyNumber": "CFP 0101696904 01",
+          "clientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+          "address": "13474 Mohawk Rd, Apple Valley, CA 92308",
+          "termCount": 1,
+          "createdAt": "2026-04-24T21:53:06.208281+00:00"
+        }
+      ]
+    },
+    {
+      "normalizedBase": "CFP 0301132038",
+      "confidence": 90,
+      "type": "same-client",
+      "survivorId": "d5aef586-091d-441a-b31a-df57714c92a2",
+      "survivorPolicyNumber": "COM 0301132038",
+      "survivorClientId": "d52ff2cb-0c1a-4f1b-a9e8-08d04b8c3037",
+      "survivorAddress": null,
+      "duplicates": [
+        {
+          "id": "ffcf7eb1-af84-4e61-a545-37e50200ac8e",
+          "policyNumber": "CFP 0301132038",
+          "clientId": "d52ff2cb-0c1a-4f1b-a9e8-08d04b8c3037",
+          "address": "6211 Corte Del Abeto, Carlsbad, CA 92011",
+          "termCount": 1,
+          "createdAt": "2026-08-12T06:06:03.414647+00:00"
+        }
+      ]
+    }
+  ],
+  "orphanedPolicies": [],
+  "duplicateFlags": [],
+  "summary": {
+    "clientExactDuplicates": 20,
+    "clientFuzzyMatches": 43,
+    "totalClientDuplicateRecords": 71,
+    "policyDuplicateGroups": 28,
+    "policyDuplicateSameClient": 16,
+    "policyDuplicateCrossClient": 12,
+    "totalPolicyDuplicateRecords": 28,
+    "orphanedPolicies": 0,
+    "duplicateFlagGroups": 0
+  }
+}

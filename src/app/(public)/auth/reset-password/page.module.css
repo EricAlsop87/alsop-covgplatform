@@ -1,0 +1,414 @@
+/* Reset Password — matches signin page design system */
+
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 120px);
+    padding: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding: 2rem;
+    }
+}
+
+.formWrapper {
+    width: 100%;
+    background: var(--bg-surface);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+    .formWrapper {
+        max-width: 480px;
+        border-radius: var(--radius-xl);
+        padding: 2.5rem;
+        box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+    }
+}
+
+/* Brand Header */
+.brandHeader {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.brandLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    margin-bottom: 0.5rem;
+}
+
+.brandIcon {
+    color: var(--accent-primary);
+}
+
+.brandName {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-high);
+    letter-spacing: -0.02em;
+}
+
+.brandTagline {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Center content (loading, expired, success states) */
+.centerContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.5rem 0;
+    gap: 0.75rem;
+}
+
+.iconCircle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.25rem;
+}
+
+.iconCircle[data-variant="error"] {
+    background: var(--bg-error-subtle, rgba(239, 68, 68, 0.12));
+    color: var(--status-error, #ef4444);
+}
+
+.iconCircle[data-variant="success"] {
+    background: var(--bg-success-subtle, rgba(34, 197, 94, 0.12));
+    color: var(--status-success, #22c55e);
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 320px;
+    margin: 0;
+}
+
+.backToSignIn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--accent-primary-muted, rgba(59, 130, 246, 0.1));
+    border: 1px solid var(--accent-primary, #3b82f6);
+    border-radius: var(--radius-md);
+    color: var(--accent-primary, #3b82f6);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.backToSignIn:hover {
+    background: var(--accent-primary-muted, rgba(59, 130, 246, 0.15));
+    transform: translateY(-1px);
+}
+
+/* Spinner */
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-default);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+.spinnerSmall {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-default);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.statusText {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.redirectSpinner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Form */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.inputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.inputIcon {
+    position: absolute;
+    left: 0.875rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem 2.75rem 0.75rem 2.75rem;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-high);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-primary-muted);
+    background: var(--bg-surface);
+}
+
+/* Toggle password visibility button */
+.togglePasswordBtn {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: color 0.2s ease;
+}
+
+.togglePasswordBtn:hover {
+    color: var(--text-mid);
+}
+
+/* Hint text below inputs */
+.hintText {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--accent-warning, #f59e0b);
+    margin: 0;
+}
+
+.hintText[data-variant="error"] {
+    color: var(--status-error, #ef4444);
+}
+
+.hintText[data-variant="success"] {
+    color: var(--status-success, #22c55e);
+}
+
+/* Submit Button */
+.submitButton {
+    margin-top: 0.5rem;
+    padding: 0.875rem 1.5rem !important;
+    font-size: 0.95rem !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-primary) !important;
+    border: none !important;
+    box-shadow: 0 4px 16px var(--accent-primary-muted) !important;
+    transition: all 0.3s ease !important;
+}
+
+.submitButton:hover {
+    transform: translateY(-1px) !important;
+    background: var(--accent-primary-hover) !important;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
+}
+
+.submitButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Alerts */
+.errorAlert {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-error-subtle);
+    border: 1px solid rgba(191, 25, 50, 0.2);
+    border-radius: var(--radius-md);
+    color: var(--status-error);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+/* Required Asterisk */
+.required {
+    color: #f87171;
+    font-weight: 600;
+}
+
+/* Toggle Text / Footer */
+.toggleText {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.toggleLink {
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+    text-decoration: none;
+}
+
+.toggleLink:hover {
+    color: var(--accent-primary-hover);
+    text-decoration: underline;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 767px) {
+    .container {
+        padding: 0.5rem;
+        align-items: flex-start;
+        min-height: calc(100vh - 80px);
+    }
+
+    .formWrapper {
+        max-width: 100%;
+        padding: 1.25rem 1rem;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .brandHeader {
+        margin-bottom: 1.25rem;
+    }
+
+    .brandIcon {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    .brandName {
+        font-size: 1.2rem;
+    }
+
+    .brandTagline {
+        font-size: 0.8rem;
+    }
+
+    .form {
+        gap: 1rem;
+    }
+
+    .label {
+        font-size: 0.72rem;
+    }
+
+    .input {
+        padding: 0.625rem 2.5rem 0.625rem 2.5rem;
+        font-size: 0.875rem;
+    }
+
+    .inputIcon {
+        width: 16px !important;
+        height: 16px !important;
+        left: 0.75rem;
+    }
+
+    .submitButton {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.875rem !important;
+    }
+
+    .toggleText {
+        margin-top: 1rem;
+        font-size: 0.8rem;
+    }
+
+    .errorAlert {
+        font-size: 0.8rem;
+        padding: 0.625rem 0.75rem;
+    }
+
+    .title {
+        font-size: 1.1rem;
+    }
+
+    .subtitle {
+        font-size: 0.8rem;
+    }
+}

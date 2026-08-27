@@ -1,0 +1,213 @@
+.container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+}
+
+.searchBar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    transition: all 150ms ease;
+}
+
+.searchBar:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-primary-muted);
+    background: var(--bg-surface);
+}
+
+.searchIcon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-high);
+    font-size: 0.875rem;
+    min-width: 0;
+}
+
+.input::placeholder {
+    color: var(--text-muted);
+}
+
+.shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--accent-primary-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-family: monospace;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.clearBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    transition: all 150ms ease;
+}
+
+.clearBtn:hover {
+    color: var(--text-high);
+    background: var(--accent-primary-subtle);
+}
+
+/* Dropdown */
+.dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--bg-surface-overlay);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-overlay);
+    z-index: 100;
+    overflow: hidden;
+    animation: searchDropIn 120ms ease-out;
+}
+
+@keyframes searchDropIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.loadingRow,
+.emptyRow {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.resultRow {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background 100ms ease;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.resultRow:last-child {
+    border-bottom: none;
+}
+
+.resultRow:hover,
+.resultRowActive {
+    background: var(--bg-surface-raised);
+}
+
+.resultIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.resultText {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.resultTitle {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-high);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.resultSubtitle {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.resultType {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.resultArrow {
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 100ms ease;
+    flex-shrink: 0;
+}
+
+.resultRow:hover .resultArrow,
+.resultRowActive .resultArrow {
+    opacity: 1;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 767px) {
+    .container {
+        max-width: 100%;
+    }
+
+    .shortcut {
+        display: none;
+    }
+
+    .dropdown {
+        position: fixed;
+        top: auto;
+        left: 0.5rem;
+        right: 0.5rem;
+        bottom: auto;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .resultRow {
+        padding: 0.75rem 0.875rem;
+        min-height: 44px;
+    }
+
+    .searchBar {
+        padding: 0.625rem 0.75rem;
+    }
+}

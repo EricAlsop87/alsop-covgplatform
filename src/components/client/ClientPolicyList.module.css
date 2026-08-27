@@ -1,0 +1,155 @@
+.container {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    overflow: hidden;
+}
+
+.header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-high);
+    margin-bottom: 0.25rem;
+}
+
+.subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.loading {
+    padding: 3rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.tableWrapper {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.thead {
+    background-color: var(--bg-surface);
+}
+
+.th {
+    padding: 0.625rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-mid);
+    border-bottom: 1px solid var(--border-default);
+    text-align: left;
+}
+
+.tr {
+    transition: background-color 150ms ease;
+}
+
+.tr:hover {
+    background-color: var(--bg-surface-raised);
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.td {
+    padding: 0.5rem 1rem;
+    color: var(--text-high);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.policyNumber {
+    font-weight: 600;
+    color: var(--text-accent);
+}
+
+.dicBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.625rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.dicNone {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--status-error);
+}
+
+.dicActive {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: var(--status-success);
+}
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.625rem;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.statusPendingReview {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: var(--status-warning);
+}
+
+.statusApproved {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: var(--status-success);
+}
+
+.statusRejected {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--status-error);
+}
+
+.statusIncomplete {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+}
+
+.actionLink {
+    color: var(--text-accent);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.actionLink:hover {
+    color: var(--accent-primary-hover);
+    text-decoration: underline;
+}
+
+.emptyState {
+    padding: 3rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .tableWrapper {
+        overflow-x: scroll;
+    }
+
+    .table {
+        min-width: 600px;
+    }
+}

@@ -1,0 +1,816 @@
+/* ═══════════════════════════════════════════════════════════════
+   PropertyBanner — Carousel property imagery component
+   ═══════════════════════════════════════════════════════════════ */
+
+.banner {
+    width: 100%;
+    margin-bottom: 2rem;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ─── State: Enriched (carousel) ─── */
+.enrichedState {
+    position: relative;
+    width: 100%;
+    height: 450px;
+    cursor: pointer;
+    transition: opacity 150ms ease;
+    overflow: hidden;
+}
+
+.enrichedState:hover {
+    opacity: 0.96;
+}
+
+/* Carousel track */
+.carouselTrack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.carouselSlide {
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.slideActive {
+    opacity: 1;
+    z-index: 1;
+    transform: scale(1);
+}
+
+.slideHidden {
+    opacity: 0;
+    z-index: 0;
+    transform: scale(1.02);
+    pointer-events: none;
+}
+
+.bannerImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: opacity 0.4s ease;
+}
+
+.imageVisible {
+    opacity: 1;
+}
+
+.imageHidden {
+    opacity: 0;
+}
+
+.imageLoadingShimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, #1e293b 30%, #334155 50%, #1e293b 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    z-index: 2;
+}
+
+/* Carousel arrows */
+.carouselArrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: all 200ms ease;
+    opacity: 0;
+}
+
+.enrichedState:hover .carouselArrow {
+    opacity: 1;
+}
+
+.carouselArrow:hover {
+    background: rgba(0, 0, 0, 0.75);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.arrowLeft {
+    left: 1rem;
+}
+
+.arrowRight {
+    right: 1rem;
+}
+
+/* Carousel indicators */
+.carouselIndicators {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.slideLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.02em;
+}
+
+.dots {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 200ms ease;
+}
+
+.dot:hover {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.dotActive {
+    background: white;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+    transform: scale(1.2);
+}
+
+/* No street view badge */
+.noStreetView {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 5px;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.bannerOverlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+    padding: 2rem;
+    z-index: 3;
+}
+
+.bannerContent {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.bannerRow {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.bannerTitle {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 0.35rem 0;
+}
+
+.bannerSubtitle {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+
+.bannerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Fire risk badge */
+.fireRiskBadge {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid;
+}
+
+.fireRiskLabel {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.fireRiskValue {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* View full button */
+.viewFullBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 150ms ease;
+    white-space: nowrap;
+}
+
+.viewFullBtn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Source badge */
+.sourceBadge {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 6px;
+    padding: 0.35rem 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    z-index: 4;
+}
+
+.sourceDot {
+    opacity: 0.4;
+}
+
+.sourceType {
+    opacity: 0.6;
+    text-transform: capitalize;
+}
+
+.confidenceCheck {
+    color: #34d399;
+    font-weight: 600;
+}
+
+
+/* ─── State: Not Enriched (placeholder) ─── */
+.placeholderState {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    background: linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.gridPattern {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+}
+
+.placeholderContent {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    max-width: 480px;
+}
+
+.placeholderIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #818cf8;
+    margin-bottom: 1rem;
+}
+
+.placeholderTitle {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.01em;
+}
+
+.placeholderAddress {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 0.75rem 0;
+    font-family: var(--font-mono, 'SF Mono', 'Fira Code', 'Fira Mono', monospace);
+    letter-spacing: 0.02em;
+}
+
+.placeholderHint {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 0 0 1.25rem 0;
+    line-height: 1.5;
+}
+
+.enrichCta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 200ms ease;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.enrichCta:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+    background: linear-gradient(135deg, #7c7ef7 0%, #6366f1 100%);
+}
+
+.enrichCta:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ─── State: Loading ─── */
+.loadingState {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    overflow: hidden;
+}
+
+.loadingShimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, #0f172a 30%, #1e293b 50%, #0f172a 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.loadingOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.loadingContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+}
+
+.loadingIcon {
+    color: #818cf8;
+    margin-bottom: 1rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.loadingTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 0.5rem 0;
+}
+
+.loadingStep {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0 0 1.25rem 0;
+    min-height: 1.5em;
+}
+
+.loadingBar {
+    width: 200px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.loadingBarFill {
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #818cf8);
+    border-radius: 2px;
+    animation: loadingSlide 1.5s ease-in-out infinite;
+}
+
+
+/* ─── State: Error ─── */
+.errorState {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    background: linear-gradient(145deg, #1a1220 0%, #1e1520 50%, #1a1220 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.errorContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    max-width: 420px;
+}
+
+.errorIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f87171;
+    margin-bottom: 1rem;
+}
+
+.errorTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 0.4rem 0;
+}
+
+.errorSubtitle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 1.25rem 0;
+    line-height: 1.5;
+}
+
+.errorActions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.retryBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 150ms ease;
+}
+
+.retryBtn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.errorMeta {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.25);
+    margin: 1rem 0 0 0;
+}
+
+
+/* ─── Modal ─── */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.92);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+    position: relative;
+    max-width: 80vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modalImageWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0a0a;
+}
+
+.modalImage {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 0;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    object-fit: contain;
+    background: #0a0a0a;
+}
+
+.modalArrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: all 200ms ease;
+}
+
+.modalArrow:hover {
+    background: rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-50%) scale(1.05);
+}
+
+.modalArrowLeft {
+    left: 1rem;
+}
+
+.modalArrowRight {
+    right: 1rem;
+}
+
+/* Modal top bar with tabs */
+.modalTopBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border-radius: 10px 10px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modalTabs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.modalTab {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+}
+
+.modalTab:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.modalTabActive {
+    color: white;
+    background: rgba(99, 102, 241, 0.2);
+    font-weight: 600;
+}
+
+.modalTabDisabled {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.25);
+    font-style: italic;
+}
+
+.closeButton {
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.825rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: all 150ms ease;
+}
+
+.closeButton:hover {
+    background: rgba(51, 65, 85, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Modal metadata panel */
+.modalMeta {
+    padding: 1rem 1.25rem;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 0 0 10px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.825rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modalMetaItem {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.modalMetaLabel {
+    color: rgba(148, 163, 184, 0.7);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.modalMetaLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 150ms;
+}
+
+.modalMetaLink:hover {
+    color: #93c5fd;
+    text-decoration: underline;
+}
+
+
+/* ─── Animations ─── */
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes loadingSlide {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(250%); }
+    100% { transform: translateX(-100%); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+
+/* ─── Mobile ─── */
+@media (max-width: 767px) {
+    .enrichedState {
+        height: 250px;
+    }
+
+    .placeholderState,
+    .loadingState,
+    .errorState {
+        height: 200px;
+    }
+
+    .bannerOverlay {
+        padding: 1rem;
+    }
+
+    .bannerTitle {
+        font-size: 1.25rem;
+    }
+
+    .bannerRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .bannerActions {
+        flex-wrap: wrap;
+    }
+
+    .modalOverlay {
+        padding: 0.5rem;
+    }
+
+    .modalContent {
+        max-width: 95vw;
+    }
+
+    .modalMeta {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+}

@@ -1,0 +1,230 @@
+.container {
+    margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-high);
+    border-bottom: 1px solid var(--border-default);
+    padding-bottom: 0.5rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.card {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-accent);
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-default);
+    padding-bottom: 0.5rem;
+}
+
+.field {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.field label {
+    color: var(--text-mid);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.field span {
+    font-weight: 600;
+    text-align: right;
+    color: var(--text-high);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+/* ── Mortgagee Rich Card ── */
+.mortgageeBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--bg-surface-raised, rgba(0, 0, 0, 0.02));
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+}
+
+.mortgageeBlockSecond {
+    margin-top: 0.65rem;
+}
+
+.mortgageeHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mortgageeBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+}
+
+.mortgageeBadgeSecond {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+
+.loanBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: monospace;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    color: var(--text-mid);
+}
+
+.mortgageeName {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-high);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.mortgageeAddress {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--text-mid);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.mortgageeIcon {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    color: var(--text-muted);
+}
+
+.mortgageeMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    margin-top: 0.1rem;
+}
+
+.metaKey {
+    color: var(--text-muted);
+}
+
+.metaVal {
+    color: var(--text-high);
+    font-weight: 600;
+}
+
+.row {
+    display: flex;
+    gap: 1rem;
+}
+
+.row .field {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.row .field span {
+    text-align: left;
+    max-width: 100%;
+}
+
+.premium {
+    color: var(--status-success);
+    font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.status {
+    padding: 0.2rem 0.625rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.approved {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: var(--status-success);
+}
+
+.pendingreview {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: var(--status-warning);
+}
+
+.rejected {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--status-error);
+}
+
+.incomplete {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 767px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sectionTitle {
+        font-size: 1.1rem;
+    }
+}

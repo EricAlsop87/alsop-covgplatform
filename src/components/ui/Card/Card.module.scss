@@ -1,0 +1,17 @@
+.card {
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    color: var(--text-high);
+    padding: 1.5rem;
+    transition: background 150ms ease;
+}
+
+.hoverable:hover {
+    background: var(--bg-surface-raised);
+}
+
+.glass {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+}

@@ -1,0 +1,2993 @@
+{
+  "timestamp": "2026-08-14T19:22:41.680Z",
+  "tier1_auto_merge": {
+    "clients": [
+      {
+        "type": "client_exact",
+        "survivorId": "0c2b0fdc-d8f5-4cf8-a035-0111841b353c",
+        "survivorName": "THE ZENAYDA REYES REVOCABLE TRUST DATED JUNE 19 20",
+        "duplicateId": "add802f9-cef7-4f58-a76e-4bfac7f7b6f9",
+        "duplicateName": "THE ZENAYDA REYES REVOCABLE TRUST DATED JUNE 19",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "1a538a4a-892c-4967-8a2c-a74d07e87ead",
+        "survivorName": "JOSE SAUCEDO",
+        "duplicateId": "3024d4b5-0add-4a6a-bdc7-475b2fa30b92",
+        "duplicateName": "Jose Saucedo",
+        "survivorPolicies": 2,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "252254 EAST 67TH WAY LONG BEACH CA 90805"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "37b4eccc-032d-4edc-8ca8-d7b5f294c62d",
+        "survivorName": "SYX GROUP LLC RWRI 3.00",
+        "duplicateId": "bfe29868-3525-4160-91f4-793ec9686aea",
+        "duplicateName": "SYX GROUP, LLC RWRI 489.00",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "5107c8a1-210a-4020-a98f-22fad2a694a3",
+        "survivorName": "MARIA ARGUETA",
+        "duplicateId": "3f4b7132-0711-4aa0-b7fc-6a20a99b4d57",
+        "duplicateName": "Maria Argueta",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "11545 RIVES AVENUE DOWNEY CA 90241"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "5107c8a1-210a-4020-a98f-22fad2a694a3",
+        "survivorName": "MARIA ARGUETA",
+        "duplicateId": "b4b5cbec-d622-4883-904b-ed77884b8568",
+        "duplicateName": "Maria Argueta",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 0,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "443a58fb-9ab0-4de5-96d1-b01e1969a55a",
+        "survivorName": "JOSEPH A. BENDER",
+        "duplicateId": "f1b9b5f6-e766-4da6-94ec-f06ed369e010",
+        "duplicateName": "Joseph A. Bender",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "28999 CEDAR TERRACE CEDAR GLEN CA 92321"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "443a58fb-9ab0-4de5-96d1-b01e1969a55a",
+        "survivorName": "JOSEPH A. BENDER",
+        "duplicateId": "e46235e0-24b3-4606-913c-18374dfc4874",
+        "duplicateName": "Joseph A. Bender",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 0,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "86ff7d7f-777c-4bc6-91ef-d23e1fe56322",
+        "survivorName": "BRADY D HEUSER",
+        "duplicateId": "45706329-6c92-4c1b-8280-6e2576358e0e",
+        "duplicateName": "Brady D Heuser",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "26888 HURON DR BLUE JAY CA 92317"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "50cb4b81-f4b9-4696-b4c5-0d82bd3b3733",
+        "survivorName": "STUART L DAVIS",
+        "duplicateId": "de0d27bd-1156-463b-bec7-71081c42b5af",
+        "duplicateName": "Stuart L Davis",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "907 BREITHORN DR LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "50cb4b81-f4b9-4696-b4c5-0d82bd3b3733",
+        "survivorName": "STUART L DAVIS",
+        "duplicateId": "a2aaa2c6-3c5b-4833-b7f3-1333169f1da1",
+        "duplicateName": "Stuart L Davis",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 0,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "74d97141-bcdb-4a58-b18a-fd35e5ce5e02",
+        "survivorName": "SCOTT VANCEA",
+        "duplicateId": "b85e2996-79df-4378-b558-c3524724a8bd",
+        "duplicateName": "Scott Vancea",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "24543 ALBRUN DRIVE CRESTLINE CA 92325"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "74d97141-bcdb-4a58-b18a-fd35e5ce5e02",
+        "survivorName": "SCOTT VANCEA",
+        "duplicateId": "6929a27c-35f6-4bc6-a430-377eb56c485c",
+        "duplicateName": "Scott Vancea",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 0,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "d5288200-eade-4ff9-8c11-17b0ac862d74",
+        "survivorName": "BRANDON RICHIE",
+        "duplicateId": "e24dc547-739e-4538-8d7f-0a21fa326421",
+        "duplicateName": "BRANDON RICHIE",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "d5288200-eade-4ff9-8c11-17b0ac862d74",
+        "survivorName": "BRANDON RICHIE",
+        "duplicateId": "d7b6eaea-73c0-427c-a14f-a609298e0630",
+        "duplicateName": "Brandon Richie",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "d5288200-eade-4ff9-8c11-17b0ac862d74",
+        "survivorName": "BRANDON RICHIE",
+        "duplicateId": "7549f39b-7bc2-4b1e-a5bd-1997231a189d",
+        "duplicateName": "Brandon Richie",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 0,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "d5288200-eade-4ff9-8c11-17b0ac862d74",
+        "survivorName": "BRANDON RICHIE",
+        "duplicateId": "de1fa73e-2f00-45f5-8b06-240bfc9a8859",
+        "duplicateName": "Brandon Richie",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "20785 CAMINO CIELO AZUL ESCONDIDO CA 92029"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "d5288200-eade-4ff9-8c11-17b0ac862d74",
+        "survivorName": "BRANDON RICHIE",
+        "duplicateId": "9a70026c-20a7-42f2-bae6-b0a68f25ef07",
+        "duplicateName": "Brandon Richie",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "352 HIGHLAND DR LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "aff04e13-b641-4685-b84e-22266c06d476",
+        "survivorName": "JASON LANE",
+        "duplicateId": "d808069d-2ee9-47f8-9288-205a068ed282",
+        "duplicateName": "Jason Lane",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "43220 MOONRIDGE RD BIG BEAR LAKE CA 92315"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "f337a255-46d0-4325-a655-8af1b652179c",
+        "survivorName": "YEDID GONZALEZ",
+        "duplicateId": "f5978e5f-1e6e-43e6-a968-409e5ffcfe4b",
+        "duplicateName": "Yedid Gonzalez",
+        "survivorPolicies": 0,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "10965 DESERT SAND AVE RIVERSIDE CA 92505"
+        ],
+        "reason": "Exact full name match (no corroborating address/policy)"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "10cb3972-9e3e-4bde-b698-cda47f3d3b2b",
+        "survivorName": "Hector Enriquez",
+        "duplicateId": "4a1445f2-85ae-487a-90dc-030bda4aa80b",
+        "duplicateName": "Hector H Enriquez",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "223 E 52ND ST SAN BERNARDINO CA 92404"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "10f99241-ec54-4119-8e7b-2cea6bf5257b",
+        "survivorName": "Kimberly Powell",
+        "duplicateId": "2f62947a-b7dd-437e-a272-621e19b91299",
+        "duplicateName": "Kimberly Dawn Powell",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "109 PLACENTIA AVE PISMO BEACH CA 93449"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "13ee1271-ab35-4d21-853f-00d126a17cbb",
+        "survivorName": "PEACEFUL PINES LLC",
+        "duplicateId": "9a4f5a27-f8bb-430e-9eba-559b2ad3ae15",
+        "duplicateName": "Peaceful Pines Llc, Robert Lombardi",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "216 BRETE HARTE RD LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "62f27e73-1159-44fc-822e-5f8aaba541e2",
+        "survivorName": "kevin lolie",
+        "duplicateId": "8f73be6d-dcea-4561-846a-f3dd1fffdde5",
+        "duplicateName": "Kevin W Lolie",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "4981 HOLLYHOCK LN RIVERSIDE CA 92505"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "654cf251-3d12-4f96-801b-1044220b1a00",
+        "survivorName": "27441 ALPEN HOLDINGS LLC",
+        "duplicateId": "e3c65d2a-f220-41e3-9ff6-4fcfd46e8702",
+        "duplicateName": "27441 Alpen Holdings Llc, Pedram Esfandiary",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "27441 ALPEN DR LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "c6ab33c2-7470-4c06-bea6-37052d43a324",
+        "survivorName": "Martha Melendez",
+        "duplicateId": "723a222e-5434-487f-91fc-8ccd80f81782",
+        "duplicateName": "Martha Melendez Moya",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "1337 S SPRUCE ST MONTEBELLO CA 90640"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "fb94d724-fccc-4890-91c3-391e21439b3f",
+        "survivorName": "Alma Christine",
+        "duplicateId": "82782072-e485-4b9e-b4c5-c3d7340b578c",
+        "duplicateName": "Alma Christine Guillermo Amaya",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "6797 MOSELLE DR SAN JOSE CA 95119"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "edb02b80-ff1a-4b1a-a4be-5add574a2cd7",
+        "survivorName": "Arrington Family",
+        "duplicateId": "8f0673cb-b697-4a23-9013-8906e6f16a2c",
+        "duplicateName": "Arrington Family Trust, Dean Arrington",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "285 CHANA DR AUBURN CA 95603"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "a62b3371-c14b-47ed-b504-50b03d850c57",
+        "survivorName": "Prapa Stubbs",
+        "duplicateId": "d477832b-205c-48ff-9273-8a2b752d9b63",
+        "duplicateName": "Prapa Stubbs Taylor",
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "11222 OSHIA LN VALLEY CENTER CA 92082"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "ed18bdbd-bc14-43af-9feb-d2763304c3a9",
+        "survivorName": "Elisa Arreola",
+        "duplicateId": "a8637b97-ec18-4ad1-8382-249f502b6031",
+        "duplicateName": "Elisa Arreola Figueroa",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "12026 PEPPER ST BLOOMINGTON CA 92316"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "a8b279b4-ba56-447d-a4bf-a67b55533c5b",
+        "survivorName": "Whitney Hein",
+        "duplicateId": "dc942a6b-db42-4eb8-aff2-08fc0dbe7f94",
+        "duplicateName": "Whitney Hein Unruh",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "24274 BERNARD DR CRESTLINE CA 92325"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "b3ce1791-cb6f-4c81-b520-d580a85f4b3b",
+        "survivorName": "Irwin Golds Trust Dated March 12 2018",
+        "duplicateId": "e1117e1b-92c0-466a-8f2f-e5e981896c08",
+        "duplicateName": "Irwin Golds Trust Dated March 12 2018, Irwin Golds",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "27570 N BAY RD LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "faeec724-ad70-4bd6-930c-86bb691ab397",
+        "survivorName": "274 Arrowhead Partners LLC",
+        "duplicateId": "c92e1f94-748f-4fb7-8432-26a0e5fab2a4",
+        "duplicateName": "274 Arrowhead Partners Llc , Chris Vossman",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "274 BRET HARTE RD LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "d9b22f2a-b95f-4487-bda7-89dbc1f63488",
+        "survivorName": "Heather And Peter Van Der Heide Living Trust",
+        "duplicateId": "cada9430-3a30-477e-a264-2751f3cc3647",
+        "duplicateName": "Heather And Peter Van Der Heide Living Trust, Heather Michelle Van Der Heide",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "245 TURLOCK DR BIG BEAR CITY CA 92314"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "f32361f0-ceb7-49ec-ae77-10d17fc04e5f",
+        "survivorName": "ZF NORTH AMERICA LLC",
+        "duplicateId": "d52ff2cb-0c1a-4f1b-a9e8-08d04b8c3037",
+        "duplicateName": "Zf North America Llc, Doug Zirbel",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "6211 CORTE DEL ABETO CARLSBAD CA 92011"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "ed7c6bfc-b978-4bde-8474-d00cfda4138a",
+        "survivorName": "Gabriela Gonzalez",
+        "duplicateId": "d9123b63-63b7-4182-add7-de4c6826ebe1",
+        "duplicateName": "Gabriela Gonzalez Anaya",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": true,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "11908 HOLLY ST GRAND TERRACE CA 92313"
+        ],
+        "reason": "Fuzzy name + shared policy base — almost certainly same person"
+      }
+    ],
+    "policies": [
+      {
+        "normalizedBase": "CFP 0102160364",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "0b7485ba-df4c-4394-a490-9efd9b4ad84f",
+        "survivorPolicyNumber": "CFP 0102160364",
+        "survivorClientId": "c6ab33c2-7470-4c06-bea6-37052d43a324",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "00616629-09a6-44d9-af8e-17ffdbc8c982",
+            "policyNumber": "CFP 0102160364 01",
+            "clientId": "723a222e-5434-487f-91fc-8ccd80f81782",
+            "address": "1337 S SPRUCE ST, MONTEBELLO, CA 90640",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:50:05.984377+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102382891",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "7f786b00-ca0e-4e6d-873c-98a41e4d72aa",
+        "survivorPolicyNumber": "CFP 0102382891",
+        "survivorClientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "01d05155-0599-43ed-92b6-407ceca1c719",
+            "policyNumber": "CFP 0102382891 00",
+            "clientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+            "address": "1085 Magnolia Ave, Beaumont, CA 92223",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:08:26.412231+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102029159",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "05b3fc48-b2d7-49d9-9a33-396cce7ae4c4",
+        "survivorPolicyNumber": "CFP 0102029159",
+        "survivorClientId": "a8b279b4-ba56-447d-a4bf-a67b55533c5b",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "75f98d65-aa94-4023-872a-6e181b5f2129",
+            "policyNumber": "CFP 0102029159 01",
+            "clientId": "dc942a6b-db42-4eb8-aff2-08fc0dbe7f94",
+            "address": "24274 BERNARD DR, CRESTLINE, CA 92325",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:53:16.646277+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0100492047",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "f1cdef17-b26c-4f99-8b48-e56d17f654fd",
+        "survivorPolicyNumber": "CFP 0100492047",
+        "survivorClientId": "654cf251-3d12-4f96-801b-1044220b1a00",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "0d500435-022a-4ce6-9efc-8d6c17f916b3",
+            "policyNumber": "CFP 0100492047 06",
+            "clientId": "e3c65d2a-f220-41e3-9ff6-4fcfd46e8702",
+            "address": "27441 ALPEN DR, LAKE ARROWHEAD, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-23T18:05:27.103615+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102279391",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "1083aa6f-ba0a-4fe9-b1d9-8506eaa2b681",
+        "survivorPolicyNumber": "CFP 0102279391",
+        "survivorClientId": "c2378a10-8acf-4073-b1ef-d2728754708f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "6960a7b0-e8d2-4f68-9df5-6184f76a66f8",
+            "policyNumber": "CFP 0102279391 00",
+            "clientId": "c2378a10-8acf-4073-b1ef-d2728754708f",
+            "address": "2440 Knollwood Dr, Cameron Park, CA 95682",
+            "termCount": 1,
+            "createdAt": "2026-04-23T23:48:10.881222+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102152362",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "aabefa34-9ca9-4c88-b9bd-ef4abe5be0b7",
+        "survivorPolicyNumber": "CFP 0102152362",
+        "survivorClientId": "ed18bdbd-bc14-43af-9feb-d2763304c3a9",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "12bc3d8b-df02-4b67-a7bd-d65c03f1c046",
+            "policyNumber": "CFP 0102152362 01",
+            "clientId": "a8637b97-ec18-4ad1-8382-249f502b6031",
+            "address": "12026 PEPPER ST, BLOOMINGTON, CA 92316",
+            "termCount": 1,
+            "createdAt": "2026-04-24T22:56:59.924341+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0100355041",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "13198296-d381-4074-a3ac-854d33c558f0",
+        "survivorPolicyNumber": "CFP 0100355041",
+        "survivorClientId": "ac6776c5-e637-4ff5-8e57-dbe41da86354",
+        "survivorAddress": "52999 SWEET JULIET LN, LAKE ELSINORE, CA 92532",
+        "duplicates": [
+          {
+            "id": "202af600-4ddd-4c65-bed8-d9a814439228",
+            "policyNumber": "CFP 0100355041 09",
+            "clientId": "ac6776c5-e637-4ff5-8e57-dbe41da86354",
+            "address": "52999 SWEET JULIET LN, LAKE ELSINORE, CA 92532",
+            "termCount": 1,
+            "createdAt": "2026-04-25T00:06:53.483177+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102030518",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "e4c9a744-a284-4297-8392-286882e1d1fa",
+        "survivorPolicyNumber": "CFP 0102030518",
+        "survivorClientId": "69b64261-8b55-42e9-9084-9f1c3418ded4",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "148be9e0-d835-4773-a8e5-8f46c9f95dd3",
+            "policyNumber": "CFP 0102030518 00",
+            "clientId": "69b64261-8b55-42e9-9084-9f1c3418ded4",
+            "address": "6301 Corona Ave Unit D, Bell Gardens, CA 90201",
+            "termCount": 1,
+            "createdAt": "2026-04-25T00:01:17.177881+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0101728613",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "1a989fa7-a3f9-4894-923b-bb04bdfccd6d",
+        "survivorPolicyNumber": "CFP 0101728613",
+        "survivorClientId": "a62b3371-c14b-47ed-b504-50b03d850c57",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "f147d50a-8da5-4390-8577-be1491ae3d4a",
+            "policyNumber": "CFP 0101728613 01",
+            "clientId": "d477832b-205c-48ff-9273-8a2b752d9b63",
+            "address": "11222 OSHIA LN, VALLEY CENTER, CA 92082",
+            "termCount": 1,
+            "createdAt": "2026-04-23T17:30:20.400634+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102280930",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "3b3fd98e-008d-421f-bb1b-4f11af47392c",
+        "survivorPolicyNumber": "CFP 0102280930",
+        "survivorClientId": "edb02b80-ff1a-4b1a-a4be-5add574a2cd7",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "1d7f9b6e-b077-4ffb-a82d-337ae2200898",
+            "policyNumber": "CFP 0102280930 00",
+            "clientId": "8f0673cb-b697-4a23-9013-8906e6f16a2c",
+            "address": "285 Chana Dr, Auburn, CA 95603",
+            "termCount": 1,
+            "createdAt": "2026-04-25T00:00:36.725788+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102139697",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "a3f2034c-16fe-4ae7-ab47-cfe659b9c2ac",
+        "survivorPolicyNumber": "CFP 0102139697",
+        "survivorClientId": "fb94d724-fccc-4890-91c3-391e21439b3f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "2a746251-1ddd-45cf-bb01-0d6885c621f9",
+            "policyNumber": "CFP 0102139697 01",
+            "clientId": "82782072-e485-4b9e-b4c5-c3d7340b578c",
+            "address": "6797 MOSELLE DR, SAN JOSE, CA 95119",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:34:45.328804+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102312862",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "30f02067-851c-49f1-9c5a-57b9557add1c",
+        "survivorPolicyNumber": "CFP 0102312862",
+        "survivorClientId": "dacfd93e-6f12-4613-9db6-d99a2f5f07ff",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "e9796e61-7621-4554-ab87-c085d27cc1e6",
+            "policyNumber": "CFP 0102312862 00",
+            "clientId": "dacfd93e-6f12-4613-9db6-d99a2f5f07ff",
+            "address": "6839 Green Ave, Riverside, CA 92503",
+            "termCount": 1,
+            "createdAt": "2026-04-23T22:21:14.750044+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102188268",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "349af179-fd94-43ec-867a-8d3f102d610e",
+        "survivorPolicyNumber": "CFP 0102188268",
+        "survivorClientId": "d967bcdf-96fb-4cb7-a839-34a1f2a0a906",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "9e4abd3a-f7fd-4a0b-962f-dc5d2375e3e7",
+            "policyNumber": "CFP 0102188268 00",
+            "clientId": "d967bcdf-96fb-4cb7-a839-34a1f2a0a906",
+            "address": "25369 Wanda Ln, Hemet, CA 92544",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:36:53.251488+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102289944",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "3cdbe047-0689-497d-b884-9e61d929fd33",
+        "survivorPolicyNumber": "CFP 0102289944",
+        "survivorClientId": "10f99241-ec54-4119-8e7b-2cea6bf5257b",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "d557494e-77d3-4749-a1f8-7647143d4ee0",
+            "policyNumber": "CFP 0102289944 00",
+            "clientId": "2f62947a-b7dd-437e-a272-621e19b91299",
+            "address": "109 Placentia Ave, Pismo Beach, CA 93449",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:02:39.744246+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102350133",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "87373ff6-548c-4230-b97c-501d1872a319",
+        "survivorPolicyNumber": "CFP 0102350133",
+        "survivorClientId": "9a89a6de-93a1-4de8-b9d8-dbcbb6ee25cf",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "3f313559-4363-4f6c-8e25-365b20d6475f",
+            "policyNumber": "CFP 0102350133 00",
+            "clientId": "9a89a6de-93a1-4de8-b9d8-dbcbb6ee25cf",
+            "address": "5715 Meridian St, Los Angeles, CA 90042",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:03:50.54172+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102380647",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "691da422-0a27-416a-8214-c40d065856e1",
+        "survivorPolicyNumber": "CFP 0102380647",
+        "survivorClientId": "17ea8dd7-3e8c-4214-9e1f-3db12ac66a9e",
+        "survivorAddress": "6069 SATTERFIELD WAY, CHINO, CA 91710",
+        "duplicates": [
+          {
+            "id": "471f2b3b-8749-4648-a816-7d33906e2271",
+            "policyNumber": "CFP 0102380647 00",
+            "clientId": "17ea8dd7-3e8c-4214-9e1f-3db12ac66a9e",
+            "address": "6069 Satterfield Way, Chino, CA 91710",
+            "termCount": 1,
+            "createdAt": "2026-04-24T00:44:02.317903+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0100532805",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "683c46ef-e003-40fc-8e6c-821210800e76",
+        "survivorPolicyNumber": "CFP 0100532805",
+        "survivorClientId": "d9b22f2a-b95f-4487-bda7-89dbc1f63488",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "4cb4a6fc-d7dc-4ca5-a3c7-60add1bf0675",
+            "policyNumber": "CFP 0100532805 02",
+            "clientId": "cada9430-3a30-477e-a264-2751f3cc3647",
+            "address": "245 TURLOCK DR, BIG BEAR CITY, CA 92314",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:51:30.330818+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0100405337",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "7f45c727-9dc3-4f20-b52c-39f16a17db22",
+        "survivorPolicyNumber": "CFP 0100405337",
+        "survivorClientId": "13ee1271-ab35-4d21-853f-00d126a17cbb",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "4e96b022-f7d3-44da-bbd0-2875d5b65137",
+            "policyNumber": "CFP 0100405337 08",
+            "clientId": "9a4f5a27-f8bb-430e-9eba-559b2ad3ae15",
+            "address": "216 BRETE HARTE RD, LAKE ARROWHEAD, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-23T22:40:41.979558+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102160485",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "50d260c8-590c-49f6-8bf5-de596a5f19e6",
+        "survivorPolicyNumber": "CFP 0102160485",
+        "survivorClientId": "10cb3972-9e3e-4bde-b698-cda47f3d3b2b",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "ac7b9016-840b-43ce-a27b-96fe98b82b25",
+            "policyNumber": "CFP 0102160485 01",
+            "clientId": "4a1445f2-85ae-487a-90dc-030bda4aa80b",
+            "address": "223 E 52ND ST, SAN BERNARDINO, CA 92404",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:45:59.046241+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102318664",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "86196e6b-aa4e-48cc-8801-0374334f99c6",
+        "survivorPolicyNumber": "CFP 0102318664",
+        "survivorClientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "51a6cc4a-6baf-433b-9101-b60c88b049af",
+            "policyNumber": "CFP 0102318664 00",
+            "clientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+            "address": "1575 W Wilson St, Banning, CA 92220",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:03:24.224671+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102401302",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "58048bb9-7547-4718-84a5-c091a4154ed6",
+        "survivorPolicyNumber": "CFP 0102401302",
+        "survivorClientId": "ad80c847-4d98-4d8b-8749-3e88fef1484f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "a9555cc9-8e75-49a1-ae35-a28fdd50007a",
+            "policyNumber": "CFP 0102401302 00",
+            "clientId": "ad80c847-4d98-4d8b-8749-3e88fef1484f",
+            "address": "4 Juan Cir, Palm Springs, CA 92262",
+            "termCount": 1,
+            "createdAt": "2026-04-27T17:33:53.050126+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0100463040",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "6b80055c-f6f8-4527-a963-316e1d43b965",
+        "survivorPolicyNumber": "CFP 0100463040",
+        "survivorClientId": "b3ce1791-cb6f-4c81-b520-d580a85f4b3b",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "5c870fe7-0420-4e89-9991-a0455691dc6a",
+            "policyNumber": "CFP 0100463040 02",
+            "clientId": "e1117e1b-92c0-466a-8f2f-e5e981896c08",
+            "address": "27570 N BAY RD, LAKE ARROWHEAD, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:54:41.559729+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0102204722",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "6a724d81-a845-46dc-91d8-33b664011026",
+        "survivorPolicyNumber": "CFP 0102204722",
+        "survivorClientId": "3e98fad5-b055-4d21-abd6-7763084ecabb",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "87b41c63-aaf8-462e-8441-67ee4e12e3f1",
+            "policyNumber": "CFP 0102204722 00",
+            "clientId": "3e98fad5-b055-4d21-abd6-7763084ecabb",
+            "address": "24736 Sherwood Rd, Willits, CA 95490",
+            "termCount": 1,
+            "createdAt": "2026-04-24T00:21:02.602276+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102004209",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "74979c0f-27df-4cf9-9efa-27f94496ca9b",
+        "survivorPolicyNumber": "CFP 0102004209",
+        "survivorClientId": "ed7c6bfc-b978-4bde-8474-d00cfda4138a",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "e6380313-d58d-4718-823b-780672712221",
+            "policyNumber": "CFP 0102004209 00",
+            "clientId": "d9123b63-63b7-4182-add7-de4c6826ebe1",
+            "address": "11908 Holly St, Grand Terrace, CA 92313",
+            "termCount": 2,
+            "createdAt": "2026-04-15T20:27:38.449625+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0100059633",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "bbb63941-4c47-48b4-a2af-950ec043f828",
+        "survivorPolicyNumber": "CFP 0100059633",
+        "survivorClientId": "41ca6242-951f-4208-8033-94aca7764ca2",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "7a91441e-6c28-4f41-bdbf-3139e282dcc9",
+            "policyNumber": "CFP 0100059633 02",
+            "clientId": "41ca6242-951f-4208-8033-94aca7764ca2",
+            "address": "2544 Hermosa Ave, Montrose, CA 91020",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:53:48.46299+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0102319822",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "b5645fa5-2fdc-488a-bf3b-0d19ee584153",
+        "survivorPolicyNumber": "CFP 0102319822",
+        "survivorClientId": "0b0d55a9-d369-4313-8bde-b932a0b67551",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "92d0fcc4-4f74-47dd-94b6-cfbaa59b3545",
+            "policyNumber": "CFP 0102319822 00",
+            "clientId": "0b0d55a9-d369-4313-8bde-b932a0b67551",
+            "address": "26356 Forest Ln, Twin Peaks, CA 92391",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:04:16.495527+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0100113782",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "ccef4641-d057-4b63-9353-6b32342f343a",
+        "survivorPolicyNumber": "CFP 0100113782",
+        "survivorClientId": "c933c0f6-e0a1-452d-b76d-01fb82b086f7",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "980e90a0-15f3-4bb8-8847-759730deab10",
+            "policyNumber": "CFP 0100113782 08",
+            "clientId": "c933c0f6-e0a1-452d-b76d-01fb82b086f7",
+            "address": "1624 OLD BIG CREEK RD, MEADOW VALLEY, CA 95956",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:40:28.550418+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0100638217",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "ada8c2e8-9d87-4716-a918-8822dddd86e5",
+        "survivorPolicyNumber": "CFP 0100638217",
+        "survivorClientId": "faeec724-ad70-4bd6-930c-86bb691ab397",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "fdbea610-fc2b-4496-a56a-2d15541802e5",
+            "policyNumber": "CFP 0100638217 02",
+            "clientId": "c92e1f94-748f-4fb7-8432-26a0e5fab2a4",
+            "address": "274 BRET HARTE RD, LAKE ARROWHEAD, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-24T16:28:20.463048+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0100723409",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "bc6f9023-1135-43e3-9fe6-320b73930547",
+        "survivorPolicyNumber": "CFP 0100723409",
+        "survivorClientId": "62f27e73-1159-44fc-822e-5f8aaba541e2",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "d56cebcb-0c06-4968-bf17-5998153e040e",
+            "policyNumber": "CFP 0100723409 02",
+            "clientId": "8f73be6d-dcea-4561-846a-f3dd1fffdde5",
+            "address": "4981 HOLLYHOCK LN, RIVERSIDE, CA 92505",
+            "termCount": 1,
+            "createdAt": "2026-04-24T20:13:25.827486+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      },
+      {
+        "normalizedBase": "CFP 0101696904",
+        "confidence": 90,
+        "type": "same-client",
+        "survivorId": "c99bf21b-1afe-408f-88ed-cdf7bcf9bf50",
+        "survivorPolicyNumber": "CFP 0101696904",
+        "survivorClientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "ea1462a8-310a-4d23-b1fc-50c5b82c7509",
+            "policyNumber": "CFP 0101696904 01",
+            "clientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+            "address": "13474 Mohawk Rd, Apple Valley, CA 92308",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:53:06.208281+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Same client, same base policy number — safe to merge terms"
+      },
+      {
+        "normalizedBase": "CFP 0301132038",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "d5aef586-091d-441a-b31a-df57714c92a2",
+        "survivorPolicyNumber": "COM 0301132038",
+        "survivorClientId": "f32361f0-ceb7-49ec-ae77-10d17fc04e5f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "ffcf7eb1-af84-4e61-a545-37e50200ac8e",
+            "policyNumber": "CFP 0301132038",
+            "clientId": "d52ff2cb-0c1a-4f1b-a9e8-08d04b8c3037",
+            "address": "6211 Corte Del Abeto, Carlsbad, CA 92011",
+            "termCount": 1,
+            "createdAt": "2026-08-12T06:06:03.414647+00:00"
+          }
+        ],
+        "tier": 1,
+        "reason": "Cross-client but clients are already identified as duplicates"
+      }
+    ],
+    "totalClients": 35,
+    "totalPolicies": 31
+  },
+  "tier2_review_merge": {
+    "clients": [
+      {
+        "type": "client_fuzzy",
+        "survivorId": "1fbe2b3b-1660-4b53-976f-871f70c02fbc",
+        "survivorName": "Henry M. Schumm",
+        "duplicateId": "021c7581-0c85-4251-a4c5-343dc159c875",
+        "duplicateName": "Henry Schumm",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "5 QUIET CANYON CIR POMONA CA 91766"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "0369f271-fa19-4f1c-a250-3992fb37be0e",
+        "survivorName": "Brenda Rodriguez",
+        "duplicateId": "bec9afce-78fe-4210-9827-986d2cf31712",
+        "duplicateName": "Brenda Bravo Rodriguez",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "0a5d0976-30c7-44ce-99f1-f7b5e26f98d3",
+        "survivorName": "JUAN IBARRA",
+        "duplicateId": "d6258e6e-a080-4f9c-8f78-d4669b775a55",
+        "duplicateName": "Juan Ibarra Gonzalez",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "7620 MESA RD PHELAN CA 92371"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "6bee773a-eadb-4a95-8b85-807427d2f90c",
+        "survivorName": "Richard J Osborne",
+        "duplicateId": "0b1e31b2-b88f-43de-bcf0-cc5f73d0f233",
+        "duplicateName": "Richard Osborne",
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "0ced03c0-7258-49ea-aadf-2d39fe70de90",
+        "survivorName": "Vidhi Bhavesh Patel",
+        "duplicateId": "2c18ec1b-55d4-4225-b05e-1d327bdbadc2",
+        "duplicateName": "Vidhi Patel",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "136eed25-92c6-42fb-9479-a9196091ed2d",
+        "survivorName": "IVONA PERIC",
+        "duplicateId": "c5b99c39-e360-4951-9d80-68412b8ff8a0",
+        "duplicateName": "Ivona Peric Gonzalez",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "2149 PATTIGLEN AVE LA VERNE CA 91750"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "2701d536-8a2b-43d7-8f13-5b571aef2ab1",
+        "survivorName": "Linda Kay",
+        "duplicateId": "1744f072-ef84-49fa-8d9b-373d189439d3",
+        "duplicateName": "Linda J Kay",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "185420e5-3927-4990-bcc0-c37054ecb16a",
+        "survivorName": "ROGELIO C. CHAVEZ",
+        "duplicateId": "a92d14a6-fa49-427c-a4f9-7e92ee57fad5",
+        "duplicateName": "ROGELIO CANELA CHAVEZ",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "1a444f9a-f53a-4b37-9c09-facfa853dd41",
+        "survivorName": "FRANCISCO PADILLA",
+        "duplicateId": "c486578f-655d-4ff8-8343-19c0b317b8af",
+        "duplicateName": "Francisco M Padilla",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "f8b4ec05-054a-4433-8d34-73819279f633",
+        "survivorName": "Jose Juan",
+        "duplicateId": "1d073c13-762d-4232-9fa4-8801f2a48f15",
+        "duplicateName": "Juan Jose",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "221e1aaf-d17b-4858-9305-2e196eff1e5f",
+        "survivorName": "Walz Family Trust",
+        "duplicateId": "3ef34a92-87a7-4033-851f-a9f27e9f9d80",
+        "duplicateName": "Walz Family Trust RWRI 2,677.00",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (3 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "2412522b-26b4-421a-894c-371d6faa14ce",
+        "survivorName": "Francisco Pozo",
+        "duplicateId": "e879b71c-ba61-4052-a59a-ca5ca97390e6",
+        "duplicateName": "Francisco Pozo Zambrano",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "19340 DAY ST PERRIS CA 92570"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "26bad5c8-a79d-4822-b8b0-fe500619b6c9",
+        "survivorName": "Paul Rodriguez",
+        "duplicateId": "f78749f9-ec8f-45fa-85bc-c28955ef34aa",
+        "duplicateName": "Ronnie Paul Rodriguez Jr",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "4655 N STODDARD AVE SAN BERNARDINO CA 92407"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "76bcb459-f2e8-4fe8-8bd1-c0e4d44df1b8",
+        "survivorName": "THE HOY TRUST OF 2015",
+        "duplicateId": "2c4fbdad-1696-4de0-a8e9-9d4540f7b5a6",
+        "duplicateName": "The Hoy Trust Of 2015, Barry Hoy",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "27861 ALPEN DR LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Strong fuzzy match (4 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "30190657-4eb0-4528-8da6-8989a98c9cc3",
+        "survivorName": "Jose Luis",
+        "duplicateId": "f95b2cff-0b59-4a1f-a4f9-f11e152fa1fb",
+        "duplicateName": "Jose luis Magana",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "3369677d-273c-4565-bd18-9ad71d3ca02b",
+        "survivorName": "JD Prince Management",
+        "duplicateId": "de9ffeb1-1a7c-45c6-81a0-9de8e2e6538f",
+        "duplicateName": "JD Prince",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "35209def-83f4-4e87-979a-9d7a70211b18",
+        "survivorName": "Feliza Banez",
+        "duplicateId": "5f9680f1-4a41-41e2-a060-ce775e101f41",
+        "duplicateName": "FELIZA HELEN BANEZ",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "3826dd0a-1de4-42ac-b1ab-ae9cc5bd21da",
+        "survivorName": "IVAN ALECIO",
+        "duplicateId": "5c8e9ddb-6017-4bdd-87a1-1cad68551492",
+        "duplicateName": "IVAN R ALECIO",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "3a4688a2-5502-4285-bf08-44eb7401571c",
+        "survivorName": "Brian Matthew Mansell",
+        "duplicateId": "42d92963-c4ad-40d6-b3fe-c1f96ba8998b",
+        "duplicateName": "Brian M Mansell",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "422696f4-3186-4354-941f-2af469f121fd",
+        "survivorName": "Sexton Family",
+        "duplicateId": "c541364c-1448-482c-9a72-61450c78d7bc",
+        "duplicateName": "Sexton 2009 FAMILY TRUST",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "db2e3500-d0bb-49c7-9602-43f5c491eb76",
+        "survivorName": "Gustavo A Galindo",
+        "duplicateId": "51da3900-acf7-415b-8c97-79a5be5b3e99",
+        "duplicateName": "Gustavo A Galindo Castillo",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "5814 VIA CORONA ST LOS ANGELES CA 90022"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "5668c291-e7c6-44d6-bff7-ccf898675154",
+        "survivorName": "Teya Wong",
+        "duplicateId": "e98d4bdb-3c20-41ad-9364-af6be339fcec",
+        "duplicateName": "TEYA WONG RESC 633.60",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "af8753fe-0a0a-48c2-8868-70cf8fe4988f",
+        "survivorName": "JOSE LOPEZ",
+        "duplicateId": "59ea6661-8665-4313-96f5-f0cea52025b4",
+        "duplicateName": "Jose Loreto Lopez Hernandez",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "67e1bfda-14aa-4c73-a98c-c91dd15b1990",
+        "survivorName": "Trust of the Cardenas Family Trust Oct. 22 2022",
+        "duplicateId": "b34eb449-f5bc-41c2-a404-85c4dffa178b",
+        "duplicateName": "The Survivors Trust of the Kimball Family dated 01",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (5 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "73748acd-c00d-43f1-8f8d-4e565a87b7a8",
+        "survivorName": "Rudy Alvarez",
+        "duplicateId": "adf6e529-ec0e-4d52-9b25-09e7cb6b4189",
+        "duplicateName": "Rudy Alvarez Jr",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "74c85e70-07e6-4140-8d52-89a561377c3a",
+        "survivorName": "STEVEN H SAUTER",
+        "duplicateId": "f6ab9b20-7ce1-4f1b-8736-aaf074430ba0",
+        "duplicateName": "Steven Sauter",
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "7554e07d-ca1a-473c-89ba-95aa11aade1a",
+        "survivorName": "The Fonzi Family Trust",
+        "duplicateId": "df42b7b1-7097-43cb-8ffb-9cb631dae718",
+        "duplicateName": "THE FONZI FAMILY TRUST U/A DATED MAY 13, 2015",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (4 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "7865c93b-397e-43ea-b421-dac816cda24f",
+        "survivorName": "KUNIKO HIGAKI",
+        "duplicateId": "b5dd53a4-c1a0-4c71-a419-01c63d808907",
+        "duplicateName": "The Kuniko Higaki",
+        "duplicatePolicies": 0,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "7865c93b-397e-43ea-b421-dac816cda24f",
+        "survivorName": "KUNIKO HIGAKI",
+        "duplicateId": "aea0b45f-0855-4225-86a0-88306031723c",
+        "duplicateName": "The Kuniko Higaki Livingtrust , Randy And Terri Varner",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "352 PIONEER RD LAKE ARROWHEAD CA 92352"
+        ],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "f427c734-846b-4a29-92de-534551bf9dc9",
+        "survivorName": "Becky Gonzales",
+        "duplicateId": "7d0cd600-1dfa-4fe4-8c83-f0f7076a3704",
+        "duplicateName": "Becky Gonzales RWRI 251.22",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "ffd026ba-1979-4aaa-bb1d-bcf20e3411af",
+        "survivorName": "Joel Flores DeJesus",
+        "duplicateId": "80159518-7455-4264-9b1d-fe051743b226",
+        "duplicateName": "JOEL FLORES",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "a24a2caf-4766-4e82-931d-d8d318d01330",
+        "survivorName": "Syx Group, Llc, N/A",
+        "duplicateId": "9788147d-fc74-4702-b8fe-024ee658b239",
+        "duplicateName": "Syx Group, Llc, N/A N/A",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [
+          "4972 NUCHAM AVE JOSHUA TREE CA 92252"
+        ],
+        "reason": "Strong fuzzy match (4 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "fb7bed80-34a2-4797-b06e-9d844be2c0fd",
+        "survivorName": "GREGORIO ARTEMISO MIGUEL JUAN",
+        "duplicateId": "a2a35b73-f58d-404f-b412-f7dd89a1e9d6",
+        "duplicateName": "Gregorio A Miguel Juan",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (3 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "b105100e-d87a-4196-a624-b1071c147b5f",
+        "survivorName": "Russell Lawrence",
+        "duplicateId": "b41b9a1d-1f4e-4d77-b59b-b16228c054c3",
+        "duplicateName": "Russell Logan Lawrence",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "b1582cbb-860f-439d-8d15-3976e05e6d1c",
+        "survivorName": "Isaac Pelaez",
+        "duplicateId": "c5719b03-2cf2-480c-b4d0-0e64a627b1b2",
+        "duplicateName": "ISAAC PELAEZ REIN 1,771.00",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Strong fuzzy match (2 shared tokens) but no address/policy confirmation"
+      }
+    ],
+    "policies": [
+      {
+        "normalizedBase": "CFP 0102051350",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "acbf2c87-43b2-430e-b32a-cb612a25eef9",
+        "survivorPolicyNumber": "CFP 0102051350",
+        "survivorClientId": "de3bf2df-2359-4f31-97b8-5e50fc94ef37",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "00242800-4c66-47b5-a557-61da31d658e2",
+            "policyNumber": "CFP 0102051350 01",
+            "clientId": "2c889cec-5dd3-4cd1-a8f9-66db6fba150c",
+            "address": "4831 HAWK RIDGE AVE, FONTANA, CA 92336",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:52:42.877579+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102088362",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "00ec5d5b-5708-4891-b242-d60f448a99ad",
+        "survivorPolicyNumber": "CFP 0102088362",
+        "survivorClientId": "447d4f64-e4d5-4d32-8cb3-8cef98d63994",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "0ab2f294-c528-420a-9e1b-bade93c46bbd",
+            "policyNumber": "CFP 0102088362 01",
+            "clientId": "5efb569d-4794-42ab-adf5-ca1acd17b9b6",
+            "address": "22662 CLOUD MEADOW DR, NUEVO, CA 92567",
+            "termCount": 1,
+            "createdAt": "2026-04-23T23:58:48.521183+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102060361",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "bb3a980b-54eb-49dd-a27a-c395cc409550",
+        "survivorPolicyNumber": "CFP 0102060361",
+        "survivorClientId": "cc82c96b-5efa-46e3-91a2-66fff71dcc67",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "0251c196-e599-4ec5-95fc-6f6123d6144e",
+            "policyNumber": "CFP 0102060361 01",
+            "clientId": "e5a88db7-36b9-47a7-bea4-14c688745e5d",
+            "address": "11822 Amanda Ln, Adelanto, CA 92301",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:41:17.014222+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102072727",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "0980353e-a82c-41a8-81ef-a916eff123e9",
+        "survivorPolicyNumber": "CFP 0102072727",
+        "survivorClientId": "54901135-e335-4ff4-b321-1747e825b521",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "e31e287a-691d-4498-9508-90291d8f29e6",
+            "policyNumber": "CFP 0102072727 00",
+            "clientId": "12fa9d61-0739-4603-abc9-8f38308d0e38",
+            "address": "3340 Del Sol Blvd Spc 145, San Diego, CA 92154",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:58:52.338433+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102049991",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "ae756d6e-5b6d-4643-a182-09a0bd7fdc59",
+        "survivorPolicyNumber": "CFP 0102049991",
+        "survivorClientId": "e4c7f339-29ed-4050-9a77-9ffaf5a2dae2",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "09b1b244-2151-46b5-8180-932008f119fd",
+            "policyNumber": "CFP 0102049991 01",
+            "clientId": "38283396-be96-4616-8c00-f0f6349ab8f6",
+            "address": "8379 QUEEN ANNE LN, RIVERSIDE, CA 92508",
+            "termCount": 1,
+            "createdAt": "2026-04-23T22:41:35.628359+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102109698",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "0ca57b00-20c2-481b-b45b-c242674b9499",
+        "survivorPolicyNumber": "CFP 0102109698",
+        "survivorClientId": "1bae6ac2-75fe-43cf-9ae9-b78219af3846",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "782a655b-5926-4831-ba32-33267497df34",
+            "policyNumber": "CFP 0102109698 01",
+            "clientId": "a139720e-c975-4093-b5cd-945900684171",
+            "address": "40547 SADDLEBACK RD, BASS LAKE, CA 93604",
+            "termCount": 1,
+            "createdAt": "2026-04-23T19:30:21.688414+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102038280",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "89dac2f0-e8ae-4c49-a976-0c7a8fe08e4c",
+        "survivorPolicyNumber": "CFP 0102038280",
+        "survivorClientId": "e4f5cbc4-9dc4-45a4-87f1-7cd6170205bb",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "0d0b9456-aba5-494f-a7b6-d1ee6fc4f951",
+            "policyNumber": "CFP 0102038280 01",
+            "clientId": "7b584d47-6c83-4b0b-9dc4-b3859f3ca4b0",
+            "address": "28121 WAR ADMIRAL ST, MORENO VALLEY, CA 92555",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:29:47.201259+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0101989656",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "2829490a-9053-4108-9d2f-84bd0fad0713",
+        "survivorPolicyNumber": "CFP 0101989656",
+        "survivorClientId": "b87df981-2e25-47ac-88a0-f172fe60dc68",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "0dbbb96c-e05a-4d97-b913-d08f0d6c4274",
+            "policyNumber": "CFP 0101989656 01",
+            "clientId": "9885ff89-e2d7-4212-b977-1246a2e9290f",
+            "address": "194 INKSTER WAY, HEMET, CA 92545",
+            "termCount": 1,
+            "createdAt": "2026-04-27T22:54:33.476904+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0100323085",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "0fca4e7c-ec08-4100-9b8c-60d485c1867a",
+        "survivorPolicyNumber": "CFP 0100323085",
+        "survivorClientId": "aa6bac46-f05d-4ffc-bd21-6d9770e2b051",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "0e2bf904-f9df-4741-8e69-eaefac09c18c",
+            "policyNumber": "CFP 0100323085 09",
+            "clientId": "717f616b-6718-4cc8-b117-8dc507fb2ef1",
+            "address": "426 N GRASS VALLEY RD, LAKE ARROWHEAD, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:24:51.689136+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102050316",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "0fd545c2-ca0f-4e75-9591-4d298c80edea",
+        "survivorPolicyNumber": "CFP 0102050316",
+        "survivorClientId": "11948cd4-825c-4617-a221-3cebd493dbf7",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "882c4d8f-7412-437b-b0e8-d5f47f181f76",
+            "policyNumber": "CFP 0102050316 01",
+            "clientId": "482e3428-23e4-40d9-a0ca-27054a061f21",
+            "address": "9517 MAGNOLIA ST BLOOMINGTON, CA 92316",
+            "termCount": 1,
+            "createdAt": "2026-04-24T17:40:27.230263+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102029204",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "30898730-63e7-42b4-baab-4a9c7fbf55c4",
+        "survivorPolicyNumber": "CFP 0102029204",
+        "survivorClientId": "cb4cca28-60fd-4024-8f67-2829554759a6",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "1276bb0a-f69f-4a65-9128-d2a0e93f6584",
+            "policyNumber": "CFP 0102029204 01",
+            "clientId": "3ab5a5d3-9d8e-467f-a713-a4f2d2fa6684",
+            "address": "1357 E 57th St, Los Angeles, CA 90011",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:47:18.449003+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0101994663",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "12be9bd3-fae9-48c3-ba0e-53b0d41618e3",
+        "survivorPolicyNumber": "CFP 0101994663",
+        "survivorClientId": "570d9abb-71d5-4fc9-b329-2305f6402260",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "ee80d14a-86c0-4df8-b50a-4a498865419f",
+            "policyNumber": "CFP 0101994663 01",
+            "clientId": "9ab882b6-903f-4de2-8875-70d0e8a98dd9",
+            "address": "37420 MINER AVE, YERMO, CA 92398",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:51:02.542905+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102059799",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "164372ad-6721-4fa7-8ce8-c5595be3e961",
+        "survivorPolicyNumber": "CFP 0102059799",
+        "survivorClientId": "0a64d661-9984-4c2a-8142-377f93d7bd94",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "19cdc5fd-3138-47ad-82a9-c2a35958109a",
+            "policyNumber": "CFP 0102059799 01",
+            "clientId": "c61edd99-45bf-4734-ac6a-7051e953fc27",
+            "address": "22738 VALLEY VIEW DR, CRESTLINE, CA 92325",
+            "termCount": 1,
+            "createdAt": "2026-04-23T19:14:32.290195+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0100450824",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "1c86bf9d-a85c-46b4-8185-7a23e9d40a59",
+        "survivorPolicyNumber": "CFP 0100450824",
+        "survivorClientId": "fd17a754-18ad-4017-83ff-1a48e4c9ec32",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "1a7244d3-dca5-490e-9af6-85f38ea80223",
+            "policyNumber": "CFP 0100450824 02",
+            "clientId": "745996a5-c0bd-4106-9b18-c046dd7ee534",
+            "address": "2442 PONDEROSA ST, SOUTH LAKE TAHOE, CA 96150",
+            "termCount": 1,
+            "createdAt": "2026-04-24T17:41:34.885848+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0100655561",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "200edd20-804f-45f8-a044-03c3a62563d7",
+        "survivorPolicyNumber": "CFP 0100655561",
+        "survivorClientId": "0cb784c7-fbd0-4f9f-adc8-8c5a6db85e6b",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "29d9652b-60bb-465e-a48a-e22f236f7616",
+            "policyNumber": "CFP 0100655561 02",
+            "clientId": "e69d8c21-75e7-49dd-8f9b-588c463616aa",
+            "address": "27657 PENINSULA DR # 126, LAKE ARROWHEAD, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-24T15:45:18.136102+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102065559",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "25c25b67-f3da-472d-97f1-738eba13bd1c",
+        "survivorPolicyNumber": "CFP 0102065559",
+        "survivorClientId": "e60b1e0a-6822-4142-b4fd-e11726607025",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "6621f2d9-50c4-44d2-a6c0-6a2a196180eb",
+            "policyNumber": "CFP 0102065559 01",
+            "clientId": "274cee7d-a17a-4c53-b87a-9f667d2104fa",
+            "address": "779 Virginia Ct, Lake Arrowhead, CA 92352",
+            "termCount": 1,
+            "createdAt": "2026-04-23T19:20:50.810262+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102119731",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "2696cd94-29aa-4772-af3a-538b114db871",
+        "survivorPolicyNumber": "CFP 0102119731 01",
+        "survivorClientId": "3974307e-68a0-4ad7-8c34-5cf4c300be79",
+        "survivorAddress": "6066 SWEETIE LN, SAN MIGUEL, CA 93451",
+        "duplicates": [
+          {
+            "id": "aaf575fe-355b-467d-afbf-53cd45460396",
+            "policyNumber": "CFP 0102119731",
+            "clientId": "5aa86376-4f45-45a4-af9a-9d6de5a26464",
+            "address": null,
+            "termCount": 1,
+            "createdAt": "2026-04-01T17:34:07.70742+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102064251",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "291df7e8-0a0a-4b8d-a74d-cec3e3a60e78",
+        "survivorPolicyNumber": "CFP 0102064251",
+        "survivorClientId": "0c57c620-d1fc-4e88-9d4d-f72601b2caa8",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "e60f3847-10f8-4ffc-b5e6-df51a8079181",
+            "policyNumber": "CFP 0102064251 01",
+            "clientId": "6eb50e63-1ef4-4fd1-8e5f-e385c42832fe",
+            "address": "619 S SHASTA ST, WEST COVINA, CA 91791",
+            "termCount": 1,
+            "createdAt": "2026-04-24T01:24:32.281768+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0101992511",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "35cdd3d8-7ca0-498d-b0a7-f2f398aeaba3",
+        "survivorPolicyNumber": "CFP 0101992511",
+        "survivorClientId": "2574b9f0-87fe-4298-ba06-4d4e7d66c835",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "6cb7d1d6-a753-45a0-b2a2-2301e4e1125a",
+            "policyNumber": "CFP 0101992511 01",
+            "clientId": "ff3f3f29-213d-43c5-bf7f-170605913fd5",
+            "address": "129 LOPEZ WAY, HEMET, CA 92545",
+            "termCount": 1,
+            "createdAt": "2026-04-24T22:13:16.430783+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102001297",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "6cd05f28-fae0-4f96-8e90-f6634c25849a",
+        "survivorPolicyNumber": "CFP 0102001297",
+        "survivorClientId": "1f60881b-9b96-4529-bca5-ce00063f0f8a",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "366abd34-ac4d-4695-9935-95c9f8edbad7",
+            "policyNumber": "CFP 0102001297 01",
+            "clientId": "9ac27746-87cf-4bb8-a210-e594c9f1e7c4",
+            "address": "40670 FOXBORO CT, BASS LAKE, CA 93604",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:21:37.468911+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102085467",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "f6115f5b-a0d7-4afe-80a0-f1b46d8130e4",
+        "survivorPolicyNumber": "CFP 0102085467",
+        "survivorClientId": "21629d45-def6-4d0f-9fdd-80ce5b533f5f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "3ba195c2-9ea4-48d3-bd18-2e8b24c10415",
+            "policyNumber": "CFP 0102085467 01",
+            "clientId": "a5eb75ca-e5bb-4b4d-862a-11cbd7ea9cdf",
+            "address": "16412 WINDCREST DR, FONTANA, CA 92337",
+            "termCount": 1,
+            "createdAt": "2026-04-24T17:54:28.495037+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102242865",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "3c131f9d-43f9-4a7d-b76e-8cce31f40c08",
+        "survivorPolicyNumber": "CFP 0102242865",
+        "survivorClientId": "61820438-3fe7-4202-abd9-90ecbf21a8c7",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "c315cdaf-b050-4023-b9a4-24235af43fc2",
+            "policyNumber": "CFP 0102242865 00",
+            "clientId": "e9210906-8535-4471-b209-5f9892f41c6a",
+            "address": "1101 myrtle ave, big Bear City, CA 92314",
+            "termCount": 1,
+            "createdAt": "2026-04-24T00:02:19.27319+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0101999569",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "66dc4619-8d34-4b2d-aa51-16735008ff69",
+        "survivorPolicyNumber": "CFP 0101999569",
+        "survivorClientId": "dbb165aa-9c4e-464e-9c1f-69a1e82d0ccc",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "42f56bb0-9506-4e1b-b7c3-2be1debcebf7",
+            "policyNumber": "CFP 0101999569 01",
+            "clientId": "6709c43f-f542-4c15-9794-a62c2d31dd17",
+            "address": "14246 VINCENT WAY, ADELANTO, CA 92301",
+            "termCount": 1,
+            "createdAt": "2026-04-23T23:53:17.657371+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102061281",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "43bfcec9-6946-480b-b0d7-5b00ce6d3d48",
+        "survivorPolicyNumber": "CFP 0102061281",
+        "survivorClientId": "93151fc6-3e60-40a4-bdb7-cd3bcfe09f33",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "858e814a-8259-4489-87b7-f1e3d09c3a88",
+            "policyNumber": "CFP 0102061281 01",
+            "clientId": "9341058c-3a2d-430f-a710-a0a96ab6f2e3",
+            "address": "4402 TRIGGS ST, LOS ANGELES, CA 90040",
+            "termCount": 1,
+            "createdAt": "2026-04-27T22:24:46.125974+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102098934",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "4f85f96b-734e-403b-b5e5-f66d96b9e4cf",
+        "survivorPolicyNumber": "CFP 0102098934",
+        "survivorClientId": "cc9ce9d8-38c6-4524-994b-a952cf5931be",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "f3a980c4-22a7-4958-a78a-eb19f37aa7fa",
+            "policyNumber": "CFP 0102098934 01",
+            "clientId": "e653c0af-45cd-4e3b-ba49-927e397300e6",
+            "address": "8023 JENNET ST, ALTA LOMA, CA 91701",
+            "termCount": 1,
+            "createdAt": "2026-04-23T19:05:42.328981+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0100517361",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "82d727f6-9508-4cdb-aa38-d4b9c23c1f15",
+        "survivorPolicyNumber": "CFP 0100517361",
+        "survivorClientId": "bfe29868-3525-4160-91f4-793ec9686aea",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "51318768-abc6-4de1-9689-2a55813e9796",
+            "policyNumber": "CFP 0100517361 07",
+            "clientId": "9788147d-fc74-4702-b8fe-024ee658b239",
+            "address": "4972 NUCHAM AVE, JOSHUA TREE, CA 92252",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:56:52.631721+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102060398",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "ce1143f4-47b8-454a-92a0-0ed65326f140",
+        "survivorPolicyNumber": "CFP 0102060398 01",
+        "survivorClientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+        "survivorAddress": "12338 CRILLY LN, YUCAIPA, CA 92399",
+        "duplicates": [
+          {
+            "id": "55647d41-4424-4b1c-8175-f80632cd1670",
+            "policyNumber": "CFP 0102060398",
+            "clientId": "a4208e5c-d46c-43c2-8fde-25c60276dc01",
+            "address": null,
+            "termCount": 1,
+            "createdAt": "2026-04-01T17:34:07.70742+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102077627",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "e8812848-8ae4-41f0-8747-4386c8cd1855",
+        "survivorPolicyNumber": "CFP 0102077627",
+        "survivorClientId": "4c3ef335-a1c8-4be8-afef-2f3f7e75b32e",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "6306400c-409a-48c6-b50c-ea01e63ff9df",
+            "policyNumber": "CFP 0102077627 01",
+            "clientId": "17b16931-1470-46a0-a926-df55ea06c3fc",
+            "address": "15756 WINDRUSH DR, HACIENDA HEIGHTS, CA 91745",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:45:42.565605+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102094218",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "e9e2b0f8-15b6-457e-805b-d42d69bd1729",
+        "survivorPolicyNumber": "CFP 0102094218",
+        "survivorClientId": "31ae8733-bc6d-4e53-9a31-9d495ed7a94f",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "67abbb7b-9a0d-458a-b8be-1a76312f6ba8",
+            "policyNumber": "CFP 0102094218 01",
+            "clientId": "c9113521-d68f-48e4-86c9-50b610d09d37",
+            "address": "20491 ARDEN PL, SANTA CLARITA, CA 91350",
+            "termCount": 1,
+            "createdAt": "2026-04-23T21:37:24.169301+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102112718",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "70f09efb-89aa-4f2c-896f-d5ba21cdcf2a",
+        "survivorPolicyNumber": "CFP 0102112718",
+        "survivorClientId": "26bad5c8-a79d-4822-b8b0-fe500619b6c9",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "8e3c6ac7-c4f1-476f-99a7-d7784b74b610",
+            "policyNumber": "CFP 0102112718 01",
+            "clientId": "dcd0ead5-8474-49f2-b945-826c3d2a0982",
+            "address": "2789 Tennessee Walker Way, Paso Robles, CA 93446",
+            "termCount": 1,
+            "createdAt": "2026-04-24T20:15:07.300825+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102046779",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "b1203c96-6e39-4f45-b69c-e47084301aa9",
+        "survivorPolicyNumber": "CFP 0102046779",
+        "survivorClientId": "d7bc85cf-9ad7-46be-80e7-1f28ea717b00",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "7195641b-f7a9-4e48-a1c1-ecaabc96e776",
+            "policyNumber": "CFP 0102046779 01",
+            "clientId": "ee73c56b-a1f5-4aed-a0a8-c2d14616068f",
+            "address": "1757 GARRISON WAY, EL CAJON, CA 92019",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:23:33.165026+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102077735",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "73347ed5-5166-422c-a9f6-921ceb903f23",
+        "survivorPolicyNumber": "CFP 0102077735",
+        "survivorClientId": "468830e9-5913-4bcc-9f6c-f3f29cf52b97",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "c5103644-1f9b-40cf-9cec-f5b9a3650335",
+            "policyNumber": "CFP 0102077735 01",
+            "clientId": "17b16931-1470-46a0-a926-df55ea06c3fc",
+            "address": "2258 LANGSPUR DR, HACIENDA HEIGHTS, CA 91745",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:46:29.352172+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102067829",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "7373b56c-3ea8-4ee6-8932-b07bd95b363c",
+        "survivorPolicyNumber": "CFP 0102067829",
+        "survivorClientId": "9d33f5f3-6b2f-4328-9442-b690cf4bb665",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "b291140f-d19e-45a7-8d48-562024ddd12c",
+            "policyNumber": "CFP 0102067829 00",
+            "clientId": "9e6400d2-cad1-4462-bea8-d03223207357",
+            "address": "25207 FOREST ST, CORONA, CA 92883",
+            "termCount": 1,
+            "createdAt": "2026-04-24T17:55:08.315646+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102110044",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "fc138af5-0767-4dd4-8dde-4d6ca03d94f7",
+        "survivorPolicyNumber": "CFP 0102110044",
+        "survivorClientId": "c43cb2c9-da7e-446f-90a4-df2b40e2f165",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "7a5a52c0-2b6b-4d53-9763-00b875cf2936",
+            "policyNumber": "CFP 0102110044 01",
+            "clientId": "f78749f9-ec8f-45fa-85bc-c28955ef34aa",
+            "address": "4655 N STODDARD AVE, SAN BERNARDINO, CA 92407",
+            "termCount": 1,
+            "createdAt": "2026-04-24T00:06:52.112413+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102104216",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "8abad3e2-ecd6-4154-a5cd-11b4cfe36aed",
+        "survivorPolicyNumber": "CFP 0102104216",
+        "survivorClientId": "36a24cf1-1f59-4f52-bf78-4aa4e70ae62c",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "f9ef8f81-90d5-4d4f-a6a4-a961168a62c4",
+            "policyNumber": "CFP 0102104216 01",
+            "clientId": "5d8bdd4a-2c40-4eb4-aa7b-d7876bf60738",
+            "address": "412, 412 1/2, 414, 414 1/2 BRADLEY AVE, MONTEBELLO, CA 90640",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:56:18.605068+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102060315",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "fe1d538c-6232-4a7c-8a75-52da1f3b6a19",
+        "survivorPolicyNumber": "CFP 0102060315",
+        "survivorClientId": "23ee403d-b68a-45ff-9ff0-c99de0f2dd46",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "904dfa0d-c9f8-40c4-bfb0-40ee53df05c4",
+            "policyNumber": "CFP 0102060315 01",
+            "clientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+            "address": "12325 CRILLY LN, YUCAIPA, CA 92399",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:44:10.842256+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0100760993",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "93767507-5d75-4cd8-82b2-ea05aed85fd7",
+        "survivorPolicyNumber": "CFP 0100760993",
+        "survivorClientId": "8493869a-e88c-4bbe-8da3-8023d2efa84a",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "bff76750-33fc-4d27-aa51-01acadf60b74",
+            "policyNumber": "CFP 0100760993 02",
+            "clientId": "5f1ccabb-d1a7-4417-a38c-3877df398e9c",
+            "address": "67 CAMINO DE FLORES, AVALON, CA 90704",
+            "termCount": 1,
+            "createdAt": "2026-04-24T22:59:05.194263+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0101945387",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "bf96e5ce-3bd3-4f36-b089-348b11663c2e",
+        "survivorPolicyNumber": "CFP 0101945387",
+        "survivorClientId": "e15f0920-894a-4057-87c5-acc1dedcc550",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "961a623b-4172-4fa2-9d10-1f03b3253f34",
+            "policyNumber": "CFP 0101945387 01",
+            "clientId": "9ec78f5e-20cf-4120-b55a-ef0d1241adc9",
+            "address": "12780 LAKOTA RD, APPLE VALLEY, CA 92308",
+            "termCount": 1,
+            "createdAt": "2026-03-13T20:09:47.66089+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102092926",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "af0744d8-26f1-4a48-8300-350eac4dd7aa",
+        "survivorPolicyNumber": "CFP 0102092926",
+        "survivorClientId": "c20ef48c-3b13-47b3-ae5f-ae6c82c2e3b8",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "a374fd6c-2d41-46b3-b984-e309b8a3b2cd",
+            "policyNumber": "CFP 0102092926 01",
+            "clientId": "a5743a84-57c3-46bd-b259-9f8bf49d54c6",
+            "address": "39545 COPPER CRAFT DR, MURRIETA, CA 92562",
+            "termCount": 1,
+            "createdAt": "2026-04-24T23:53:31.948771+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102107824",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "a5219514-bc0a-4f34-a2e6-5d1389513a5d",
+        "survivorPolicyNumber": "CFP 0102107824",
+        "survivorClientId": "eddd788f-607e-4d95-ac31-5e5264e80b80",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "ca62b062-0a89-45e8-95f8-ca377888ebe3",
+            "policyNumber": "CFP 0102107824 01",
+            "clientId": "b20d5ee9-a3ca-4d56-842d-f4e399329017",
+            "address": "17445 MADRONE ST, FONTANA, CA 92337",
+            "termCount": 1,
+            "createdAt": "2026-04-24T18:33:49.552422+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102111994",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "f4bcfab0-64ff-4e18-8e22-6b1d6e004ed6",
+        "survivorPolicyNumber": "CFP 0102111994",
+        "survivorClientId": "bbab5c37-a442-4f91-a3c8-5a59bf9b8540",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "b573b314-0aa9-46dc-a3a4-c7f0c303184c",
+            "policyNumber": "CFP 0102111994 01",
+            "clientId": "70177e03-4498-4cee-bb32-23656d717a03",
+            "address": "15050 MONTE VISTA AVE SPC 183, CHINO HILLS, CA 91709",
+            "termCount": 1,
+            "createdAt": "2026-04-23T18:51:26.35437+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      },
+      {
+        "normalizedBase": "CFP 0102060234",
+        "confidence": 75,
+        "type": "cross-client",
+        "survivorId": "fb57ac06-ff05-4907-bc5e-2cc7713eae52",
+        "survivorPolicyNumber": "CFP 0102060234",
+        "survivorClientId": "c5926255-e925-466e-bb78-5684f9736c46",
+        "survivorAddress": null,
+        "duplicates": [
+          {
+            "id": "db343d54-736b-49d5-bf69-3cb5facda045",
+            "policyNumber": "CFP 0102060234 01",
+            "clientId": "e0371b06-258a-4252-a116-79c30e90bb4f",
+            "address": "12320 CRILLY LN, YUCAIPA, CA 92399",
+            "termCount": 1,
+            "createdAt": "2026-04-24T21:53:41.125643+00:00"
+          }
+        ],
+        "tier": 2,
+        "reason": "Cross-client, clients not yet matched — needs manual review"
+      }
+    ],
+    "totalClients": 35,
+    "totalPolicies": 42
+  },
+  "tier3_skip": {
+    "clients": [
+      {
+        "type": "client_exact",
+        "survivorId": "07448079-fc8d-4075-90d6-7a437acc88e8",
+        "survivorName": "08DD927B23A945",
+        "duplicateId": "4c3ef335-a1c8-4be8-afef-2f3f7e75b32e",
+        "duplicateName": "08DD9310BA1192",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Both hex placeholders, no corroborating data"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "07f029dd-97a4-44dc-a6ad-88a45467d36b",
+        "survivorName": "MICHAEL",
+        "duplicateId": "71506879-7d0b-4f71-abdc-e287eecd36d7",
+        "duplicateName": "MICHAEL",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "2a8f1e8a-c275-49ea-a3d0-bb0dd8d878fc",
+        "survivorName": "LAVERNE",
+        "duplicateId": "0a7198aa-abb5-4e56-8ac5-8b6ba38ac42e",
+        "duplicateName": "LAVERNE",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "f746e6c6-f266-4856-a798-356b3ab27a26",
+        "survivorName": "Joshua",
+        "duplicateId": "0a9549dc-0ce0-432d-b210-cb14a5f11f08",
+        "duplicateName": "JOSHUA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "0be5a25a-2a96-4952-80da-f72472948357",
+        "survivorName": "BRANDON",
+        "duplicateId": "142d4469-3a39-4e70-a5be-bf200f96ac87",
+        "duplicateName": "BRANDON",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "b79d05d1-5110-453b-b535-9f67a61351da",
+        "survivorName": "Chelsea",
+        "duplicateId": "0d912ce0-1a10-4f6a-8cfd-bf2ed2574a96",
+        "duplicateName": "CHELSEA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "d4a6878b-5058-40ad-b219-0fd546d63326",
+        "survivorName": "Christopher",
+        "duplicateId": "13b33b05-4d84-43dc-8466-279c176a531e",
+        "duplicateName": "Christopher",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "1c7c47da-f10c-4f55-99e0-3f5ae630acca",
+        "survivorName": "GUILLERMO",
+        "duplicateId": "f15a7475-fbf5-4cbf-8f4b-5ed18c97d513",
+        "duplicateName": "GUILLERMO",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "1f60881b-9b96-4529-bca5-ce00063f0f8a",
+        "survivorName": "08DD78949D75C5",
+        "duplicateId": "c5926255-e925-466e-bb78-5684f9736c46",
+        "duplicateName": "08DD8D83C74048",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Both hex placeholders, no corroborating data"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "89544704-c9b7-40ee-b507-f024d81df825",
+        "survivorName": "PATRICIA",
+        "duplicateId": "a10dae7d-9421-4e5b-aae6-867cc22585b0",
+        "duplicateName": "PATRICIA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "89544704-c9b7-40ee-b507-f024d81df825",
+        "survivorName": "PATRICIA",
+        "duplicateId": "c3121814-3402-4ba3-9733-7634497e516a",
+        "duplicateName": "PATRICIA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "89544704-c9b7-40ee-b507-f024d81df825",
+        "survivorName": "PATRICIA",
+        "duplicateId": "27fcbbb9-2e8f-40c2-b208-ef3e8be4e6a0",
+        "duplicateName": "PATRICIA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "75b04fdf-4e7a-4fc9-bf6d-644e004cd812",
+        "survivorName": "JEFFREY",
+        "duplicateId": "2987da0d-ead5-4c87-a121-eba9ad44fa37",
+        "duplicateName": "JEFFREY",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "51cbb7c2-e897-4998-ac88-ab44e49e2a39",
+        "survivorName": "Alejandro",
+        "duplicateId": "5aa86376-4f45-45a4-af9a-9d6de5a26464",
+        "duplicateName": "Alejandro",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "a95f1227-8709-4232-ac25-88775a5d973a",
+        "survivorName": "08DD812738D735",
+        "duplicateId": "b87df981-2e25-47ac-88a0-f172fe60dc68",
+        "duplicateName": "08DD76158D5506",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Both hex placeholders, no corroborating data"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "a95f1227-8709-4232-ac25-88775a5d973a",
+        "survivorName": "08DD812738D735",
+        "duplicateId": "717147a8-6a58-4fd8-8069-1a136ab57111",
+        "duplicateName": "08DD8208D01459",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Both hex placeholders, no corroborating data"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "75fafb98-d66f-4a7b-877e-5e8294774268",
+        "survivorName": "DANIEL",
+        "duplicateId": "f72eae0e-d4ce-4b45-a67b-048a7abe26f3",
+        "duplicateName": "DANIEL",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "fa49a7a3-2667-427b-b48b-42a9307db64c",
+        "survivorName": "ANTHONY",
+        "duplicateId": "88a60016-5a8c-449e-8adf-e0f213097d00",
+        "duplicateName": "ANTHONY",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 3,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "a72a9061-5fe7-44b6-b60d-4c2f72d1fca7",
+        "survivorName": "VICTORIA",
+        "duplicateId": "ffbfa912-4740-4690-a715-0bdd6ea565da",
+        "duplicateName": "VICTORIA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "ae290f6b-05a3-427d-8f09-d7e96ec255fa",
+        "survivorName": "MARGARITA",
+        "duplicateId": "d288d22f-13a1-4d24-9da5-7c5d67c337fb",
+        "duplicateName": "MARGARITA",
+        "survivorPolicies": 1,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_exact",
+        "survivorId": "cf9765a2-abc1-4922-a0fc-a878af018606",
+        "survivorName": "FRANCISCO",
+        "duplicateId": "caf31b82-48d6-4072-8767-aed84acf4955",
+        "duplicateName": "Francisco",
+        "survivorPolicies": 2,
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "First-name-only, no corroborating data — could be different people"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "49afe8fa-79e4-406d-8aba-1f25a623cc78",
+        "survivorName": "Susan Chun Ok Kim",
+        "duplicateId": "010bacd7-9e89-4e76-b4a8-b64ed172e3f9",
+        "duplicateName": "SUSAN KIM",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "03e14434-f487-4375-aea5-10f860587a5c",
+        "survivorName": "JAIME ORLANDO BRAVO LOPEZ",
+        "duplicateId": "9c33b61c-fedd-4c4f-871b-acdbaeaee03b",
+        "duplicateName": "Jaime O Bravo",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "0ec711ad-6ec1-4269-90a9-9b97b915c55c",
+        "survivorName": "The James T and Beatrice L Wesdy Family Trust",
+        "duplicateId": "96375345-ce98-422c-b23b-45a237a8e358",
+        "duplicateName": "The James M a",
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "0ec711ad-6ec1-4269-90a9-9b97b915c55c",
+        "survivorName": "The James T and Beatrice L Wesdy Family Trust",
+        "duplicateId": "8d26a748-85e4-41a7-ac95-edfed800986c",
+        "duplicateName": "THE JAMES M",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "fa8df3a8-b4b5-41c5-aa70-f5d0cd313d0d",
+        "survivorName": "The McCarley Family Trust dated September 6 2023",
+        "duplicateId": "3ad1445d-2e9b-4a90-8a7b-bf1db2e8146b",
+        "duplicateName": "The McCarley",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "401034c5-58e2-43a1-a4f8-60a4574b035a",
+        "survivorName": "THE BOSWELL FAMILY TRUST DATED MAY 27, 2016",
+        "duplicateId": "c8e834fc-bbeb-4299-a8c1-926f7a396800",
+        "duplicateName": "The Boswell Family Trust",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "67e1bfda-14aa-4c73-a98c-c91dd15b1990",
+        "survivorName": "Trust of the Cardenas Family Trust Oct. 22 2022",
+        "duplicateId": "5d5970f6-66d6-4a4c-b4da-664c052b3a36",
+        "duplicateName": "The family trust of",
+        "duplicatePolicies": 2,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "80f1fee2-02f7-4c08-a548-0b93588219da",
+        "survivorName": "JOHN TIONGSON & LOURMA TIONGSON 2019 FAMILY TRUST",
+        "duplicateId": "f1bc3fc4-ba67-4fab-88e5-35e016fde19a",
+        "duplicateName": "John R. Tiongson",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "f34fd1d3-4edb-48e7-afaf-fb18c395cace",
+        "survivorName": "The Yahn Family Trust Dated July 15 2021",
+        "duplicateId": "96ba1769-f477-4e67-8612-e1897bfeb54d",
+        "duplicateName": "The Yahn Family",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "b3ce1791-cb6f-4c81-b520-d580a85f4b3b",
+        "survivorName": "Irwin Golds Trust Dated March 12 2018",
+        "duplicateId": "ff53fa4d-d9aa-46fe-ba8d-c15d99907115",
+        "duplicateName": "Irwin Golds Trust",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      },
+      {
+        "type": "client_fuzzy",
+        "survivorId": "ff4e91d3-7159-4e0c-b5c2-bc4818902fbf",
+        "survivorName": "LUIS OMAR MIRANDA MARTINEZ",
+        "duplicateId": "c287a6ef-57bc-4c6b-b526-b1c66b0d431e",
+        "duplicateName": "LUIS OMAR",
+        "duplicatePolicies": 1,
+        "sharedAddress": false,
+        "sharedPolicyBase": false,
+        "survivorAddresses": [],
+        "duplicateAddresses": [],
+        "reason": "Weak fuzzy match, no corroborating data"
+      }
+    ],
+    "totalSkipped": 32
+  }
+}

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /policy
+Disallow: /client
+Disallow: /flags
+Disallow: /settings
+Disallow: /profile
+Disallow: /api/
+
+Sitemap: https://coveragechecknow.com/sitemap.xml

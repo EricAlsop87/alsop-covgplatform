@@ -1,0 +1,137 @@
+.viewWrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.displayValue {
+    font-weight: 500;
+    color: var(--text-high);
+}
+
+.editTrigger {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.viewWrapper:hover .editTrigger {
+    opacity: 1;
+    background: var(--bg-surface-raised);
+    color: var(--text-mid);
+}
+
+.editTrigger:hover {
+    color: var(--accent-primary) !important;
+}
+
+.isOverridden .displayValue {
+    color: #eab308; /* highlight overridden values slightly */
+}
+
+.overrideBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(234, 179, 8, 0.15);
+    color: #ca8a04;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    cursor: help;
+}
+
+[data-theme='dark'] .overrideBadge {
+    background: rgba(250, 204, 21, 0.15);
+    color: #fde047;
+}
+
+/* Edit Mode */
+
+.editWrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.input {
+    background: var(--bg-surface-overlay);
+    border: 1px solid var(--accent-primary);
+    color: var(--text-high);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    width: 120px;
+    outline: none;
+}
+
+.input:focus {
+    box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+
+.input:disabled {
+    opacity: 0.7;
+}
+
+.actions {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+.saveBtn, .cancelBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saveBtn {
+    background: var(--status-success);
+    color: white;
+}
+
+.saveBtn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.cancelBtn {
+    background: var(--bg-surface-overlay);
+    border: 1px solid var(--border-strong);
+    color: var(--text-mid);
+}
+
+.cancelBtn:hover:not(:disabled) {
+    background: var(--bg-surface-raised);
+    color: var(--text-high);
+}
+
+.saveBtn:disabled, .cancelBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.error {
+    font-size: 0.75rem;
+    color: var(--status-error);
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    white-space: nowrap;
+}

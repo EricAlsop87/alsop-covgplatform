@@ -1,0 +1,426 @@
+/* ═══════════════════════════════════════════════════════════
+   PolicyOverviewTab — Number-Driven Executive Layout
+   ═══════════════════════════════════════════════════════════ */
+
+.container {
+    margin-bottom: 1.5rem;
+}
+
+/* ── Page Header ── */
+.headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.headerTitleGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.headerIcon {
+    color: var(--accent-primary, #6366f1);
+    flex-shrink: 0;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin: 0;
+}
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+}
+
+.statusBadge.pending {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+
+.statusBadge.cancelled,
+.statusBadge.expired {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+/* ═══ Hero: Number-Driven Executive Overview Strip ═══ */
+.hero {
+    display: flex;
+    gap: 1.5rem;
+    align-items: stretch;
+    padding: 1.35rem 1.6rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(59, 130, 246, 0.04) 50%, rgba(16, 185, 129, 0.04) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    margin-bottom: 1rem;
+}
+
+.heroMain {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.heroLabel {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent-primary, #6366f1);
+    margin-bottom: 0.2rem;
+}
+
+.heroCost {
+    font-size: 2.35rem;
+    font-weight: 800;
+    color: var(--text-high);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.heroSubtext {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ═══ Cards ═══ */
+.card {
+    border: 1px solid var(--border-default);
+    border-radius: 0.625rem;
+    background: var(--bg-surface);
+    margin-bottom: 0.85rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    background: var(--bg-surface-raised);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.cardHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cardHeaderLeft svg {
+    flex-shrink: 0;
+}
+
+.cardHeaderLeft h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin: 0;
+}
+
+.cardHeaderRight {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.editBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-primary, #6366f1);
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    padding: 0.2rem 0.55rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.editBtn:hover {
+    background: rgba(99, 102, 241, 0.16);
+    border-color: var(--accent-primary, #6366f1);
+    transform: translateY(-1px);
+}
+
+.cardBody {
+    padding: 0.5rem 0.75rem;
+}
+
+/* ═══ Field Rows & Zebra Striping ═══ */
+.field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.42rem 0.65rem;
+    gap: 1rem;
+    min-width: 0;
+    border-radius: 0.3rem;
+}
+
+.cardBody > .field:nth-child(odd) {
+    background: rgba(128, 128, 128, 0.04);
+}
+
+.fieldLabel {
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.fieldValue {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-high);
+    text-align: right;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    font-variant-numeric: tabular-nums;
+}
+
+.mono {
+    font-variant-numeric: tabular-nums;
+}
+
+.premiumRow {
+    margin-top: 0.5rem;
+    border-top: 1px dashed var(--border-default);
+    padding: 0.6rem 0.65rem !important;
+    background: rgba(99, 102, 241, 0.05) !important;
+    border-radius: 0.35rem;
+}
+
+.premiumValue {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--accent-primary, #6366f1);
+    font-variant-numeric: tabular-nums;
+}
+
+.premiumDic {
+    color: #10b981;
+}
+
+/* ═══ Badges & Chips ═══ */
+.planChip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.18rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+}
+
+.dicChip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.18rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.carrierSubtext {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ═══ Grids ═══ */
+.dualGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.dualGrid .card {
+    margin-bottom: 0;
+}
+
+.triGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.triGrid .card {
+    margin-bottom: 0;
+}
+
+/* ═══ Mortgagee Blocks ═══ */
+.mortgageeBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.55rem 0.65rem;
+    background: rgba(128, 128, 128, 0.03);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    margin-bottom: 0.45rem;
+}
+
+.mortgageeBlock:last-child {
+    margin-bottom: 0;
+}
+
+.mortgageeHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.mortgageeBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+}
+
+.mortgageeBadgeSecond {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+
+.loanBadge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    background: var(--bg-surface);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid var(--border-default);
+    font-variant-numeric: tabular-nums;
+}
+
+.mortgageeName {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-high);
+}
+
+.mortgageeAddress {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+.mortgageeIcon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.mortgageeMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+.metaKey {
+    font-weight: 500;
+}
+
+.metaVal {
+    font-weight: 600;
+    color: var(--text-high);
+}
+
+/* ═══ Empty DIC State ═══ */
+.emptyDic {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.75rem 1rem;
+    text-align: center;
+    gap: 0.5rem;
+}
+
+.emptyDicTitle {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.emptyDicSubtext {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    max-width: 240px;
+    line-height: 1.35;
+}
+
+/* ═══ Responsive Breakpoints ═══ */
+@media (max-width: 900px) {
+    .hero {
+        flex-direction: column;
+    }
+
+    .heroMeta {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid var(--border-default);
+        padding-top: 0.75rem;
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dualGrid,
+    .triGrid {
+        grid-template-columns: 1fr;
+    }
+}

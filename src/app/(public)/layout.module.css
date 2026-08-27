@@ -1,0 +1,10 @@
+.contentWrapper {
+    flex: 1;
+    padding: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .contentWrapper {
+        padding: 2rem;
+    }
+}

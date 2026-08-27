@@ -1,0 +1,155 @@
+.portalContainer {
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.portalHeader {
+    margin-bottom: 1.5rem;
+}
+
+.portalTitle {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.portalSubtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.mainGrid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.25rem;
+}
+
+.sidebarColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.policyRow {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.policyRowHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.375rem;
+}
+
+.policyMetaRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.infoRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+    min-width: 0;
+}
+
+.infoLabel {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    width: 75px;
+    flex-shrink: 0;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.infoValue {
+    font-size: 0.8rem;
+    color: var(--text-high);
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .statsGrid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .mainGrid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .portalTitle {
+        font-size: 1.25rem;
+    }
+
+    .policyMetaRow {
+        gap: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* ── Review in Progress Banner ── */
+.reviewBanner {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    border-radius: var(--radius-lg, 8px);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.reviewBannerIcon {
+    color: #16a34a;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.reviewBannerContent {
+    flex: 1;
+}
+
+.reviewBannerTitle {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #14532d;
+    margin: 0 0 0.25rem 0;
+}
+
+.reviewBannerText {
+    font-size: 0.78rem;
+    color: #166534;
+    line-height: 1.45;
+    margin: 0;
+}
+

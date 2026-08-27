@@ -1,0 +1,289 @@
+/* ═══════════════════════════════════════════════════════════
+   PolicyDicDetailsTab — Clean, compact, mobile-first DIC layout
+   ═══════════════════════════════════════════════════════════ */
+
+.wrapper {
+    max-width: 56rem;
+}
+
+/* ── Page Header ── */
+.pageHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.pageHeader svg {
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+.pageHeader h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin: 0;
+}
+
+/* ═══ Document Selector ═══ */
+.docSelector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-default);
+    overflow-x: auto;
+}
+
+.docPill {
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.docPill:hover {
+    background: var(--bg-surface-raised);
+}
+
+.docPill.active {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+    color: #10b981;
+    font-weight: 600;
+}
+
+.compareToggle {
+    margin-left: auto;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.compareToggle:hover {
+    background: var(--bg-surface-raised);
+}
+
+.compareToggle.active {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: #6366f1;
+    color: #6366f1;
+    font-weight: 600;
+}
+
+/* ═══ Cards ═══ */
+.card {
+    border: 1px solid var(--border-default);
+    border-radius: 0.625rem;
+    background: var(--bg-surface);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.85rem;
+    background: var(--bg-surface-raised);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.cardHeader svg {
+    flex-shrink: 0;
+}
+
+.cardHeader h3 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-high);
+    margin: 0;
+}
+
+.cardBody {
+    padding: 0.65rem 0.85rem;
+}
+
+/* ═══ Field Rows ═══ */
+.field {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.3rem 0.5rem;
+    gap: 0.75rem;
+    min-width: 0;
+    border-radius: 0.25rem;
+}
+
+.cardBody > .field:nth-child(odd) {
+    background: rgba(128, 128, 128, 0.08);
+}
+
+.fieldGrid > .field:nth-child(4n+1),
+.fieldGrid > .field:nth-child(4n+2) {
+    background: rgba(128, 128, 128, 0.08);
+}
+
+.fieldLabel {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.fieldValue {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-high);
+    text-align: right;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.mono {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Field grid */
+.fieldGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 1.5rem;
+}
+
+/* ═══ Layout Grids ═══ */
+.dualGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.dualGrid .card {
+    margin-bottom: 0;
+}
+
+/* ═══ Document Info Footer ═══ */
+.docInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.docInfo svg {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+/* ═══ Compare Table ═══ */
+.compareTableWrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border-default);
+    border-radius: 0.5rem;
+    background: var(--bg-surface);
+}
+
+.compareTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    text-align: left;
+}
+
+.compareTable th,
+.compareTable td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border-default);
+    border-right: 1px solid var(--border-default);
+}
+
+.compareTable th {
+    background: var(--bg-surface-raised);
+    font-weight: 600;
+    color: var(--text-mid);
+    white-space: nowrap;
+}
+
+.compareTable tr:last-child th,
+.compareTable tr:last-child td {
+    border-bottom: none;
+}
+
+.compareTable th:last-child,
+.compareTable td:last-child {
+    border-right: none;
+}
+
+/* Fallback styling classes (from original) */
+.container {
+    padding-top: 1rem;
+}
+.sectionTitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+.premium {
+    font-weight: 700;
+    color: #10b981;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile Responsive
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+    .fieldGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .fieldGrid > .field:nth-child(even) {
+        background: transparent;
+    }
+    .fieldGrid > .field:nth-child(odd) {
+        background: rgba(128, 128, 128, 0.08);
+    }
+
+    .dualGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .docInfo {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

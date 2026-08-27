@@ -1,0 +1,524 @@
+.container {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    border: 1px solid var(--border-default);
+}
+
+.header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-high);
+    margin: 0;
+}
+
+.count {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.refreshButton {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md, 6px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+    color: var(--text-high);
+    border-color: var(--border-active, var(--accent-primary));
+    background: var(--bg-surface-raised);
+}
+
+.refreshButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.filterBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.filterPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.filterPill:hover {
+    color: var(--text-high);
+    border-color: var(--border-strong);
+    background: var(--bg-surface);
+}
+
+.filterPillActive {
+    color: var(--accent-primary);
+    background: var(--accent-primary-muted);
+    border-color: var(--accent-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(34, 67, 182, 0.12);
+}
+
+.filterPillActive:hover {
+    color: var(--accent-primary);
+    background: var(--accent-primary-muted);
+    border-color: var(--accent-primary);
+}
+
+.filterPillIssues.filterPillActive {
+    color: var(--status-error);
+    background: var(--bg-error-subtle);
+    border-color: var(--status-error);
+}
+
+.filterBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.05rem 0.4rem;
+    border-radius: 9999px;
+    background: var(--border-subtle);
+    color: var(--text-muted);
+}
+
+.filterPillActive .filterBadge {
+    background: var(--accent-primary);
+    color: #ffffff;
+}
+
+.filterPillIssues.filterPillActive .filterBadge {
+    background: var(--status-error);
+    color: #ffffff;
+}
+
+.emptyFilterState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    gap: 0.5rem;
+    font-size: 0.84rem;
+}
+
+.clearFilterBtn {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    background: var(--accent-primary-muted);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.clearFilterBtn:hover {
+    background: var(--bg-surface-raised);
+    border-color: var(--accent-primary);
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 24px 1fr 80px;
+    gap: 0.25rem 0.75rem;
+    align-items: start;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border-default);
+    transition: background-color 0.15s ease;
+    border-radius: var(--radius-md);
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.row:hover {
+    background-color: var(--bg-surface-raised);
+}
+
+.statusCol {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    grid-row: 1 / 3;
+    padding-top: 2px;
+}
+
+.statusIconDone {
+    color: #10b981;
+}
+
+.statusIconFailed {
+    color: #ef4444;
+}
+
+.statusIconProcessing {
+    color: #3b82f6;
+}
+
+.statusIconQueued {
+    color: #8b5cf6;
+}
+
+.statusIconDefault {
+    color: var(--text-muted);
+}
+
+.spinSlow {
+    animation: spin 2s linear infinite;
+}
+
+.mainCol {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-wrap: wrap;
+}
+
+.actionTextMerge {
+    color: #a78bfa;
+}
+
+.statusIconMerge {
+    color: #a78bfa;
+}
+
+.statusIconDoc {
+    color: #38bdf8;
+}
+
+.rowMerge {
+    border-left: 2px solid rgba(167, 139, 250, 0.3);
+    padding-left: 0.75rem;
+}
+
+.detailText {
+    width: 100%;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.125rem;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+/* Document event row */
+.rowDoc {
+    border-left: 2px solid rgba(56, 189, 248, 0.3);
+    padding-left: 0.75rem;
+}
+
+.actionTextDoc {
+    color: #38bdf8;
+}
+
+/* View RCE Data link */
+.viewDataLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #38bdf8;
+    cursor: pointer;
+    padding: 0.1rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    transition: all 0.15s ease;
+}
+
+.viewDataLink:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #7dd3fc;
+}
+
+.reassignLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #f59e0b;
+    cursor: pointer;
+    padding: 0.1rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    transition: all 0.15s ease;
+}
+
+.reassignLink:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+}
+
+.statusLabel {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-default);
+    color: var(--text-mid);
+}
+
+.statusLabel.done,
+.statusLabel.parsed {
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.statusLabel.failed {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.statusLabel.processing {
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.statusLabel.queued {
+    color: #8b5cf6;
+    border-color: rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.divider {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.clickableLink {
+    color: #60a5fa;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease, text-decoration 0.15s ease;
+    text-decoration: none;
+}
+
+.clickableLink:hover {
+    color: #93bbfd;
+    text-decoration: underline;
+}
+
+.fileName {
+    color: var(--text-high);
+    font-weight: 500;
+}
+
+.actionText {
+    color: var(--text-high);
+    font-weight: 500;
+    font-size: 0.825rem;
+}
+
+.uploaderCol {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: -0.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.successHints {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    color: var(--text-muted, #6b7280);
+    opacity: 0.8;
+    padding-left: 0.25rem;
+}
+
+.showMoreRow {
+    text-align: center;
+    padding: 0.75rem 0 0.25rem;
+    border-top: 1px solid var(--border-default);
+}
+
+.showMoreBtn {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--accent-primary, #6366f1);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    padding: 0.375rem 1rem;
+    border-radius: var(--radius-md, 6px);
+}
+
+.showMoreBtn:hover {
+    opacity: 0.8;
+    background: var(--bg-surface-raised);
+}
+
+.errorCol {
+    font-size: 0.75rem;
+    color: #ef4444;
+    grid-column: 2;
+    grid-row: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.125rem;
+    padding-right: 1rem;
+    opacity: 0.9;
+}
+
+.timeCol {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    text-align: right;
+    white-space: nowrap;
+    grid-column: 3;
+    grid-row: 1;
+}
+
+/* Loading state */
+.loadingState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Empty state */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.emptyIcon {
+    width: 2rem;
+    height: 2rem;
+    opacity: 0.4;
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 640px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .row {
+        grid-template-columns: 20px 1fr;
+        grid-template-rows: auto auto;
+        gap: 0.375rem 0.5rem;
+        padding: 0.75rem 0.25rem;
+    }
+
+    .statusCol {
+        grid-row: 1 / 3;
+        grid-column: 1;
+        align-self: start;
+        padding-top: 2px;
+    }
+
+    .mainCol {
+        grid-row: 1;
+        grid-column: 2;
+        flex-wrap: wrap;
+        font-size: 0.8125rem;
+    }
+
+    .uploaderCol {
+        display: none;
+    }
+
+    .errorCol {
+        grid-column: 2;
+        grid-row: 3;
+    }
+
+    .timeCol {
+        grid-row: 2;
+        grid-column: 2;
+        font-size: 0.75rem;
+        text-align: left;
+    }
+}

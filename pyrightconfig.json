@@ -1,0 +1,10 @@
+{
+    "executionEnvironments": [
+        {
+            "root": "worker",
+            "extraPaths": [
+                "src"
+            ]
+        }
+    ]
+}
