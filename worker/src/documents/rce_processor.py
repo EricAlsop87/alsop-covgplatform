@@ -32,7 +32,31 @@ class RCEProcessor(DocumentProcessor):
         return "rce"
 
     def extract_fields(self, raw_text: str) -> dict[str, Any]:
-        """Extract RCE fields using GPT-4o-mini."""
+        """Extract RCE fields using GPT-4o-mini.
+
+        Includes a safety check: if the text contains American Modern markers,
+        this processor will re-route to AMRCEProcessor rather than silently
+        producing incomplete data with the wrong prompt.
+        """
+        # ── Safety guardrail: catch mis-routed American Modern RCEs ───
+        AM_MARKERS = ["AMERICAN MODERN", "RCT EXPRESS", "COTALITY", "DETAILED REPORT ESTIMATE"]
+        upper_text = raw_text.upper()
+        if any(m in upper_text for m in AM_MARKERS):
+            logger.warning(
+                "360Value processor received American Modern RCE text — "
+                "re-routing to AMRCEProcessor. This means the job handler's "
+                "AM detection was bypassed (possibly running old worker code)."
+            )
+            from .am_rce_processor import AMRCEProcessor
+            am_proc = AMRCEProcessor(
+                document_id=self.document_id,
+                account_id=self.account_id,
+            )
+            # Delegate the entire extraction to the AM processor
+            self._am_rerouted = True
+            self._am_processor = am_proc
+            return am_proc.extract_fields(raw_text)
+
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY not set — cannot extract RCE fields")
@@ -93,6 +117,10 @@ class RCEProcessor(DocumentProcessor):
 
     def persist_extracted_data(self, extracted: dict[str, Any]) -> str:
         """Save to doc_data_rce table."""
+        # If rerouted to AM, delegate entirely
+        if getattr(self, '_am_rerouted', False):
+            return self._am_processor.persist_extracted_data(extracted)
+
         sb = get_supabase()
 
         def _parse_date(date_str: str | None) -> str | None:
@@ -177,6 +205,10 @@ class RCEProcessor(DocumentProcessor):
         - policy_terms fields (year_built, construction_type): Write only if
           currently empty. Flag conflict if different value exists.
         """
+        # If rerouted to AM, delegate entirely
+        if getattr(self, '_am_rerouted', False):
+            return self._am_processor.writeback_to_policy(extracted, policy_id, policy_term_id)
+
         sb = get_supabase()
         now_iso = datetime.now(timezone.utc).isoformat()
         log: list[dict] = []
