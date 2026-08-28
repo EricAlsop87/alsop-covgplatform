@@ -1,0 +1,33 @@
+name: Deploy Worker to Droplet
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy worker to DigitalOcean droplet
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd /opt/gap-guard/alsop-covgplatform
+            git pull origin main
+
+            # Reinstall dependencies if requirements.txt changed
+            cd worker
+            .venv/bin/pip install -q -r requirements.txt
+            cd ..
+
+            # Restart the worker service
+            systemctl restart decpage-worker.service
+
+            # Verify it started
+            sleep 2
+            systemctl is-active decpage-worker.service
