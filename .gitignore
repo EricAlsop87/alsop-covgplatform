@@ -57,3 +57,5 @@ scratch_*
 *.pdf
 ev_dump.json
 csv_output.txt
+exports/
+*.xlsx

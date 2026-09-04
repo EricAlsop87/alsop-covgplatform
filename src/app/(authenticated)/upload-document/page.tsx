@@ -110,6 +110,11 @@ export default function UploadDocumentPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [selectedType, setSelectedType] = useState<DocTypeKey | null>(null);
+    const [detectedType, setDetectedType] = useState<DocTypeKey | null>(null);
+    const [isClassifying, setIsClassifying] = useState(false);
+    const [successToast, setSuccessToast] = useState<{ message: string; docType: string } | null>(null);
+    const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autoResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const dragCounterRef = useRef(0);
     const [uploadError, setUploadError] = useState<string | null>(null);
@@ -384,8 +389,6 @@ export default function UploadDocumentPage() {
     /* ── Upload ──────────────────────────────────────────────────────── */
 
     const handleUpload = useCallback(async (file: File) => {
-        if (!selectedType) return;
-
         const ext = '.' + file.name.split('.').pop()?.toLowerCase();
         if (ext !== '.pdf') { setUploadError(`Only PDF files are accepted.`); return; }
         if (file.size === 0) { setUploadError('File is empty.'); return; }
@@ -398,6 +401,7 @@ export default function UploadDocumentPage() {
         setIsDuplicate(false);
         setProcessingTime('');
         setUploadedFileName(file.name);
+        setDetectedType(null);
         // Reset dec page state
         setDecPageStatus(null);
         setDecPageStep(null);
@@ -408,7 +412,30 @@ export default function UploadDocumentPage() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.access_token) { setUploadError('Session expired.'); setPhase('idle'); return; }
 
-            if (selectedType === 'dec_page') {
+            // ── Step 1: Auto-classify the document ──
+            setIsClassifying(true);
+            let classifiedType: DocTypeKey = 'other';
+            try {
+                const classifyForm = new FormData();
+                classifyForm.set('file', file);
+                const classifyRes = await fetch('/api/documents/classify', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${session.access_token}` },
+                    body: classifyForm,
+                });
+                if (classifyRes.ok) {
+                    const classifyJson = await classifyRes.json();
+                    classifiedType = classifyJson.detectedType as DocTypeKey;
+                }
+            } catch {
+                // Classification failed — fall back to 'other'
+            }
+            setIsClassifying(false);
+            setDetectedType(classifiedType);
+            setSelectedType(classifiedType);
+
+            // ── Step 2: Route to the correct engine ──
+            if (classifiedType === 'dec_page') {
                 // ── Dec Page Engine: XHR to /api/upload ──
                 const formData = new FormData();
                 formData.set('file', file);
@@ -470,7 +497,7 @@ export default function UploadDocumentPage() {
                 // ── Platform Documents Engine: fetch to /api/documents/upload ──
                 const formData = new FormData();
                 formData.set('file', file);
-                formData.set('doc_type', selectedType);
+                formData.set('doc_type', classifiedType);
 
                 const res = await fetch('/api/documents/upload', {
                     method: 'POST',
@@ -509,7 +536,7 @@ export default function UploadDocumentPage() {
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    }, [selectedType, startPolling, loadExistingDoc, startDecPagePolling]);
+    }, [startPolling, loadExistingDoc, startDecPagePolling]);
 
     const handleDragEnter = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); dragCounterRef.current++; setIsDragOver(true); };
     const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
@@ -799,7 +826,7 @@ export default function UploadDocumentPage() {
         }
     };
 
-    const resetForNewUpload = () => {
+    const resetForNewUpload = useCallback(() => {
         setPhase('idle');
         setDocumentId(null);
         setDocStatus(null);
@@ -807,6 +834,8 @@ export default function UploadDocumentPage() {
         setIsDuplicate(false);
         setProcessingTime('');
         setSelectedType(null);
+        setDetectedType(null);
+        setIsClassifying(false);
         setUploadedFileName('');
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
         // Reset dec page engine state
@@ -815,7 +844,57 @@ export default function UploadDocumentPage() {
         setDecPageUploadProgress(0);
         setDecPageSubmissionId(null);
         if (decPagePollRef.current) { clearInterval(decPagePollRef.current); decPagePollRef.current = null; }
-    };
+        // Reset manual assign state
+        setSearchQuery('');
+        setSearchResults([]);
+        setAutoRecommendations([]);
+        setAutoSearchDone(false);
+        autoSearchRanRef.current = false;
+    }, []);
+
+    // ── Auto-reset after successful processing ──
+    useEffect(() => {
+        if (phase !== 'done') return;
+
+        // Don't auto-reset if the document needs manual review
+        const needsReview = docStatus?.parse_status === 'needs_review' ||
+            docStatus?.match_status === 'no_match' ||
+            docStatus?.match_status === 'needs_review' ||
+            docStatus?.parse_status === 'failed';
+
+        // Don't auto-reset in reassign mode
+        if (isReassignMode || needsReview) return;
+
+        // For Dec Pages: auto-reset after success
+        const isDecSuccess = selectedType === 'dec_page' && decPageStatus === 'parsed';
+        // For Platform Docs: auto-reset after success
+        const isPlatformSuccess = selectedType !== 'dec_page' && docStatus?.parse_status === 'parsed';
+
+        if (isDecSuccess || isPlatformSuccess) {
+            const typeLabel = DOC_TYPES.find(t => t.key === selectedType)?.label || 'Document';
+            const policyNum = docStatus?.policies?.policy_number;
+            const toastMsg = policyNum
+                ? `${typeLabel} processed — matched to ${policyNum}`
+                : `${typeLabel} processed successfully`;
+
+            setSuccessToast({ message: toastMsg, docType: selectedType || 'other' });
+
+            // Clear toast after 8 seconds
+            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+            toastTimeoutRef.current = setTimeout(() => setSuccessToast(null), 8000);
+
+            // Auto-reset form after 3 seconds
+            if (autoResetTimeoutRef.current) clearTimeout(autoResetTimeoutRef.current);
+            autoResetTimeoutRef.current = setTimeout(() => {
+                resetForNewUpload();
+            }, 3000);
+        }
+
+        return () => {
+            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+            if (autoResetTimeoutRef.current) clearTimeout(autoResetTimeoutRef.current);
+        };
+    }, [phase, docStatus, decPageStatus, selectedType, isReassignMode, resetForNewUpload]);
 
     return (
         <main style={{ padding: '2rem', maxWidth: '48rem', margin: '0 auto' }}>
@@ -835,6 +914,21 @@ export default function UploadDocumentPage() {
                     </p>
                 </div>
             </div>
+
+            {/* ── Success Toast ── */}
+            {successToast && (
+                <div style={{
+                    position: 'fixed', top: '1rem', right: '1rem', zIndex: 9999,
+                    padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-lg)',
+                    background: '#10b981', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    display: 'flex', alignItems: 'center', gap: '0.6rem',
+                    animation: 'slideIn 0.3s ease-out',
+                    maxWidth: '400px',
+                }}>
+                    <CheckCircle size={18} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{successToast.message}</span>
+                </div>
+            )}
 
             {/* ── Reassign Context Banner ── */}
             {isReassignMode && reassignDocInfo && (
@@ -1043,79 +1137,50 @@ export default function UploadDocumentPage() {
                  ═══════════════════════════════════════════════════════════ */}
             {showSelector && (
                 <>
-                    {/* Step 1: Select Type */}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1.25rem' }}>
-                        <h2 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-high)', marginBottom: '1rem' }}>
-                            <span style={{ color: 'var(--accent-primary)', marginRight: '0.5rem' }}>1.</span>Select Document Type
+                    {/* Supported Document Types — informational only */}
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1rem' }}>
+                        <h2 style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Supported Document Types
                         </h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                            {DOC_TYPES.map(type => {
-                                const isOther = type.key === 'other';
-                                return (
-                                    <button
-                                        key={type.key}
-                                        onClick={() => { setSelectedType(type.key); setUploadError(null); }}
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: isOther ? 'row' : 'column',
-                                            alignItems: isOther ? 'center' : 'flex-start',
-                                            gridColumn: isOther ? '1 / -1' : 'span 1',
-                                            padding: '1rem 1.25rem', borderRadius: '0.75rem',
-                                            border: selectedType === type.key ? `2px solid ${type.color}` : '2px solid var(--border-default)',
-                                            background: selectedType === type.key ? `${type.color}08` : 'var(--bg-surface-raised)',
-                                            cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s ease',
-                                        }}
-                                    >
-                                        {isOther ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '110px' }}>
-                                                    <span style={{ fontSize: '1.4rem' }}>{type.icon}</span>
-                                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em', padding: '0.15rem 0.5rem', borderRadius: '0.25rem', backgroundColor: `${type.color}20`, color: type.color }}>{type.label}</span>
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-high)', marginBottom: '0.1rem' }}>{type.fullLabel}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{type.description}</div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                                                    <span style={{ fontSize: '1.4rem' }}>{type.icon}</span>
-                                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em', padding: '0.15rem 0.5rem', borderRadius: '0.25rem', backgroundColor: `${type.color}20`, color: type.color }}>{type.label}</span>
-                                                </div>
-                                                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-high)', marginBottom: '0.2rem' }}>{type.fullLabel}</div>
-                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{type.description}</div>
-                                            </>
-                                        )}
-                                    </button>
-                                );
-                            })}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem' }}>
+                            {DOC_TYPES.map(type => (
+                                <div
+                                    key={type.key}
+                                    style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                        padding: '0.75rem 0.5rem', borderRadius: '0.6rem',
+                                        border: `1px solid ${type.color}20`,
+                                        background: `${type.color}06`,
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.25rem', marginBottom: '0.35rem' }}>{type.icon}</span>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.03em', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', backgroundColor: `${type.color}18`, color: type.color, marginBottom: '0.3rem' }}>{type.label}</span>
+                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>{type.description}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Step 2: Upload */}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1.25rem', opacity: selectedType ? 1 : 0.5, pointerEvents: selectedType ? 'auto' : 'none', transition: 'opacity 0.2s' }}>
-                        <h2 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-high)', marginBottom: '1rem' }}>
-                            <span style={{ color: 'var(--accent-primary)', marginRight: '0.5rem' }}>2.</span>Upload PDF
-                            {selectedTypeInfo && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '0.25rem', backgroundColor: `${selectedTypeInfo.color}20`, color: selectedTypeInfo.color }}>{selectedTypeInfo.label}</span>}
-                        </h2>
+                    {/* Upload Dropzone */}
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1.25rem' }}>
                         <div
                             onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                             onClick={() => fileInputRef.current?.click()}
                             style={{
-                                border: isDragOver ? `2px dashed ${selectedTypeInfo?.color || 'var(--accent-primary)'}` : '2px dashed var(--border-default)',
+                                border: isDragOver ? `2px dashed var(--accent-primary)` : '2px dashed var(--border-default)',
                                 borderRadius: '0.75rem', padding: '2.5rem 2rem', textAlign: 'center', cursor: 'pointer',
-                                background: isDragOver ? `${selectedTypeInfo?.color || 'var(--accent-primary)'}08` : 'var(--bg-surface-raised)',
+                                background: isDragOver ? `var(--accent-primary)08` : 'var(--bg-surface-raised)',
                                 transition: 'all 0.2s',
                             }}
                         >
                             <input type="file" ref={fileInputRef} accept=".pdf" style={{ display: 'none' }} onChange={handleFileChange} />
                             <div style={{ pointerEvents: 'none' }}>
-                                <FileUp size={36} style={{ color: selectedTypeInfo?.color || 'var(--text-muted)', marginBottom: '0.75rem' }} />
+                                <FileUp size={36} style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }} />
                                 <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-high)' }}>
-                                    {isDragOver ? <span style={{ color: selectedTypeInfo?.color }}>Drop PDF here</span> : <>Drop a {selectedTypeInfo?.label || 'document'} PDF here or <span style={{ color: 'var(--accent-primary)' }}>click to browse</span></>}
+                                    {isDragOver ? <span style={{ color: 'var(--accent-primary)' }}>Drop PDF here</span> : <>Drop any policy document PDF here or <span style={{ color: 'var(--accent-primary)' }}>click to browse</span></>}
                                 </p>
-                                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>PDF only · Max 10MB</p>
+                                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>PDF only · Max 10MB · Auto-detects document type</p>
                             </div>
                         </div>
                         {uploadError && (
@@ -1164,7 +1229,7 @@ export default function UploadDocumentPage() {
                                 {isDecSuccess && <CheckCircle size={18} style={{ color: '#10b981' }} />}
                                 {isDecFailed && <XCircle size={18} style={{ color: '#ef4444' }} />}
                                 <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                                    {phase === 'uploading' ? 'Uploading…' :
+                                    {isClassifying ? 'Classifying document…' : phase === 'uploading' ? 'Uploading…' :
                                      phase === 'polling' ? 'Processing Dec Page…' :
                                      isDecSuccess ? 'Dec Page Processed Successfully' :
                                      isDecFailed ? 'Processing Failed' : 'Processing…'}
@@ -1294,7 +1359,7 @@ export default function UploadDocumentPage() {
                             {isDuplicate && docStatus && !isSuccess && !needsReview && !isFailed && !isStalled && <Copy size={18} style={{ color: '#6366f1' }} />}
 
                             <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                                {phase === 'uploading' ? 'Uploading…' :
+                                {isClassifying ? 'Classifying document…' : phase === 'uploading' ? 'Uploading…' :
                                  phase === 'polling' ? 'Processing Document…' :
                                  isStalled ? 'Processing Stalled' :
                                  isDuplicate && !isSuccess && !needsReview && !isFailed ? 'Duplicate — Already Uploaded' :
