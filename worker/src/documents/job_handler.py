@@ -40,6 +40,20 @@ def classify_document_text(text: str) -> str:
     """
     upper_text = text.upper()
 
+    # Check DIC indicators FIRST (including American Modern Homeowners Flex Quote / DIC)
+    dic_markers = [
+        "DIFFERENCE IN CONDITIONS", "DIC", "BAMBOO", "PACIFIC SPECIALTY", "PSIC",
+        "HOMEOWNERS FLEX", "HOMEOWNERS FLEX QUOTE", "DIC - FIRE",
+    ]
+    for marker in dic_markers:
+        if marker in upper_text:
+            logger.info("Auto-classified document as 'dic_dec_page' via marker: %s", marker)
+            return "dic_dec_page"
+
+    if "AMERICAN MODERN" in upper_text and ("FLEX" in upper_text or "QUOTE" in upper_text or "DIC" in upper_text):
+        logger.info("Auto-classified document as 'dic_dec_page' via American Modern DIC quote markers")
+        return "dic_dec_page"
+
     # Check E&S indicators
     es_markers = [
         "SURPLUS LINES", "STAMPING FEE", "E&S", "EXCESS AND SURPLUS",
@@ -51,23 +65,21 @@ def classify_document_text(text: str) -> str:
             logger.info("Auto-classified document as 'es_doc' via marker: %s", marker)
             return "es_doc"
 
-    # Check DIC indicators
-    dic_markers = ["DIFFERENCE IN CONDITIONS", "DIC", "BAMBOO", "PACIFIC SPECIALTY", "PSIC"]
-    for marker in dic_markers:
-        if marker in upper_text:
-            logger.info("Auto-classified document as 'dic_dec_page' via marker: %s", marker)
-            return "dic_dec_page"
-
-    # Check RCE indicators (both 360Value and American Modern / Cotality)
+    # Check RCE indicators (both 360Value and American Modern / Cotality RCE)
     rce_markers = [
         "360VALUE", "REPLACEMENT COST ESTIMATION", "REPLACEMENT COST ESTIMATOR",
-        "VALUATION DATE", "AMERICAN MODERN", "RCT EXPRESS", "COTALITY",
+        "VALUATION DATE", "RCT EXPRESS", "COTALITY",
         "DETAILED REPORT ESTIMATE", "RECONSTRUCTION COST WITH DEBRIS REMOVAL",
+        "VALUATION TOTALS DETAIL",
     ]
     for marker in rce_markers:
         if marker in upper_text:
             logger.info("Auto-classified document as 'rce' via marker: %s", marker)
             return "rce"
+
+    if "AMERICAN MODERN" in upper_text and ("RECONSTRUCTION" in upper_text or "VALUATION" in upper_text or "REPLACEMENT" in upper_text):
+        logger.info("Auto-classified document as 'rce' via American Modern RCE markers")
+        return "rce"
 
     # Default to E&S document
     logger.info("No specific classification markers matched — defaulting 'other' upload to 'es_doc'")
@@ -171,24 +183,40 @@ def process_document_job(job: dict) -> None:
             raw_text = text_result["raw_text"]
             upper_text = raw_text.upper()
 
-            am_markers = [
-                "AMERICAN MODERN", "RCT EXPRESS", "COTALITY",
-                "DETAILED REPORT ESTIMATE",
-            ]
-            is_american_modern = any(m in upper_text for m in am_markers)
-
-            if is_american_modern:
-                processor_cls = AMRCEProcessor
+            # Guard against American Modern DIC quotes mis-classified as RCE
+            am_dic_markers = ["HOMEOWNERS FLEX", "HOMEOWNERS FLEX QUOTE", "DIC - FIRE", "FLEX QUOTE"]
+            if any(m in upper_text for m in am_dic_markers) or ("AMERICAN MODERN" in upper_text and "DIC" in upper_text and "QUOTE" in upper_text):
                 logger.info(
-                    "job=%s detected American Modern RCE format — using AMRCEProcessor",
+                    "job=%s detected American Modern DIC quote uploaded as RCE — re-routing to DICProcessor",
                     job_id,
                 )
+                processor_cls = DICProcessor
+                try:
+                    sb.table("platform_documents").update({"doc_type": "dic_dec_page"}).eq("id", document_id).execute()
+                    doc_type = "dic_dec_page"
+                except Exception as e:
+                    logger.warning("job=%s failed to update doc_type to 'dic_dec_page': %s", job_id, e)
             else:
-                processor_cls = RCEProcessor
-                logger.info(
-                    "job=%s detected 360Value RCE format — using RCEProcessor",
-                    job_id,
+                am_rce_markers = [
+                    "RCT EXPRESS", "COTALITY", "DETAILED REPORT ESTIMATE",
+                    "VALUATION TOTALS DETAIL", "RECONSTRUCTION COST",
+                ]
+                is_american_modern_rce = any(m in upper_text for m in am_rce_markers) or (
+                    "AMERICAN MODERN" in upper_text and ("RECONSTRUCTION" in upper_text or "VALUATION" in upper_text)
                 )
+
+                if is_american_modern_rce:
+                    processor_cls = AMRCEProcessor
+                    logger.info(
+                        "job=%s detected American Modern RCE format — using AMRCEProcessor",
+                        job_id,
+                    )
+                else:
+                    processor_cls = RCEProcessor
+                    logger.info(
+                        "job=%s detected 360Value RCE format — using RCEProcessor",
+                        job_id,
+                    )
 
         # 4. Instantiate processor and run
         processor = processor_cls(document_id=document_id, account_id=account_id)

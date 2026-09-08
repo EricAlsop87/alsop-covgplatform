@@ -38,21 +38,35 @@ class RCEProcessor(DocumentProcessor):
         this processor will re-route to AMRCEProcessor rather than silently
         producing incomplete data with the wrong prompt.
         """
-        # ── Safety guardrail: catch mis-routed American Modern RCEs ───
-        AM_MARKERS = ["AMERICAN MODERN", "RCT EXPRESS", "COTALITY", "DETAILED REPORT ESTIMATE"]
+        # ── Safety guardrail 1: catch mis-routed American Modern DIC quotes ───
+        am_dic_markers = ["HOMEOWNERS FLEX", "HOMEOWNERS FLEX QUOTE", "DIC - FIRE", "FLEX QUOTE"]
         upper_text = raw_text.upper()
-        if any(m in upper_text for m in AM_MARKERS):
+        if any(m in upper_text for m in am_dic_markers) or ("AMERICAN MODERN" in upper_text and "DIC" in upper_text and "QUOTE" in upper_text):
+            logger.warning(
+                "RCEProcessor received American Modern DIC quote text — "
+                "re-routing to DICProcessor."
+            )
+            from .dic_processor import DICProcessor
+            dic_proc = DICProcessor(
+                document_id=self.document_id,
+                account_id=self.account_id,
+            )
+            self._dic_rerouted = True
+            self._dic_processor = dic_proc
+            return dic_proc.extract_fields(raw_text)
+
+        # ── Safety guardrail 2: catch mis-routed American Modern RCEs ───
+        am_rce_markers = ["RCT EXPRESS", "COTALITY", "DETAILED REPORT ESTIMATE", "VALUATION TOTALS DETAIL", "RECONSTRUCTION COST"]
+        if any(m in upper_text for m in am_rce_markers) or ("AMERICAN MODERN" in upper_text and ("RECONSTRUCTION" in upper_text or "VALUATION" in upper_text)):
             logger.warning(
                 "360Value processor received American Modern RCE text — "
-                "re-routing to AMRCEProcessor. This means the job handler's "
-                "AM detection was bypassed (possibly running old worker code)."
+                "re-routing to AMRCEProcessor."
             )
             from .am_rce_processor import AMRCEProcessor
             am_proc = AMRCEProcessor(
                 document_id=self.document_id,
                 account_id=self.account_id,
             )
-            # Delegate the entire extraction to the AM processor
             self._am_rerouted = True
             self._am_processor = am_proc
             return am_proc.extract_fields(raw_text)
@@ -117,6 +131,10 @@ class RCEProcessor(DocumentProcessor):
 
     def persist_extracted_data(self, extracted: dict[str, Any]) -> str:
         """Save to doc_data_rce table."""
+        # If rerouted to DIC, delegate entirely
+        if getattr(self, '_dic_rerouted', False):
+            return self._dic_processor.persist_extracted_data(extracted)
+
         # If rerouted to AM, delegate entirely
         if getattr(self, '_am_rerouted', False):
             return self._am_processor.persist_extracted_data(extracted)
@@ -205,6 +223,10 @@ class RCEProcessor(DocumentProcessor):
         - policy_terms fields (year_built, construction_type): Write only if
           currently empty. Flag conflict if different value exists.
         """
+        # If rerouted to DIC, delegate entirely
+        if getattr(self, '_dic_rerouted', False):
+            return self._dic_processor.writeback_to_policy(extracted, policy_id, policy_term_id)
+
         # If rerouted to AM, delegate entirely
         if getattr(self, '_am_rerouted', False):
             return self._am_processor.writeback_to_policy(extracted, policy_id, policy_term_id)

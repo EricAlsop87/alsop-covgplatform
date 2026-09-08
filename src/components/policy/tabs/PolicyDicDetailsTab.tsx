@@ -316,9 +316,31 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
                                 <Field label="Deductible" value={fmtCurrency(doc.deductible)} mono />
                             </div>
                             <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-default)' }}>
-                                <Field label="Ordinance or Law" value={doc.ordinance_or_law ? 'Yes' : 'No'} />
-                                <Field label="Extended Repl Cost" value={doc.extended_repl_cost ? 'Yes' : 'No'} />
-                                <Field label="Sewer Backup" value={doc.sewer_backup ? 'Yes' : 'No'} />
+                                <Field
+                                    label="Ordinance or Law"
+                                    value={
+                                        typeof doc.ordinance_or_law === 'string' && doc.ordinance_or_law !== 'Yes' && doc.ordinance_or_law !== 'true' && !isNaN(parseFloat(doc.ordinance_or_law.replace(/[$,]/g, '')))
+                                            ? fmtCurrency(doc.ordinance_or_law)
+                                            : (doc.ordinance_or_law || '—')
+                                    }
+                                    mono={typeof doc.ordinance_or_law === 'string' && /[\d$]/.test(doc.ordinance_or_law)}
+                                />
+                                <Field
+                                    label="Extended Repl Cost"
+                                    value={
+                                        typeof doc.extended_repl_cost === 'string' && doc.extended_repl_cost !== 'true'
+                                            ? doc.extended_repl_cost
+                                            : (doc.extended_repl_cost ? 'Yes' : '—')
+                                    }
+                                />
+                                <Field
+                                    label="Sewer Backup"
+                                    value={
+                                        typeof doc.sewer_backup === 'string' && doc.sewer_backup !== 'true'
+                                            ? doc.sewer_backup
+                                            : (doc.sewer_backup ? 'Yes' : '—')
+                                    }
+                                />
                             </div>
                         </SectionCard>
 

@@ -103,7 +103,23 @@ function classifyDocument(upperText: string): string {
     const decPageHits = decPageMarkers.filter(m => upperText.includes(m)).length;
     if (decPageHits >= 2) return 'dec_page';
 
-    // 2. Check for E&S documents
+    // 2. Check for DIC documents (BEFORE general RCE/E&S so American Modern DIC quotes are classified as DIC)
+    const dicMarkers = [
+        'DIFFERENCE IN CONDITIONS',
+        'DIC',
+        'BAMBOO',
+        'PACIFIC SPECIALTY',
+        'PSIC',
+        'HOMEOWNERS FLEX',
+        'HOMEOWNERS FLEX QUOTE',
+        'DIC - FIRE',
+    ];
+    if (dicMarkers.some(m => upperText.includes(m))) return 'dic_dec_page';
+    if (upperText.includes('AMERICAN MODERN') && (upperText.includes('FLEX') || upperText.includes('QUOTE') || upperText.includes('DIC'))) {
+        return 'dic_dec_page';
+    }
+
+    // 3. Check for E&S documents
     const esMarkers = [
         'SURPLUS LINES',
         'STAMPING FEE',
@@ -118,29 +134,22 @@ function classifyDocument(upperText: string): string {
     ];
     if (esMarkers.some(m => upperText.includes(m))) return 'other'; // 'other' triggers auto-classify in worker
 
-    // 3. Check for DIC documents
-    const dicMarkers = [
-        'DIFFERENCE IN CONDITIONS',
-        'DIC',
-        'BAMBOO',
-        'PACIFIC SPECIALTY',
-        'PSIC',
-    ];
-    if (dicMarkers.some(m => upperText.includes(m))) return 'dic_dec_page';
-
     // 4. Check for RCE documents
     const rceMarkers = [
         '360VALUE',
         'REPLACEMENT COST ESTIMATION',
         'REPLACEMENT COST ESTIMATOR',
         'VALUATION DATE',
-        'AMERICAN MODERN',
         'RCT EXPRESS',
         'COTALITY',
         'DETAILED REPORT ESTIMATE',
         'RECONSTRUCTION COST WITH DEBRIS REMOVAL',
+        'VALUATION TOTALS DETAIL',
     ];
     if (rceMarkers.some(m => upperText.includes(m))) return 'rce';
+    if (upperText.includes('AMERICAN MODERN') && (upperText.includes('RECONSTRUCTION') || upperText.includes('VALUATION') || upperText.includes('REPLACEMENT'))) {
+        return 'rce';
+    }
 
     // 5. Fallback
     return 'other';
