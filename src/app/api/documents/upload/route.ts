@@ -138,9 +138,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<DocumentU
             );
         }
 
-        if (!ALLOWED_TYPES.has(file.type)) {
+        const isPdfMime = !file.type || ALLOWED_TYPES.has(file.type) || file.type.includes('pdf') || file.type === 'application/octet-stream';
+        const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
+        if (!isPdfMime && !isPdfExt) {
             return NextResponse.json(
-                { success: false, message: `Unsupported file type: ${file.type}. Only PDF files are accepted.`, error: 'INVALID_FILE_TYPE' },
+                { success: false, message: `Unsupported file type: ${file.type || 'unknown'}. Only PDF files are accepted.`, error: 'INVALID_FILE_TYPE' },
                 { status: 400 }
             );
         }
@@ -159,10 +161,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<DocumentU
             );
         }
 
-        // Validate PDF magic bytes (%PDF-) to reject spoofed files
+        // Validate PDF magic bytes (%PDF-) within first 1024 bytes (supports BOM and scanner headers)
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        if (fileBuffer.length < 4 || fileBuffer[0] !== 0x25 || fileBuffer[1] !== 0x50 || fileBuffer[2] !== 0x44 || fileBuffer[3] !== 0x46) {
-            logger.warn('DocumentUpload', 'File does not have valid PDF magic bytes', { name: file.name });
+        const pdfHeaderIndex = fileBuffer.subarray(0, 1024).indexOf('%PDF-');
+        if (pdfHeaderIndex === -1) {
+            logger.warn('DocumentUpload', 'File does not contain valid PDF magic bytes (%PDF-)', { name: file.name });
             return NextResponse.json(
                 { success: false, message: 'The uploaded file is not a valid PDF document.', error: 'CORRUPTED_FILE' },
                 { status: 400 }
