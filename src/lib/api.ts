@@ -1149,29 +1149,34 @@ export async function getPolicyDetailById(policyId: string, customClient?: Supab
         const client = row.clients;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const terms: any[] = row.policy_terms || [];
-        const currentTerm = terms.find(t => t.is_current === true) || terms[0] || null;
+
+        // Sort terms by effective_date descending (newest first)
+        const sortedTerms = [...terms].sort((a: any, b: any) => {
+            const da = a.effective_date ? new Date(a.effective_date).getTime() : 0;
+            const db = b.effective_date ? new Date(b.effective_date).getTime() : 0;
+            if (db !== da) return db - da;
+            const aScore = (a.source_dec_page_id ? 2 : 0) + (a.annual_premium ? 1 : 0);
+            const bScore = (b.source_dec_page_id ? 2 : 0) + (b.annual_premium ? 1 : 0);
+            return bScore - aScore;
+        });
+
+        const currentTerm = sortedTerms.find((t: any) => t.is_current === true) || sortedTerms[0] || null;
 
         // Build all-terms array for the Term History panel
-        const allTermsSorted: PolicyTermSummary[] = terms
-            .map((t: any) => ({
-                id: t.id,
-                effective_date: t.effective_date,
-                expiration_date: t.expiration_date,
-                annual_premium: t.annual_premium,
-                is_current: t.is_current,
-                carrier_status: t.carrier_status,
-                property_location: t.property_location,
-                limit_dwelling: t.limit_dwelling,
-                deductible: t.deductible,
-                source_dec_page_id: t.source_dec_page_id,
-                carrier_policy_number: t.carrier_policy_number,
-                created_at: t.created_at,
-            }))
-            .sort((a: PolicyTermSummary, b: PolicyTermSummary) => {
-                const da = a.effective_date ? new Date(a.effective_date).getTime() : 0;
-                const db = b.effective_date ? new Date(b.effective_date).getTime() : 0;
-                return db - da; // newest first
-            });
+        const allTermsSorted: PolicyTermSummary[] = sortedTerms.map((t: any) => ({
+            id: t.id,
+            effective_date: t.effective_date,
+            expiration_date: t.expiration_date,
+            annual_premium: t.annual_premium,
+            is_current: t.id === currentTerm?.id,
+            carrier_status: t.carrier_status,
+            property_location: t.property_location,
+            limit_dwelling: t.limit_dwelling,
+            deductible: t.deductible,
+            source_dec_page_id: t.source_dec_page_id,
+            carrier_policy_number: t.carrier_policy_number,
+            created_at: t.created_at,
+        }));
 
         // Enrich terms with source_policy_number from their dec pages
         const decPageIds = allTermsSorted
