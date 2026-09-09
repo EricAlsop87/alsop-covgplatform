@@ -180,6 +180,8 @@ export default function UploadDocumentPage() {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
 
+                const urlPolicyId = searchParams.get('policy_id') || searchParams.get('policyId');
+
                 // Fetch the document with its policy/client info
                 const { data: doc } = await supabase
                     .from('platform_documents')
@@ -191,11 +193,11 @@ export default function UploadDocumentPage() {
                         )
                     `)
                     .eq('id', reassignId)
-                    .single();
+                    .maybeSingle();
 
                 if (doc) {
-                    const policy = doc.policies as any;
-                    const client = policy?.clients as any;
+                    const policy = Array.isArray(doc.policies) ? doc.policies[0] : (doc.policies as any);
+                    const client = Array.isArray(policy?.clients) ? policy?.clients[0] : (policy?.clients as any);
                     setReassignDocInfo({
                         id: doc.id,
                         file_name: doc.file_name || 'Unknown file',
@@ -203,10 +205,39 @@ export default function UploadDocumentPage() {
                         policy_number: policy?.policy_number,
                         insured_name: client?.named_insured || doc.extracted_owner_name,
                         property_address: policy?.property_address_raw || doc.extracted_address,
-                        policy_id: doc.policy_id,
+                        policy_id: doc.policy_id || urlPolicyId || undefined,
                         client_id: doc.client_id,
                     });
                     setUploadedFileName(doc.file_name || '');
+                } else {
+                    // Try dec_pages table fallback
+                    const { data: decDoc } = await supabase
+                        .from('dec_pages')
+                        .select(`
+                            id, policy_number, insured_name, property_location, policy_id, client_id,
+                            policies (id, policy_number, property_address_raw, carrier_name,
+                                clients (id, named_insured)
+                            ),
+                            dec_page_submissions (file_name)
+                        `)
+                        .eq('id', reassignId)
+                        .maybeSingle();
+                    if (decDoc) {
+                        const policy = Array.isArray(decDoc.policies) ? decDoc.policies[0] : (decDoc.policies as any);
+                        const client = Array.isArray(policy?.clients) ? policy?.clients[0] : (policy?.clients as any);
+                        const sub = Array.isArray(decDoc.dec_page_submissions) ? decDoc.dec_page_submissions[0] : decDoc.dec_page_submissions;
+                        setReassignDocInfo({
+                            id: decDoc.id,
+                            file_name: sub?.file_name || 'Declaration Page.pdf',
+                            doc_type: 'dec_page',
+                            policy_number: policy?.policy_number || decDoc.policy_number,
+                            insured_name: client?.named_insured || decDoc.insured_name,
+                            property_address: policy?.property_address_raw || decDoc.property_location,
+                            policy_id: decDoc.policy_id || urlPolicyId || undefined,
+                            client_id: decDoc.client_id,
+                        });
+                        setUploadedFileName(sub?.file_name || 'Declaration Page.pdf');
+                    }
                 }
             } catch {
                 setUploadError('Failed to load document for reassignment.');
@@ -783,6 +814,52 @@ export default function UploadDocumentPage() {
         }
     };
 
+    // ── Keep Current Policy Handler (Cancel reassignment & confirm) ──
+    const [isKeepingPolicy, setIsKeepingPolicy] = useState(false);
+
+    const handleKeepCurrentPolicy = useCallback(async () => {
+        const policyId = reassignDocInfo?.policy_id;
+        const docId = reassignDocInfo?.id || documentId;
+
+        setIsKeepingPolicy(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session && docId) {
+                // Update platform_documents match_status to manual / confirmed
+                await supabase
+                    .from('platform_documents')
+                    .update({ match_status: 'manual', writeback_status: 'confirmed' })
+                    .eq('id', docId);
+
+                // Update dec_pages if applicable
+                await supabase
+                    .from('dec_pages')
+                    .update({ review_status: 'approved', needs_review: false })
+                    .eq('id', docId);
+            }
+
+            setSuccessToast({
+                message: 'Current policy confirmed. Redirecting...',
+                docType: reassignDocInfo?.doc_type || 'document',
+            });
+
+            setTimeout(() => {
+                if (policyId) {
+                    window.location.href = `/policy/${policyId}`;
+                } else {
+                    window.location.href = '/dashboard';
+                }
+            }, 250);
+        } catch (err) {
+            console.error('Failed to keep current policy:', err);
+            if (policyId) {
+                window.location.href = `/policy/${policyId}`;
+            } else {
+                router.back();
+            }
+        }
+    }, [reassignDocInfo, documentId, router]);
+
     const selectedTypeInfo = DOC_TYPES.find(t => t.key === selectedType);
     const showSelector = phase === 'idle' && !isReassignMode;
     const showTracker = phase !== 'idle' && !isReassignMode;
@@ -901,7 +978,18 @@ export default function UploadDocumentPage() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <button onClick={() => reassignDocInfo?.policy_id ? router.push(`/policy/${reassignDocInfo.policy_id}`) : router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem' }} title="Go back">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (reassignDocInfo?.policy_id) {
+                                window.location.href = `/policy/${reassignDocInfo.policy_id}`;
+                            } else {
+                                router.back();
+                            }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem' }}
+                        title="Go back"
+                    >
                         <ArrowLeft size={20} />
                     </button>
                     <div>
@@ -915,15 +1003,6 @@ export default function UploadDocumentPage() {
                         </p>
                     </div>
                 </div>
-                {isReassignMode && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => reassignDocInfo?.policy_id ? router.push(`/policy/${reassignDocInfo.policy_id}`) : router.back()}
-                    >
-                        ✕ Do Not Reassign
-                    </Button>
-                )}
             </div>
 
             {/* ── Success Toast ── */}
@@ -964,12 +1043,21 @@ export default function UploadDocumentPage() {
                         </div>
                         {reassignDocInfo.policy_id && (
                             <Button
+                                type="button"
                                 variant="primary"
                                 size="sm"
-                                onClick={() => router.push(`/policy/${reassignDocInfo.policy_id}`)}
-                                style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                                onClick={handleKeepCurrentPolicy}
+                                disabled={isKeepingPolicy}
+                                style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 600 }}
                             >
-                                ✓ Keep Current Policy (Do Not Reassign)
+                                {isKeepingPolicy ? (
+                                    <>
+                                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', marginRight: '0.4rem' }} />
+                                        Confirming...
+                                    </>
+                                ) : (
+                                    '✓ Keep Current Policy (Do Not Reassign)'
+                                )}
                             </Button>
                         )}
                     </div>
