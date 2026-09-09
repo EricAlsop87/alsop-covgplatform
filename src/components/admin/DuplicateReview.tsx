@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import { Copy, AlertCircle, CheckCircle2, X, Merge, RefreshCw, Users, ShieldAlert, Search, UserPlus, Loader2, User } from "lucide-react";
+import { Copy, AlertCircle, CheckCircle2, X, Merge, RefreshCw, Users, ShieldAlert, Search, UserPlus, Loader2, User, ExternalLink } from "lucide-react";
 import ClientMergeModal from "./ClientMergeModal";
 import { supabase } from "@/lib/supabaseClient";
 import styles from "./DuplicateReview.module.css";
@@ -468,15 +468,45 @@ export default function DuplicateReview() {
                                     <span>Match Confidence: </span>
                                     <span className={styles.confidenceHigh}>{group.confidence}%</span>
                                 </div>
-                                <button
-                                    className={styles.dismissButton}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDuplicateClients(prev => prev.filter(g => g.survivor_id !== group.survivor_id));
-                                    }}
-                                >
-                                    Dismiss
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveMergeGroup({
+                                                survivor_id: group.survivor_id,
+                                                merged_ids: group.merged_ids,
+                                                survivor: group.details.survivor,
+                                                candidates: group.details.duplicates
+                                            });
+                                        }}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.35rem',
+                                            padding: '0.25rem 0.65rem',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 600,
+                                            borderRadius: '6px',
+                                            border: '1px solid rgba(16, 185, 129, 0.4)',
+                                            background: 'rgba(16, 185, 129, 0.08)',
+                                            color: 'var(--status-success, #10b981)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <Merge size={13} />
+                                        Review &amp; Compare
+                                    </button>
+                                    <button
+                                        className={styles.dismissButton}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDuplicateClients(prev => prev.filter(g => g.survivor_id !== group.survivor_id));
+                                        }}
+                                    >
+                                        Dismiss
+                                    </button>
+                                </div>
                             </div>
 
                             <div className={styles.entityList}>
@@ -484,11 +514,50 @@ export default function DuplicateReview() {
                                 <div className={styles.entityItem}>
                                     <div className={`${styles.iconMarker} ${styles.iconSurvivorClient}`}>S</div>
                                     <div className={styles.entityDetails}>
-                                        <div className={styles.entityTitle}>{group.details.survivor.named_insured}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                            <div className={styles.entityTitle}>{group.details.survivor.named_insured}</div>
+                                            <a
+                                                href={`/client/${group.details.survivor.id}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.25rem',
+                                                    fontSize: '0.72rem',
+                                                    color: 'var(--accent-primary, #6366f1)',
+                                                    textDecoration: 'none',
+                                                    fontWeight: 500,
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    background: 'rgba(99, 102, 241, 0.08)',
+                                                    flexShrink: 0
+                                                }}
+                                            >
+                                                View Profile <ExternalLink size={11} />
+                                            </a>
+                                        </div>
                                         <div className={styles.entitySubtext}>
                                             <span style={{ color: "var(--status-success)", fontWeight: 600 }}>Survivor Record</span>
-                                            <span>Age: {new Date(group.details.survivor.created_at).toLocaleDateString()}</span>
+                                            <span>Created: {new Date(group.details.survivor.created_at).toLocaleDateString()}</span>
+                                            <span>•</span>
+                                            <span style={{ fontWeight: 600 }}>{(group.details.survivor.policies || []).length} policies</span>
                                         </div>
+                                        {(group.details.survivor.mailing_address_raw || group.details.survivor.mailing_address_norm) && (
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                <span style={{ opacity: 0.8 }}>📍</span>
+                                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {group.details.survivor.mailing_address_raw || group.details.survivor.mailing_address_norm}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {(group.details.survivor.email || group.details.survivor.phone) && (
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem', display: 'flex', gap: '0.75rem' }}>
+                                                {group.details.survivor.email && <span>✉ {group.details.survivor.email}</span>}
+                                                {group.details.survivor.phone && <span>📞 {group.details.survivor.phone}</span>}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -498,11 +567,50 @@ export default function DuplicateReview() {
                                     <div key={rec.id} className={styles.entityItem}>
                                         <div className={`${styles.iconMarker} ${styles.iconTarget}`}>{i + 1}</div>
                                         <div className={styles.entityDetails}>
-                                            <div className={`${styles.entityTitle} ${styles.targetText}`}>{rec.named_insured}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                                <div className={`${styles.entityTitle} ${styles.targetText}`}>{rec.named_insured}</div>
+                                                <a
+                                                    href={`/client/${rec.id}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.25rem',
+                                                        fontSize: '0.72rem',
+                                                        color: 'var(--accent-primary, #6366f1)',
+                                                        textDecoration: 'none',
+                                                        fontWeight: 500,
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        background: 'rgba(99, 102, 241, 0.08)',
+                                                        flexShrink: 0
+                                                    }}
+                                                >
+                                                    View Profile <ExternalLink size={11} />
+                                                </a>
+                                            </div>
                                             <div className={styles.entitySubtext}>
                                                 <span>Merge Candidate</span>
-                                                <span>Age: {new Date(rec.created_at).toLocaleDateString()}</span>
+                                                <span>Created: {new Date(rec.created_at).toLocaleDateString()}</span>
+                                                <span>•</span>
+                                                <span style={{ fontWeight: 600 }}>{(rec.policies || []).length} policies</span>
                                             </div>
+                                            {(rec.mailing_address_raw || rec.mailing_address_norm) && (
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                    <span style={{ opacity: 0.8 }}>📍</span>
+                                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {rec.mailing_address_raw || rec.mailing_address_norm}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {(rec.email || rec.phone) && (
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem', display: 'flex', gap: '0.75rem' }}>
+                                                    {rec.email && <span>✉ {rec.email}</span>}
+                                                    {rec.phone && <span>📞 {rec.phone}</span>}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -574,7 +682,30 @@ export default function DuplicateReview() {
                                 <div className={styles.entityItem}>
                                     <div className={`${styles.iconMarker} ${styles.iconSurvivorPolicy}`}>S</div>
                                     <div className={styles.entityDetails}>
-                                        <div className={styles.entityTitle}>{group.details.survivor.policy_number}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                            <div className={styles.entityTitle}>{group.details.survivor.policy_number}</div>
+                                            <a
+                                                href={`/policy/${group.details.survivor.id}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.25rem',
+                                                    fontSize: '0.72rem',
+                                                    color: 'var(--accent-primary, #6366f1)',
+                                                    textDecoration: 'none',
+                                                    fontWeight: 500,
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    background: 'rgba(99, 102, 241, 0.08)',
+                                                    flexShrink: 0
+                                                }}
+                                            >
+                                                View Policy <ExternalLink size={11} />
+                                            </a>
+                                        </div>
                                         <div className={styles.entitySubtext}>
                                             <span style={{ color: "var(--status-info)", fontWeight: 600 }}>Root Policy</span>
                                             <span style={{ maxWidth: '60%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -590,7 +721,30 @@ export default function DuplicateReview() {
                                     <div key={rec.id} className={styles.entityItem}>
                                         <div className={`${styles.iconMarker} ${styles.iconTarget}`}>{i + 1}</div>
                                         <div className={styles.entityDetails}>
-                                            <div className={`${styles.entityTitle} ${styles.targetText}`}>{rec.policy_number}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                                <div className={`${styles.entityTitle} ${styles.targetText}`}>{rec.policy_number}</div>
+                                                <a
+                                                    href={`/policy/${rec.id}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.25rem',
+                                                        fontSize: '0.72rem',
+                                                        color: 'var(--accent-primary, #6366f1)',
+                                                        textDecoration: 'none',
+                                                        fontWeight: 500,
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        background: 'rgba(99, 102, 241, 0.08)',
+                                                        flexShrink: 0
+                                                    }}
+                                                >
+                                                    View Policy <ExternalLink size={11} />
+                                                </a>
+                                            </div>
                                             <div className={styles.entitySubtext}>
                                                 <span>Sub-Term (Will link to Root)</span>
                                                 <span style={{ maxWidth: '40%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
