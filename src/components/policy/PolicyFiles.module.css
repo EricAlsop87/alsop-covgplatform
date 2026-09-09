@@ -296,6 +296,18 @@
     flex-wrap: wrap;
 }
 
+.uploadedByText {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-muted);
+}
+
+.uploadedByName {
+    color: var(--text-high);
+    font-weight: 600;
+}
+
 .processingStep {
     font-size: 0.7rem;
     color: var(--accent-secondary, #6366f1);

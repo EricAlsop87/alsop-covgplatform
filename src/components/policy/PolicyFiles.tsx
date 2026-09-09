@@ -88,6 +88,7 @@ interface UnifiedFile {
     match_status?: string;
     error_message?: string | null;
     uploaded_at: string;
+    uploaded_by?: string | null;
     bucket?: string;
 }
 
@@ -190,6 +191,7 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
             storage_path: f.storage_path,
             parse_status: f.parse_status,
             uploaded_at: f.uploaded_at,
+            uploaded_by: f.uploaded_by,
         })),
         ...platformDocs.map(d => ({
             id: d.id,
@@ -203,6 +205,7 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
             match_status: d.match_status,
             error_message: d.error_message,
             uploaded_at: d.created_at,
+            uploaded_by: d.uploaded_by,
             bucket: 'cfp-platform-documents',
         })),
     ].sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
@@ -736,6 +739,11 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                                 )}
                                                                 <span>{formatFileSize(file.file_size)}</span>
                                                                 <span>{formatDate(file.uploaded_at)}</span>
+                                                                {file.uploaded_by && (
+                                                                    <span className={styles.uploadedByText}>
+                                                                        Uploaded by: <strong className={styles.uploadedByName}>{file.uploaded_by}</strong>
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             {file.error_message && file.parse_status !== 'parsed' && (
                                                                 <div className={styles.errorMessage}>

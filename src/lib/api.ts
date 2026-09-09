@@ -2364,11 +2364,12 @@ export interface DecPageFileInfo {
     parse_status: string | null;
     insured_name: string | null;
     policy_number: string | null;
+    uploaded_by?: string | null;
 }
 
 /**
  * Fetch dec page files linked to a policy.
- * Joins dec_pages → dec_page_submissions to get file metadata.
+ * Joins dec_pages → dec_page_submissions & accounts to get file metadata and uploader.
  */
 export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<DecPageFileInfo[]> {
     try {
@@ -2380,6 +2381,7 @@ export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<Dec
                 policy_number,
                 parse_status,
                 created_at,
+                created_by_account_id,
                 submission_id,
                 dec_page_submissions (
                     id,
@@ -2389,7 +2391,20 @@ export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<Dec
                     file_size,
                     file_hash,
                     status,
-                    created_at
+                    account_id,
+                    created_at,
+                    accounts:account_id (
+                        id,
+                        first_name,
+                        last_name,
+                        email
+                    )
+                ),
+                accounts:created_by_account_id (
+                    id,
+                    first_name,
+                    last_name,
+                    email
                 )
             `)
             .eq('policy_id', policyId)
@@ -2400,7 +2415,6 @@ export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<Dec
             return [];
         }
         
-    // (Existing code continues...)
         if (!data) return [];
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2408,6 +2422,18 @@ export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<Dec
             const sub = Array.isArray(row.dec_page_submissions)
                 ? row.dec_page_submissions[0]
                 : row.dec_page_submissions;
+            
+            const subAccount = Array.isArray(sub?.accounts) ? sub?.accounts[0] : sub?.accounts;
+            const decAccount = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
+            const account = subAccount || decAccount;
+
+            let uploaded_by: string | null = null;
+            if (account) {
+                const fn = account.first_name || '';
+                const ln = account.last_name || '';
+                uploaded_by = `${fn} ${ln}`.trim() || account.email || null;
+            }
+
             return {
                 id: sub?.id || row.id,
                 dec_page_id: row.id,
@@ -2418,6 +2444,7 @@ export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<Dec
                 parse_status: row.parse_status,
                 insured_name: row.insured_name,
                 policy_number: row.policy_number,
+                uploaded_by,
                 _sub_status: sub?.status || null,
                 _file_hash: sub?.file_hash || null,
             };
@@ -2529,6 +2556,7 @@ export interface PlatformDocumentInfo {
     client_id: string | null;
     created_at: string;
     updated_at: string;
+    uploaded_by?: string | null;
 }
 
 /**
@@ -2542,7 +2570,11 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
                 id, doc_type, file_name, file_size, storage_path,
                 parse_status, processing_step, match_status, match_confidence,
                 error_message, extracted_owner_name, extracted_address,
-                writeback_status, policy_id, client_id, created_at, updated_at
+                writeback_status, policy_id, client_id, created_at, updated_at,
+                account_id,
+                accounts:account_id (
+                    id, first_name, last_name, email
+                )
             `)
             .eq('policy_id', policyId)
             .order('created_at', { ascending: false });
@@ -2551,7 +2583,23 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
             logger.error('API', 'Error fetching platform documents', { message: error.message, policyId });
             return [];
         }
-        return (data || []) as PlatformDocumentInfo[];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const docs = (data || []).map((row: any) => {
+            const acc = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
+            let uploaded_by: string | null = null;
+            if (acc) {
+                const fn = acc.first_name || '';
+                const ln = acc.last_name || '';
+                uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
+            }
+            return {
+                ...row,
+                uploaded_by,
+            };
+        });
+
+        return docs as PlatformDocumentInfo[];
     } catch (err) {
         logger.error('API', 'Unexpected error fetching platform documents', {
             error: err instanceof Error ? err.message : String(err),
@@ -2571,7 +2619,11 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
                 id, doc_type, file_name, file_size, storage_path,
                 parse_status, processing_step, match_status, match_confidence,
                 error_message, extracted_owner_name, extracted_address,
-                writeback_status, policy_id, client_id, created_at, updated_at
+                writeback_status, policy_id, client_id, created_at, updated_at,
+                account_id,
+                accounts:account_id (
+                    id, first_name, last_name, email
+                )
             `)
             .eq('client_id', clientId)
             .order('created_at', { ascending: false });
@@ -2580,7 +2632,23 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
             logger.error('API', 'Error fetching client platform documents', { message: error.message, clientId });
             return [];
         }
-        return (data || []) as PlatformDocumentInfo[];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const docs = (data || []).map((row: any) => {
+            const acc = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
+            let uploaded_by: string | null = null;
+            if (acc) {
+                const fn = acc.first_name || '';
+                const ln = acc.last_name || '';
+                uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
+            }
+            return {
+                ...row,
+                uploaded_by,
+            };
+        });
+
+        return docs as PlatformDocumentInfo[];
     } catch (err) {
         logger.error('API', 'Unexpected error fetching client platform documents', {
             error: err instanceof Error ? err.message : String(err),
@@ -2600,7 +2668,11 @@ export async function fetchDocumentsNeedingReview(): Promise<PlatformDocumentInf
                 id, doc_type, file_name, file_size, storage_path,
                 parse_status, processing_step, match_status, match_confidence,
                 error_message, extracted_owner_name, extracted_address,
-                writeback_status, policy_id, client_id, created_at, updated_at
+                writeback_status, policy_id, client_id, created_at, updated_at,
+                account_id,
+                accounts:account_id (
+                    id, first_name, last_name, email
+                )
             `)
             .or('match_status.eq.needs_review,match_status.eq.no_match,parse_status.eq.failed')
             .order('created_at', { ascending: false });
@@ -2609,7 +2681,23 @@ export async function fetchDocumentsNeedingReview(): Promise<PlatformDocumentInf
             logger.error('API', 'Error fetching review queue', { message: error.message });
             return [];
         }
-        return (data || []) as PlatformDocumentInfo[];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const docs = (data || []).map((row: any) => {
+            const acc = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
+            let uploaded_by: string | null = null;
+            if (acc) {
+                const fn = acc.first_name || '';
+                const ln = acc.last_name || '';
+                uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
+            }
+            return {
+                ...row,
+                uploaded_by,
+            };
+        });
+
+        return docs as PlatformDocumentInfo[];
     } catch (err) {
         logger.error('API', 'Unexpected error fetching review queue', {
             error: err instanceof Error ? err.message : String(err),

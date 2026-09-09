@@ -102,6 +102,7 @@ describe('getPolicyEnding', () => {
                 clientName: 'Puja Sarna',
                 policyNumber: 'CFP 0102717347 00',
                 agentName: 'Alsop & Associates Insurance Agency',
+                propertyAddress: '20 Snow Ct',
             }
         );
         expect(rendered).toBe('Policy Ending in 7347 | 7347');
