@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { fetchDocumentsNeedingReview, deleteDocument, PlatformDocumentInfo } from "@/lib/api";
+import { supabase } from "@/lib/supabaseClient";
 import SubmissionsDebug from "./SubmissionsDebug";
 import DuplicateReview from "./DuplicateReview";
 
@@ -65,10 +66,12 @@ function formatFileSize(bytes: number | null): string {
 }
 
 /* ── Document Review Card ──────────────────────────────────────── */
-function ReviewCard({ doc, onDelete, isDeleting }: {
+function ReviewCard({ doc, onDelete, isDeleting, onConfirm, isConfirming }: {
     doc: PlatformDocumentInfo;
     onDelete: (id: string) => void;
     isDeleting: boolean;
+    onConfirm: (id: string) => void;
+    isConfirming: boolean;
 }) {
     const docConfig = DOC_TYPE_CONFIG[doc.doc_type] || DOC_TYPE_CONFIG.other;
     const status = getMatchStatusBadge(doc);
@@ -193,21 +196,56 @@ function ReviewCard({ doc, onDelete, isDeleting }: {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Link
-                    href={`/upload-document?reassign=${doc.id}`}
-                    style={{
-                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
-                        padding: '0.55rem 1rem', borderRadius: '0.5rem',
-                        background: docConfig.color, color: 'var(--text-inverse)',
-                        fontSize: '0.78rem', fontWeight: 600,
-                        textDecoration: 'none', transition: 'all 0.15s',
-                        boxShadow: `0 2px 8px ${docConfig.color}30`,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 4px 12px ${docConfig.color}40`; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 2px 8px ${docConfig.color}30`; }}
-                >
-                    Review & Assign <ArrowRight size={14} />
-                </Link>
+                {doc.policy_id ? (
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => onConfirm(doc.id)}
+                            disabled={isConfirming}
+                            style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                                padding: '0.55rem 1rem', borderRadius: '0.5rem',
+                                background: '#16a34a', color: '#fff', border: 'none',
+                                fontSize: '0.78rem', fontWeight: 600,
+                                cursor: isConfirming ? 'wait' : 'pointer',
+                                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                                transition: 'all 0.15s',
+                            }}
+                        >
+                            {isConfirming ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle size={14} />}
+                            Confirm Match
+                        </button>
+                        <Link
+                            href={`/upload-document?reassign=${doc.id}`}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                                padding: '0.55rem 0.85rem', borderRadius: '0.5rem',
+                                background: 'var(--bg-surface-raised)', color: 'var(--text-high)',
+                                border: '1px solid var(--border-default)',
+                                fontSize: '0.78rem', fontWeight: 600,
+                                textDecoration: 'none', transition: 'all 0.15s',
+                            }}
+                        >
+                            Reassign
+                        </Link>
+                    </>
+                ) : (
+                    <Link
+                        href={`/upload-document?reassign=${doc.id}`}
+                        style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                            padding: '0.55rem 1rem', borderRadius: '0.5rem',
+                            background: docConfig.color, color: 'var(--text-inverse)',
+                            fontSize: '0.78rem', fontWeight: 600,
+                            textDecoration: 'none', transition: 'all 0.15s',
+                            boxShadow: `0 2px 8px ${docConfig.color}30`,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 4px 12px ${docConfig.color}40`; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 2px 8px ${docConfig.color}30`; }}
+                    >
+                        Review & Assign <ArrowRight size={14} />
+                    </Link>
+                )}
                 <button
                     onClick={() => onDelete(doc.id)}
                     disabled={isDeleting}
@@ -234,6 +272,7 @@ function DocumentReviewTab() {
     const [docs, setDocs] = useState<PlatformDocumentInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
     const loadDocs = useCallback(async () => {
         setLoading(true);
@@ -250,6 +289,28 @@ function DocumentReviewTab() {
         const ok = await deleteDocument(id, 'platform');
         if (ok) setDocs(prev => prev.filter(d => d.id !== id));
         setDeletingId(null);
+    };
+
+    const handleConfirm = async (id: string) => {
+        setConfirmingId(id);
+        try {
+            const { error } = await supabase
+                .from('platform_documents')
+                .update({ match_status: 'manual', parse_status: 'parsed', error_message: null })
+                .eq('id', id);
+
+            if (!error) {
+                setDocs(prev => prev.filter(d => d.id !== id));
+            } else {
+                console.error('Failed to confirm document:', error);
+                alert('Failed to confirm document match. Please try again.');
+            }
+        } catch (err) {
+            console.error('Error confirming document:', err);
+            alert('An error occurred while confirming the document.');
+        } finally {
+            setConfirmingId(null);
+        }
     };
 
     if (loading) {
@@ -346,6 +407,8 @@ function DocumentReviewTab() {
                         doc={doc}
                         onDelete={handleDelete}
                         isDeleting={deletingId === doc.id}
+                        onConfirm={handleConfirm}
+                        isConfirming={confirmingId === doc.id}
                     />
                 ))}
             </div>

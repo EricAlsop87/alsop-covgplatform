@@ -825,10 +825,10 @@ export default function UploadDocumentPage() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session && docId) {
-                // Update platform_documents match_status to manual / confirmed
+                // Update platform_documents match_status to manual
                 await supabase
                     .from('platform_documents')
-                    .update({ match_status: 'manual', writeback_status: 'confirmed' })
+                    .update({ match_status: 'manual', parse_status: 'parsed', error_message: null })
                     .eq('id', docId);
 
                 // Update dec_pages if applicable
