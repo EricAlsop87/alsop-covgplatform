@@ -899,20 +899,31 @@ export default function UploadDocumentPage() {
     return (
         <main style={{ padding: '2rem', maxWidth: '48rem', margin: '0 auto' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-                <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem' }}>
-                    <ArrowLeft size={20} />
-                </button>
-                <div>
-                    <h1 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-high)', marginBottom: '0.15rem' }}>
-                        {isReassignMode ? 'Reassign Document' : 'Upload Document'}
-                    </h1>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        {isReassignMode
-                            ? 'Move this document to a different policy. Old data will be cleaned up automatically.'
-                            : 'Upload declaration pages, RCE, DIC, or other policy documents for automatic processing'}
-                    </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button onClick={() => reassignDocInfo?.policy_id ? router.push(`/policy/${reassignDocInfo.policy_id}`) : router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem' }} title="Go back">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-high)', marginBottom: '0.15rem' }}>
+                            {isReassignMode ? 'Reassign Document' : 'Upload Document'}
+                        </h1>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            {isReassignMode
+                                ? 'Move this document to a different policy. Old data will be cleaned up automatically.'
+                                : 'Upload declaration pages, RCE, DIC, or other policy documents for automatic processing'}
+                        </p>
+                    </div>
                 </div>
+                {isReassignMode && (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => reassignDocInfo?.policy_id ? router.push(`/policy/${reassignDocInfo.policy_id}`) : router.back()}
+                    >
+                        ✕ Do Not Reassign
+                    </Button>
+                )}
             </div>
 
             {/* ── Success Toast ── */}
@@ -939,16 +950,28 @@ export default function UploadDocumentPage() {
                     padding: '1.25rem 1.5rem',
                     marginBottom: '1.25rem',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                        <RefreshCw size={16} style={{ color: '#f59e0b' }} />
-                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f59e0b' }}>Reassigning Document</span>
-                        <span style={{
-                            fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem',
-                            borderRadius: '0.25rem', backgroundColor: '#10b98120', color: '#10b981',
-                            marginLeft: '0.25rem',
-                        }}>
-                            {reassignDocInfo.doc_type?.toUpperCase() || 'RCE'}
-                        </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <RefreshCw size={16} style={{ color: '#f59e0b' }} />
+                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f59e0b' }}>Reassigning Document</span>
+                            <span style={{
+                                fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem',
+                                borderRadius: '0.25rem', backgroundColor: '#10b98120', color: '#10b981',
+                                marginLeft: '0.25rem',
+                            }}>
+                                {reassignDocInfo.doc_type?.toUpperCase() || 'RCE'}
+                            </span>
+                        </div>
+                        {reassignDocInfo.policy_id && (
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => router.push(`/policy/${reassignDocInfo.policy_id}`)}
+                                style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                            >
+                                ✓ Keep Current Policy (Do Not Reassign)
+                            </Button>
+                        )}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem 1.5rem', fontSize: '0.78rem' }}>
                         <div>
@@ -974,8 +997,8 @@ export default function UploadDocumentPage() {
                             </div>
                         )}
                     </div>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.75rem', lineHeight: 1.5 }}>
-                        Search for a new policy below. When you reassign, the old RCE data, enrichments, and policy term writebacks will be automatically cleaned up from the current policy.
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.75rem', lineHeight: 1.5, marginBottom: 0 }}>
+                        Search for a new policy below only if you want to move this document to a different policy. If it is already on the correct policy, click <strong>&ldquo;Keep Current Policy&rdquo;</strong> above.
                     </p>
                 </div>
             )}
