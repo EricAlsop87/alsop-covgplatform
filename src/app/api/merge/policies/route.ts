@@ -108,8 +108,10 @@ export async function POST(req: NextRequest) {
                     const oldTermId = dupTerm.id;
                     
                     // Reparent any child records that use policy_term_id to avoid FK issues
-                    await supabaseAdmin.from('dec_pages').update({ policy_term_id: targetTermId }).eq('policy_term_id', oldTermId);
-                    await supabaseAdmin.from('policy_flags').update({ policy_term_id: targetTermId }).eq('policy_term_id', oldTermId);
+                    await supabaseAdmin.from('dec_pages').update({ policy_term_id: targetTermId, policy_id: survivor_id }).eq('policy_term_id', oldTermId);
+                    await supabaseAdmin.from('policy_flags').update({ policy_term_id: targetTermId, policy_id: survivor_id }).eq('policy_term_id', oldTermId);
+                    await supabaseAdmin.from('platform_documents').update({ policy_term_id: targetTermId, policy_id: survivor_id }).eq('policy_term_id', oldTermId);
+                    await supabaseAdmin.from('policy_reports').update({ policy_term_id: targetTermId, policy_id: survivor_id }).eq('policy_term_id', oldTermId);
 
                     // Update survivor's collision term with the best carrier policy number
                     const targetCarrier = chooseCarrierPolicyNumber(collision.carrier_policy_number, finalCarrierPolicyNumber);
@@ -120,15 +122,23 @@ export async function POST(req: NextRequest) {
                     }
 
                     // Delete the colliding duplicate term so we don't violate the constraint when updating policy_id
-                    await supabaseAdmin.from('policy_terms').delete().eq('id', oldTermId);
+                    const { error: delTermErr } = await supabaseAdmin.from('policy_terms').delete().eq('id', oldTermId);
+                    if (delTermErr) {
+                        logger.error('Merge', 'Failed to delete colliding duplicate term', { oldTermId, error: delTermErr });
+                        throw delTermErr;
+                    }
                 } else {
                     // No collision: move term to the survivor policy and set carrier_policy_number
-                    await supabaseAdmin.from('policy_terms')
+                    const { error: updTermErr } = await supabaseAdmin.from('policy_terms')
                         .update({ 
                             policy_id: survivor_id,
                             carrier_policy_number: finalCarrierPolicyNumber
                         })
                         .eq('id', dupTerm.id);
+                    if (updTermErr) {
+                        logger.error('Merge', 'Failed to update term to survivor policy', { oldTermId: dupTerm.id, error: updTermErr });
+                        throw updTermErr;
+                    }
                 }
             }
         }
@@ -224,6 +234,13 @@ export async function POST(req: NextRequest) {
             .from('manual_overrides')
             .update({ policy_id: survivor_id })
             .eq('policy_id', merged_id);
+
+        // 4g. Remap Notes
+        const { error: notesError } = await supabaseAdmin
+            .from('notes')
+            .update({ policy_id: survivor_id })
+            .eq('policy_id', merged_id);
+
         // Verify all terms were remapped before deleting the duplicate
         const { data: remainingTerms } = await supabaseAdmin
             .from('policy_terms')

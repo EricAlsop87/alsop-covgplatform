@@ -79,7 +79,10 @@ export default function DuplicateReview() {
                         keep_documents: keepDocs
                     })
                 });
-                if (!res.ok) throw new Error("Merge failed");
+                if (!res.ok) {
+                    const data = await res.json().catch(() => null);
+                    throw new Error(data?.error || "Merge failed");
+                }
             }
 
             // Immediately purge any cluster involving survivorId or any mergedId
@@ -103,9 +106,9 @@ export default function DuplicateReview() {
 
             // Re-fetch fresh duplicate list from backend to keep UI 100% in sync
             await fetchDuplicates(false);
-        } catch (err) {
-            logger.error('DuplicateReview', String(err))
-            alert("Failed to merge client. Please see console.");
+        } catch (err: any) {
+            logger.error('DuplicateReview', String(err));
+            alert(err?.message || "Failed to merge client. Please see console.");
         } finally {
             setIsMerging(false);
         }
@@ -124,7 +127,10 @@ export default function DuplicateReview() {
                     },
                     body: JSON.stringify({ survivor_id: survivorId, merged_id: mergedId })
                 });
-                if (!res.ok) throw new Error("Merge failed");
+                if (!res.ok) {
+                    const data = await res.json().catch(() => null);
+                    throw new Error(data?.error || "Merge failed");
+                }
             }
 
             const allInvolvedPolicyIds = new Set([survivorId, ...mergedIds]);
@@ -142,9 +148,9 @@ export default function DuplicateReview() {
 
             // Re-fetch fresh duplicate list from backend
             await fetchDuplicates(false);
-        } catch (err) {
-            logger.error('DuplicateReview', String(err))
-            alert("Failed to merge policy. Please check console.");
+        } catch (err: any) {
+            logger.error('DuplicateReview', String(err));
+            alert(err?.message || "Failed to merge policy. Please check console.");
         } finally {
             setIsMerging(false);
         }
