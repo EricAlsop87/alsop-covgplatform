@@ -370,6 +370,22 @@ def process_lifecycle(
             except Exception as e:
                 logger.warning("Could not set dec page review_status: %s", e)
 
+        # 5. Retroactive Auto-Reconcile: link any unassigned RCE/DIC documents matching this policy
+        try:
+            matched_doc_ids = reconcile_unmatched_documents(
+                policy_id=policy_id,
+                client_id=client_id,
+                policy_term_id=term_id,
+                property_address=property_location,
+                insured_name=insured_name,
+                account_id=account_id,
+            )
+            if matched_doc_ids:
+                logger.info("Policy %s auto-reconciled %d orphaned document(s): %s",
+                            policy_number, len(matched_doc_ids), matched_doc_ids)
+        except Exception as e:
+            logger.warning("Error during document auto-reconciliation: %s", e)
+
         logger.info("Successfully processed lifecycle for policy %s", policy_number)
 
     except Exception as e:
@@ -377,3 +393,78 @@ def process_lifecycle(
         raise e
 
     return result_ids
+
+
+def reconcile_unmatched_documents(
+    policy_id: str,
+    client_id: str,
+    policy_term_id: str | None,
+    property_address: str | None,
+    insured_name: str | None,
+    account_id: str,
+) -> list[str]:
+    """
+    Scans platform_documents for unassigned documents (policy_id IS NULL)
+    whose extracted_address or extracted_owner_name matches the newly created/updated policy.
+    Auto-links them with match_status='matched' and match_confidence=1.0.
+    Returns list of matched platform_document IDs.
+    """
+    if not property_address and not insured_name:
+        return []
+
+    sb = get_supabase()
+    norm_addr = normalize_address(property_address) if property_address else None
+
+    # Query unassigned platform_documents
+    unassigned = (
+        sb.table("platform_documents")
+        .select("id, doc_type, file_name, extracted_address, extracted_address_norm, extracted_owner_name, match_status")
+        .is_("policy_id", "null")
+        .in_("match_status", ["no_match", "pending", "needs_review"])
+        .execute()
+    )
+
+    if not unassigned.data:
+        return []
+
+    matched_ids = []
+    for doc in unassigned.data:
+        doc_id = doc["id"]
+        doc_addr = doc.get("extracted_address")
+        doc_addr_norm = doc.get("extracted_address_norm") or (normalize_address(doc_addr) if doc_addr else None)
+        doc_owner = doc.get("extracted_owner_name")
+
+        is_match = False
+        match_reason = ""
+
+        # Exact or high-confidence address match
+        if norm_addr and doc_addr_norm:
+            if norm_addr == doc_addr_norm or (len(norm_addr) > 8 and norm_addr in doc_addr_norm) or (len(doc_addr_norm) > 8 and doc_addr_norm in norm_addr):
+                is_match = True
+                match_reason = f"Retroactive match by address: '{doc_addr}'"
+
+        # Fallback owner match if address matched partially or is missing
+        if not is_match and insured_name and doc_owner:
+            norm_insured = insured_name.strip().lower()
+            norm_doc_owner = doc_owner.strip().lower()
+            if norm_insured == norm_doc_owner or (len(norm_insured) > 5 and norm_insured in norm_doc_owner):
+                is_match = True
+                match_reason = f"Retroactive match by insured name: '{doc_owner}'"
+
+        if is_match:
+            logger.info("Auto-reconciling document %s (%s) to policy %s: %s",
+                        doc_id, doc.get("file_name"), policy_id, match_reason)
+            link_payload = {
+                "policy_id": policy_id,
+                "client_id": client_id,
+                "match_status": "matched",
+                "match_confidence": 1.0,
+            }
+            if policy_term_id:
+                link_payload["policy_term_id"] = policy_term_id
+
+            sb.table("platform_documents").update(link_payload).eq("id", doc_id).execute()
+            matched_ids.append(doc_id)
+
+    return matched_ids
+

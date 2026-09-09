@@ -388,6 +388,10 @@ export interface DashboardPolicy {
     has_rce: boolean;
     has_dic: boolean;
     has_es: boolean;
+    // Document carrier identifiers
+    rce_carrier?: string;
+    dic_carrier?: string;
+    es_carrier?: string;
     // Metadata
     created_at?: string;
     // Enrichment status
@@ -756,13 +760,27 @@ export async function fetchDashboardPolicies(): Promise<DashboardPolicy[]> {
         const rceSet = new Set<string>();
         const dicSet = new Set<string>();
         const esSet = new Set<string>();
+        const rceCarrierMap = new Map<string, string>();
+        const dicCarrierMap = new Map<string, string>();
+        const esCarrierMap = new Map<string, string>();
+
         try {
             for (let i = 0; i < policyIds.length; i += IN_CHUNK) {
                 const chunk = policyIds.slice(i, i + IN_CHUNK);
-                const { data: statusRows } = await supabase
+                let { data: statusRows, error: statusErr } = await supabase
                     .from('policy_document_status')
-                    .select('policy_id, is_enriched, has_dec_page, has_rce, has_dic, has_es_doc')
+                    .select('policy_id, is_enriched, has_dec_page, has_rce, has_dic, has_es_doc, rce_carrier, dic_carrier, es_carrier')
                     .in('policy_id', chunk);
+
+                // Fallback if view doesn't have carrier columns yet
+                if (statusErr && statusErr.message?.includes('does not exist')) {
+                    const fallback = await supabase
+                        .from('policy_document_status')
+                        .select('policy_id, is_enriched, has_dec_page, has_rce, has_dic, has_es_doc')
+                        .in('policy_id', chunk);
+                    statusRows = (fallback.data || []) as any;
+                }
+
                 if (statusRows) {
                     for (const row of statusRows) {
                         if (row.is_enriched) enrichedSet.add(row.policy_id);
@@ -770,6 +788,56 @@ export async function fetchDashboardPolicies(): Promise<DashboardPolicy[]> {
                         if (row.has_rce) rceSet.add(row.policy_id);
                         if (row.has_dic) dicSet.add(row.policy_id);
                         if (row.has_es_doc) esSet.add(row.policy_id);
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const r = row as any;
+                        if (r.rce_carrier) rceCarrierMap.set(r.policy_id, r.rce_carrier);
+                        if (r.dic_carrier) dicCarrierMap.set(r.policy_id, r.dic_carrier);
+                        if (r.es_carrier) esCarrierMap.set(r.policy_id, r.es_carrier);
+                    }
+                }
+            }
+
+            // Fallback carrier resolver if policy_document_status view is not yet updated
+            if (rceCarrierMap.size === 0 && dicCarrierMap.size === 0 && (rceSet.size > 0 || dicSet.size > 0)) {
+                const { data: linkedDocs } = await supabase
+                    .from('platform_documents')
+                    .select('id, doc_type, policy_id, file_name')
+                    .in('policy_id', policyIds)
+                    .in('doc_type', ['rce', 'dic_dec_page', 'es_doc']);
+
+                if (linkedDocs && linkedDocs.length > 0) {
+                    const dicDocIds = linkedDocs.filter(d => d.doc_type === 'dic_dec_page').map(d => d.id);
+                    const rceDocIds = linkedDocs.filter(d => d.doc_type === 'rce').map(d => d.id);
+
+                    if (dicDocIds.length > 0) {
+                        const { data: dicData } = await supabase
+                            .from('doc_data_dic')
+                            .select('document_id, carrier_name')
+                            .in('document_id', dicDocIds);
+                        if (dicData) {
+                            const dicMap = new Map(dicData.map(d => [d.document_id, d.carrier_name]));
+                            for (const doc of linkedDocs) {
+                                if (doc.doc_type === 'dic_dec_page' && doc.policy_id && dicMap.has(doc.id)) {
+                                    dicCarrierMap.set(doc.policy_id, dicMap.get(doc.id)!);
+                                }
+                            }
+                        }
+                    }
+
+                    if (rceDocIds.length > 0) {
+                        const { data: rceData } = await supabase
+                            .from('doc_data_rce')
+                            .select('document_id, source')
+                            .in('document_id', rceDocIds);
+                        if (rceData) {
+                            const rceMap = new Map(rceData.map(r => [r.document_id, r.source]));
+                            for (const doc of linkedDocs) {
+                                if (doc.doc_type === 'rce' && doc.policy_id) {
+                                    const src = rceMap.get(doc.id) || (doc.file_name?.toLowerCase().includes('american modern') ? 'rce_american_modern' : 'rce_360value');
+                                    rceCarrierMap.set(doc.policy_id, src);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -834,6 +902,9 @@ export async function fetchDashboardPolicies(): Promise<DashboardPolicy[]> {
                 has_rce: rceSet.has(row.id),
                 has_dic: dicSet.has(row.id),
                 has_es: esSet.has(row.id) || (currentTermSorted?.es_exists ?? false),
+                rce_carrier: rceCarrierMap.get(row.id),
+                dic_carrier: dicCarrierMap.get(row.id),
+                es_carrier: esCarrierMap.get(row.id),
             } as DashboardPolicy;
         });
     } catch (err) {
