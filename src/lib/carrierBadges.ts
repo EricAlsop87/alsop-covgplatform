@@ -21,30 +21,35 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
     bgColor: string;
     borderColor: string;
 }> = {
+    // 1. Bamboo - Vibrant Orange (matches the Orange circular icon with bamboo stalks)
     bamboo: {
-        textColor: '#16a34a',
-        bgColor: 'rgba(34, 197, 94, 0.12)',
-        borderColor: 'rgba(34, 197, 94, 0.30)',
+        textColor: '#ea580c',
+        bgColor: 'rgba(234, 88, 12, 0.12)',
+        borderColor: 'rgba(234, 88, 12, 0.30)',
     },
+    // 2. American Modern - Teal / Cyan Blue (matches the multi-colored pinwheel icon)
     american_modern: {
-        textColor: '#0284c7',
-        bgColor: 'rgba(2, 132, 199, 0.12)',
-        borderColor: 'rgba(2, 132, 199, 0.30)',
+        textColor: '#0891b2',
+        bgColor: 'rgba(8, 145, 178, 0.12)',
+        borderColor: 'rgba(8, 145, 178, 0.30)',
     },
+    // 3. PSIC (Pacific Specialty) - Classic Navy / Blue (matches the psic wordmark)
     psic: {
-        textColor: '#9333ea',
-        bgColor: 'rgba(147, 51, 234, 0.12)',
-        borderColor: 'rgba(147, 51, 234, 0.30)',
+        textColor: '#1d4ed8',
+        bgColor: 'rgba(29, 78, 216, 0.12)',
+        borderColor: 'rgba(29, 78, 216, 0.30)',
     },
+    // 4. Aegis General - Slate / Steel Shield (matches the silver-slate shield outline icon)
     aegis: {
-        textColor: '#d97706',
-        bgColor: 'rgba(217, 119, 6, 0.12)',
-        borderColor: 'rgba(217, 119, 6, 0.30)',
+        textColor: '#475569',
+        bgColor: 'rgba(71, 85, 105, 0.12)',
+        borderColor: 'rgba(71, 85, 105, 0.30)',
     },
+    // 5. SageSure - Vibrant Lime Green (matches the bright green 'S' leaf logo)
     sagesure: {
-        textColor: '#0d9488',
-        bgColor: 'rgba(13, 148, 136, 0.12)',
-        borderColor: 'rgba(13, 148, 136, 0.30)',
+        textColor: '#65a30d',
+        bgColor: 'rgba(101, 163, 13, 0.12)',
+        borderColor: 'rgba(101, 163, 13, 0.30)',
     },
     other: {
         textColor: '#6366f1',
