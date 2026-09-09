@@ -802,7 +802,7 @@ export async function fetchDashboardPolicies(): Promise<DashboardPolicy[]> {
                 const { data: linkedDocs } = await supabase
                     .from('platform_documents')
                     .select('id, doc_type, policy_id, file_name')
-                    .in('policy_id', policyIds)
+                    .not('policy_id', 'is', null)
                     .in('doc_type', ['rce', 'dic_dec_page', 'es_doc']);
 
                 if (linkedDocs && linkedDocs.length > 0) {

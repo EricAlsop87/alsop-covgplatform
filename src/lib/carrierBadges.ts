@@ -178,11 +178,11 @@ export function getCarrierBadge(
         };
     }
 
-    // If hasDoc is true but no carrier is identified
+    // If hasDoc is true but no specific carrier was identified
     return {
-        label: 'Yes',
+        label: 'Bamboo',
         carrierKey: 'bamboo',
-        tooltip: `${docType.toUpperCase()} document attached`,
+        tooltip: docType === 'rce' ? 'Bamboo 360Value RCE' : 'Bamboo DIC Policy',
         ...CARRIER_STYLES.bamboo,
         hasDoc: true,
     };
