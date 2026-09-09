@@ -11,10 +11,9 @@ import { fetchDocumentsNeedingReview, deleteDocument, PlatformDocumentInfo } fro
 import { supabase } from "@/lib/supabaseClient";
 import { detectDocumentCarrier } from "@/lib/carrierBadges";
 import SubmissionsDebug from "./SubmissionsDebug";
-import DuplicateReview from "./DuplicateReview";
 
 /* ── Tab definition ──────────────────────────────────────────────── */
-type TabKey = 'review' | 'identity' | 'pipeline';
+type TabKey = 'review' | 'pipeline';
 
 interface TabDef {
     key: TabKey;
@@ -25,7 +24,6 @@ interface TabDef {
 
 const TABS: TabDef[] = [
     { key: 'review', label: 'Document Review', icon: FileSearch, description: 'Unmatched documents awaiting assignment' },
-    { key: 'identity', label: 'Identity Resolution', icon: Users, description: 'Duplicate client detection & merge' },
     { key: 'pipeline', label: 'Submissions Pipeline', icon: Layers, description: 'Ingestion job log & debug' },
 ];
 
@@ -518,11 +516,6 @@ export default function OperationsHub() {
 
             {/* Tab Content */}
             {activeTab === 'review' && <DocumentReviewTab />}
-            {activeTab === 'identity' && (
-                <div>
-                    <DuplicateReview />
-                </div>
-            )}
             {activeTab === 'pipeline' && <SubmissionsDebug />}
 
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>

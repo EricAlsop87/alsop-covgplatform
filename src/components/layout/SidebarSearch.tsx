@@ -19,6 +19,8 @@ interface PolicyResult {
     address: string;
     carrier: string;
     clientName: string;
+    totalDocs?: number;
+    docTypes?: string[];
     type: 'policy';
 }
 
@@ -228,8 +230,38 @@ export function SidebarSearch({ collapsed }: SidebarSearchProps) {
                                         >
                                             <FileText size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {p.policyNumber}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                                                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {p.policyNumber}
+                                                    </div>
+                                                    {(p.totalDocs ?? 0) > 0 ? (
+                                                        <span style={{
+                                                            fontSize: '0.62rem',
+                                                            fontWeight: 700,
+                                                            color: '#34d399',
+                                                            background: 'rgba(52, 211, 153, 0.12)',
+                                                            border: '1px solid rgba(52, 211, 153, 0.25)',
+                                                            padding: '0.05rem 0.35rem',
+                                                            borderRadius: '3px',
+                                                            whiteSpace: 'nowrap',
+                                                            flexShrink: 0,
+                                                        }}>
+                                                            {p.docTypes && p.docTypes.length > 0 ? p.docTypes.join(' · ') : `${p.totalDocs} docs`}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{
+                                                            fontSize: '0.62rem',
+                                                            color: 'var(--text-muted)',
+                                                            background: 'rgba(255, 255, 255, 0.05)',
+                                                            border: '1px solid var(--border-subtle)',
+                                                            padding: '0.05rem 0.35rem',
+                                                            borderRadius: '3px',
+                                                            whiteSpace: 'nowrap',
+                                                            flexShrink: 0,
+                                                        }}>
+                                                            0 files
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     {p.address !== '—' ? p.address : p.clientName}

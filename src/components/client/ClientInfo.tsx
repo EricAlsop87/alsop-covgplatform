@@ -157,6 +157,7 @@ export function ClientInfo({ clientId }: ClientInfoProps) {
     };
 
     // ── Merge: search for clients to merge with ──
+    // ── Merge: search for clients to merge with ──
     const handleMergeSearchChange = useCallback((query: string) => {
         setMergeSearchQuery(query);
         if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -169,7 +170,11 @@ export function ClientInfo({ clientId }: ClientInfoProps) {
         debounceRef.current = setTimeout(async () => {
             setMergeSearchLoading(true);
             try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
                 const data = await res.json();
                 // Filter out the current client from results
                 const filtered = (data.clients || []).filter((c: any) => c.id !== clientId);
@@ -186,11 +191,12 @@ export function ClientInfo({ clientId }: ClientInfoProps) {
     const handleSelectMergeTarget = useCallback(async (targetId: string) => {
         setMergeSearchLoading(true);
         try {
-            // Fetch full data for both clients (with policies, terms, dec_pages)
+            // Fetch full data for both clients (with policies, terms, dec_pages, documents)
             const selectFields = `id, named_insured, email, phone, mailing_address_raw, mailing_address_norm, created_at,
                 policies(id, policy_number, carrier_name, property_address_raw, status, created_at,
-                    policy_terms(id, effective_date, expiration_date, annual_premium, is_current)),
-                dec_pages(id)`;
+                    policy_terms(id, effective_date, expiration_date, annual_premium, is_current),
+                    platform_documents(id, doc_type, file_name, created_at)),
+                dec_pages(id, policy_number, created_at, submission_id, dec_page_submissions(file_name))`;
 
             const [currentRes, targetRes] = await Promise.all([
                 supabase.from('clients').select(selectFields).eq('id', clientId).single(),
@@ -221,10 +227,16 @@ export function ClientInfo({ clientId }: ClientInfoProps) {
     const handleMergeConfirm = useCallback(async (survivorId: string, mergedIds: string[], consolidatedFields: Record<string, any>, keepDocs: boolean) => {
         setIsMerging(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             for (const mergedId of mergedIds) {
                 const res = await fetch('/api/merge/clients', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
                     body: JSON.stringify({
                         survivor_id: survivorId,
                         merged_id: mergedId,
@@ -232,7 +244,10 @@ export function ClientInfo({ clientId }: ClientInfoProps) {
                         keep_documents: keepDocs,
                     }),
                 });
-                if (!res.ok) throw new Error('Merge failed');
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Merge failed');
+                }
             }
 
             toast.success('Clients merged successfully!');

@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { GitMerge, X, ArrowRight } from 'lucide-react';
 import { fetchPoliciesByClientId, DashboardPolicy } from '@/lib/api';
+import { Button } from '@/components/ui/Button/Button';
+import { PolicyMergeModal } from './PolicyMergeModal';
 import styles from './ClientPolicyList.module.css';
 import { logger } from '@/lib/logger';
-
 
 interface ClientPolicyListProps {
     clientId: string;
@@ -24,23 +26,48 @@ function formatShortDate(dateStr: string | null | undefined): string {
 
 export function ClientPolicyList({ clientId }: ClientPolicyListProps) {
     const router = useRouter();
-    const [policies, setPolicies] = React.useState<DashboardPolicy[]>([]);
-    const [loading, setLoading] = React.useState(true);
+    const [policies, setPolicies] = useState<DashboardPolicy[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    React.useEffect(() => {
-        const loadPolicies = async () => {
-            try {
-                const clientPolicies = await fetchPoliciesByClientId(clientId);
-                setPolicies(clientPolicies);
-            } catch (error) {
-                logger.error('ClientPolicyList', 'Error loading policies:', { error: error instanceof Error ? error.message : String(error) })
-            } finally {
-                setLoading(false);
-            }
-        };
+    // Merge state
+    const [mergeMode, setMergeMode] = useState(false);
+    const [selectedPolicyIds, setSelectedPolicyIds] = useState<string[]>([]);
+    const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
 
-        loadPolicies();
+    const loadPolicies = useCallback(async () => {
+        try {
+            const clientPolicies = await fetchPoliciesByClientId(clientId);
+            setPolicies(clientPolicies);
+        } catch (error) {
+            logger.error('ClientPolicyList', 'Error loading policies:', { error: error instanceof Error ? error.message : String(error) });
+        } finally {
+            setLoading(false);
+        }
     }, [clientId]);
+
+    useEffect(() => {
+        loadPolicies();
+    }, [loadPolicies]);
+
+    const toggleSelectPolicy = (id: string) => {
+        setSelectedPolicyIds(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(item => item !== id);
+            }
+            if (prev.length >= 2) {
+                // Keep the first one and replace the second
+                return [prev[0], id];
+            }
+            return [...prev, id];
+        });
+    };
+
+    const handleExitMergeMode = () => {
+        setMergeMode(false);
+        setSelectedPolicyIds([]);
+    };
+
+    const selectedPolicies = policies.filter(p => selectedPolicyIds.includes(p.id));
 
     if (loading) {
         return <div className={styles.loading}>Loading policies...</div>;
@@ -49,14 +76,69 @@ export function ClientPolicyList({ clientId }: ClientPolicyListProps) {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h2 className={styles.title}>Client Policies</h2>
-                <p className={styles.subtitle}>{policies.length} total {policies.length === 1 ? 'policy' : 'policies'}</p>
+                <div>
+                    <h2 className={styles.title}>Client Policies</h2>
+                    <p className={styles.subtitle}>{policies.length} total {policies.length === 1 ? 'policy' : 'policies'}</p>
+                </div>
+
+                {policies.length >= 2 && (
+                    <div className={styles.mergeControls}>
+                        {mergeMode ? (
+                            <>
+                                <span className={styles.mergeInfoText}>
+                                    Select 2 policies ({selectedPolicyIds.length}/2 selected)
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleExitMergeMode}
+                                >
+                                    <X size={14} style={{ marginRight: '0.35rem' }} />
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    disabled={selectedPolicyIds.length !== 2}
+                                    onClick={() => setIsMergeModalOpen(true)}
+                                    style={{
+                                        background: selectedPolicyIds.length === 2 ? '#6366f1' : undefined,
+                                        borderColor: selectedPolicyIds.length === 2 ? '#6366f1' : undefined,
+                                    }}
+                                >
+                                    <GitMerge size={14} style={{ marginRight: '0.35rem' }} />
+                                    Compare & Merge
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setMergeMode(true);
+                                    setSelectedPolicyIds([]);
+                                }}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    borderColor: 'rgba(99, 102, 241, 0.3)',
+                                    color: 'var(--text-high)',
+                                }}
+                            >
+                                <GitMerge size={14} style={{ color: '#818cf8' }} />
+                                Merge Policies
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className={styles.tableWrapper}>
                 <table className={styles.table}>
                     <thead className={styles.thead}>
                         <tr>
+                            {mergeMode && <th className={styles.checkboxTh}>Select</th>}
                             <th className={styles.th}>Policy Number</th>
                             <th className={styles.th}>Property Address</th>
                             <th className={styles.th}>Flags</th>
@@ -76,13 +158,36 @@ export function ClientPolicyList({ clientId }: ClientPolicyListProps) {
                                 low:      { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: 'rgba(59,130,246,0.25)' },
                             };
                             const sc = sevColors[sev] || sevColors.low;
+                            const isSelected = selectedPolicyIds.includes(policy.id);
 
                             return (
                             <tr
                                 key={`${policy.id}-${idx}`}
-                                className={`${styles.tr} ${styles.clickable}`}
-                                onClick={() => router.push(`/policy/${policy.id}`)}
+                                className={`${styles.tr} ${styles.clickable} ${isSelected ? styles.selectedRow : ''}`}
+                                onClick={() => {
+                                    if (mergeMode) {
+                                        toggleSelectPolicy(policy.id);
+                                    } else {
+                                        router.push(`/policy/${policy.id}`);
+                                    }
+                                }}
                             >
+                                {mergeMode && (
+                                    <td className={styles.checkboxTd} onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => toggleSelectPolicy(policy.id)}
+                                            style={{
+                                                accentColor: '#6366f1',
+                                                width: 16,
+                                                height: 16,
+                                                cursor: 'pointer',
+                                                verticalAlign: 'middle',
+                                            }}
+                                        />
+                                    </td>
+                                )}
                                 <td className={styles.td}>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span className={styles.policyNumber}>{policy.policy_number}</span>
@@ -138,6 +243,19 @@ export function ClientPolicyList({ clientId }: ClientPolicyListProps) {
                     </div>
                 )}
             </div>
+
+            {/* Merge Policies Modal */}
+            {isMergeModalOpen && selectedPolicies.length === 2 && (
+                <PolicyMergeModal
+                    policyA={selectedPolicies[0]}
+                    policyB={selectedPolicies[1]}
+                    onClose={() => setIsMergeModalOpen(false)}
+                    onSuccess={() => {
+                        handleExitMergeMode();
+                        loadPolicies();
+                    }}
+                />
+            )}
         </div>
     );
 }

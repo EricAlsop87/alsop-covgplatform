@@ -8,6 +8,39 @@
 .header {
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.mergeControls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mergeInfoText {
+    font-size: 0.85rem;
+    color: var(--text-mid);
+    font-weight: 500;
+}
+
+.selectedRow {
+    background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+.checkboxTh {
+    width: 44px;
+    padding: 0.625rem 0.5rem 0.625rem 1rem !important;
+    text-align: center;
+}
+
+.checkboxTd {
+    width: 44px;
+    padding: 0.5rem 0.5rem 0.5rem 1rem !important;
+    text-align: center;
 }
 
 .title {
