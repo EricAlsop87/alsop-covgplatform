@@ -99,10 +99,16 @@ export function getCarrierBadge(
     // 2. American Modern
     if (
         lower.includes('american modern') ||
+        lower.includes('americanmodern') ||
         lower.includes('rce_american_modern') ||
         lower.includes('cotality') ||
         lower.includes('am rce') ||
-        lower.includes('homeowners flex')
+        lower.includes('rce am') ||
+        lower.includes('rcm am') ||
+        lower.includes('quote am') ||
+        lower.includes('dic am') ||
+        lower.includes('homeowners flex') ||
+        /\bAM\b/i.test(raw)
     ) {
         return {
             label: 'American Modern',
@@ -116,6 +122,7 @@ export function getCarrierBadge(
     // 3. PSIC (Pacific Specialty)
     if (
         lower.includes('pacific specialty') ||
+        lower.includes('pacificspecialty') ||
         lower.includes('psic')
     ) {
         return {
@@ -130,6 +137,7 @@ export function getCarrierBadge(
     // 4. Aegis
     if (
         lower.includes('aegis') ||
+        lower.includes('aegis general') ||
         lower.includes('aegis security')
     ) {
         return {
@@ -186,4 +194,131 @@ export function getCarrierBadge(
         ...CARRIER_STYLES.bamboo,
         hasDoc: true,
     };
+}
+
+/**
+ * Detect carrier info directly from a document object (file_name, carrier_name, doc_type, source, created_by).
+ */
+export function detectDocumentCarrier(doc: {
+    file_name?: string | null;
+    doc_type?: string | null;
+    carrier_name?: string | null;
+    source?: string | null;
+    created_by?: string | null;
+}): CarrierBadgeInfo | null {
+    const fileName = doc.file_name || '';
+    const docType = doc.doc_type || '';
+    const carrierName = doc.carrier_name || '';
+    const source = doc.source || '';
+    const createdBy = doc.created_by || '';
+
+    const combined = `${carrierName} ${source} ${createdBy} ${fileName}`.trim();
+    const lower = combined.toLowerCase();
+
+    // 1. American Modern
+    if (
+        lower.includes('american modern') ||
+        lower.includes('americanmodern') ||
+        lower.includes('rce_american_modern') ||
+        lower.includes('cotality') ||
+        lower.includes('homeowners flex') ||
+        lower.includes('rce am') ||
+        lower.includes('rcm am') ||
+        lower.includes('quote am') ||
+        lower.includes('dic am') ||
+        /\bAM\b/.test(fileName) ||
+        /[\s_]AM[\s_\.]/i.test(fileName)
+    ) {
+        return {
+            label: 'American Modern',
+            carrierKey: 'american_modern',
+            tooltip: 'American Modern Insurance',
+            ...CARRIER_STYLES.american_modern,
+            hasDoc: true,
+        };
+    }
+
+    // 2. PSIC (Pacific Specialty)
+    if (
+        lower.includes('pacific specialty') ||
+        lower.includes('pacificspecialty') ||
+        lower.includes('psic')
+    ) {
+        return {
+            label: 'PSIC',
+            carrierKey: 'psic',
+            tooltip: 'Pacific Specialty Insurance Company (PSIC)',
+            ...CARRIER_STYLES.psic,
+            hasDoc: true,
+        };
+    }
+
+    // 3. Aegis
+    if (
+        lower.includes('aegis') ||
+        lower.includes('aegis general') ||
+        lower.includes('aegis security')
+    ) {
+        return {
+            label: 'Aegis',
+            carrierKey: 'aegis',
+            tooltip: 'Aegis Security Insurance Company',
+            ...CARRIER_STYLES.aegis,
+            hasDoc: true,
+        };
+    }
+
+    // 4. SageSure
+    if (
+        lower.includes('sagesure') ||
+        lower.includes('sage sure')
+    ) {
+        return {
+            label: 'SageSure',
+            carrierKey: 'sagesure',
+            tooltip: 'SageSure Insurance',
+            ...CARRIER_STYLES.sagesure,
+            hasDoc: true,
+        };
+    }
+
+    // 5. Bamboo
+    if (
+        lower.includes('bamboo') ||
+        lower.includes('guidewire@bamboo') ||
+        lower.includes('360value') ||
+        lower.includes('rce_360value')
+    ) {
+        return {
+            label: 'Bamboo',
+            carrierKey: 'bamboo',
+            tooltip: 'Bamboo Insurance',
+            ...CARRIER_STYLES.bamboo,
+            hasDoc: true,
+        };
+    }
+
+    // If it's a specific carrier name directly provided
+    if (carrierName && carrierName !== 'unknown') {
+        return {
+            label: carrierName,
+            carrierKey: 'other',
+            tooltip: carrierName,
+            ...CARRIER_STYLES.other,
+            hasDoc: true,
+        };
+    }
+
+    // For RCE or DIC docs without explicit carrier name, default to Bamboo (360Value standard)
+    if (docType === 'rce') {
+        return {
+            label: 'Bamboo',
+            carrierKey: 'bamboo',
+            tooltip: 'Bamboo 360Value RCE',
+            ...CARRIER_STYLES.bamboo,
+            hasDoc: true,
+        };
+    }
+
+    return null;
 }

@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { fetchDocumentsNeedingReview, deleteDocument, PlatformDocumentInfo } from "@/lib/api";
 import { supabase } from "@/lib/supabaseClient";
+import { detectDocumentCarrier } from "@/lib/carrierBadges";
 import SubmissionsDebug from "./SubmissionsDebug";
 import DuplicateReview from "./DuplicateReview";
 
@@ -112,7 +113,23 @@ function ReviewCard({ doc, onDelete, isDeleting, onConfirm, isConfirming }: {
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {/* Carrier badge */}
+                    {(() => {
+                        const carrierBadge = detectDocumentCarrier(doc);
+                        if (!carrierBadge) return null;
+                        return (
+                            <span style={{
+                                padding: '0.15rem 0.5rem', borderRadius: '999px',
+                                fontSize: '0.65rem', fontWeight: 700,
+                                background: carrierBadge.bgColor, color: carrierBadge.textColor,
+                                border: `1px solid ${carrierBadge.borderColor}`,
+                                textTransform: 'uppercase', letterSpacing: '0.03em',
+                            }} title={carrierBadge.tooltip}>
+                                {carrierBadge.label}
+                            </span>
+                        );
+                    })()}
                     {/* Doc type badge */}
                     <span style={{
                         padding: '0.15rem 0.5rem', borderRadius: '999px',

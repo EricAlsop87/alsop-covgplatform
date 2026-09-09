@@ -2557,6 +2557,9 @@ export interface PlatformDocumentInfo {
     created_at: string;
     updated_at: string;
     uploaded_by?: string | null;
+    carrier_name?: string | null;
+    source?: string | null;
+    created_by?: string | null;
 }
 
 /**
@@ -2574,6 +2577,12 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
                 account_id,
                 accounts:account_id (
                     id, first_name, last_name, email
+                ),
+                doc_data_rce (
+                    source, created_by
+                ),
+                doc_data_dic (
+                    carrier_name
                 )
             `)
             .eq('policy_id', policyId)
@@ -2593,9 +2602,15 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
                 const ln = acc.last_name || '';
                 uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
             }
+            const rce = Array.isArray(row.doc_data_rce) ? row.doc_data_rce[0] : row.doc_data_rce;
+            const dic = Array.isArray(row.doc_data_dic) ? row.doc_data_dic[0] : row.doc_data_dic;
+            const carrier_name = dic?.carrier_name || (rce?.created_by?.toLowerCase().includes('bamboo') ? 'Bamboo' : null);
             return {
                 ...row,
                 uploaded_by,
+                carrier_name,
+                source: rce?.source || null,
+                created_by: rce?.created_by || null,
             };
         });
 
@@ -2623,6 +2638,12 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
                 account_id,
                 accounts:account_id (
                     id, first_name, last_name, email
+                ),
+                doc_data_rce (
+                    source, created_by
+                ),
+                doc_data_dic (
+                    carrier_name
                 )
             `)
             .eq('client_id', clientId)
@@ -2642,9 +2663,15 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
                 const ln = acc.last_name || '';
                 uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
             }
+            const rce = Array.isArray(row.doc_data_rce) ? row.doc_data_rce[0] : row.doc_data_rce;
+            const dic = Array.isArray(row.doc_data_dic) ? row.doc_data_dic[0] : row.doc_data_dic;
+            const carrier_name = dic?.carrier_name || (rce?.created_by?.toLowerCase().includes('bamboo') ? 'Bamboo' : null);
             return {
                 ...row,
                 uploaded_by,
+                carrier_name,
+                source: rce?.source || null,
+                created_by: rce?.created_by || null,
             };
         });
 
@@ -2672,6 +2699,12 @@ export async function fetchDocumentsNeedingReview(): Promise<PlatformDocumentInf
                 account_id,
                 accounts:account_id (
                     id, first_name, last_name, email
+                ),
+                doc_data_rce (
+                    source, created_by
+                ),
+                doc_data_dic (
+                    carrier_name
                 )
             `)
             .or('match_status.eq.needs_review,match_status.eq.no_match,parse_status.eq.failed')
@@ -2691,9 +2724,15 @@ export async function fetchDocumentsNeedingReview(): Promise<PlatformDocumentInf
                 const ln = acc.last_name || '';
                 uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
             }
+            const rce = Array.isArray(row.doc_data_rce) ? row.doc_data_rce[0] : row.doc_data_rce;
+            const dic = Array.isArray(row.doc_data_dic) ? row.doc_data_dic[0] : row.doc_data_dic;
+            const carrier_name = dic?.carrier_name || (rce?.created_by?.toLowerCase().includes('bamboo') ? 'Bamboo' : null);
             return {
                 ...row,
                 uploaded_by,
+                carrier_name,
+                source: rce?.source || null,
+                created_by: rce?.created_by || null,
             };
         });
 

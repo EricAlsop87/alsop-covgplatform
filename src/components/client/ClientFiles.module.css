@@ -288,6 +288,19 @@
     text-transform: uppercase;
 }
 
+.carrierBadge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
 .fileMeta {
     display: flex;
     align-items: center;

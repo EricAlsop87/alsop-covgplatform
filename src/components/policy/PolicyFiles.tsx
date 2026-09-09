@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { insertActivityEvent } from '@/lib/notes';
 import { useToast } from '@/components/ui/Toast/Toast';
+import { detectDocumentCarrier } from '@/lib/carrierBadges';
 import styles from './PolicyFiles.module.css';
 import { logger } from '@/lib/logger';
 
@@ -38,12 +39,10 @@ function formatFileSize(bytes: number | null): string {
 }
 
 function formatDate(dateStr: string): string {
+    if (!dateStr) return '—';
     try {
-        return new Date(dateStr).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     } catch {
         return dateStr;
     }
@@ -89,6 +88,9 @@ interface UnifiedFile {
     error_message?: string | null;
     uploaded_at: string;
     uploaded_by?: string | null;
+    carrier_name?: string | null;
+    source_name?: string | null;
+    created_by?: string | null;
     bucket?: string;
 }
 
@@ -206,6 +208,9 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
             error_message: d.error_message,
             uploaded_at: d.created_at,
             uploaded_by: d.uploaded_by,
+            carrier_name: d.carrier_name,
+            source_name: d.source,
+            created_by: d.created_by,
             bucket: 'cfp-platform-documents',
         })),
     ].sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
@@ -687,6 +692,13 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                             const parseStatus = getParseStatusBadge(file.parse_status);
                                             const docTypeInfo = DOC_TYPE_LABELS[file.doc_type] || { label: file.doc_type.toUpperCase(), color: 'var(--text-muted)' };
                                             const decPageReview = getDecPageReview(file);
+                                            const carrierBadge = detectDocumentCarrier({
+                                                file_name: file.file_name,
+                                                doc_type: file.doc_type,
+                                                carrier_name: file.carrier_name,
+                                                source: file.source_name,
+                                                created_by: file.created_by,
+                                            });
 
                                             return (
                                                 <div key={`${file.source}-${file.id}`} className={styles.fileItem}>
@@ -706,6 +718,19 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                                 >
                                                                     {docTypeInfo.label}
                                                                 </span>
+                                                                {carrierBadge && (
+                                                                    <span
+                                                                        className={styles.carrierBadge}
+                                                                        style={{
+                                                                            backgroundColor: carrierBadge.bgColor,
+                                                                            color: carrierBadge.textColor,
+                                                                            borderColor: carrierBadge.borderColor,
+                                                                        }}
+                                                                        title={carrierBadge.tooltip}
+                                                                    >
+                                                                        {carrierBadge.label}
+                                                                    </span>
+                                                                )}
                                                                 <span className={styles.fileNameText}>{file.file_name || 'Document'}</span>
                                                             </div>
                                                             <div className={styles.fileMeta}>

@@ -9,6 +9,7 @@ import {
   PlatformDocumentInfo,
 } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast/Toast';
+import { detectDocumentCarrier } from '@/lib/carrierBadges';
 import styles from './ClientFiles.module.css';
 import { logger } from '@/lib/logger';
 
@@ -212,6 +213,13 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                   {files.map(file => {
                     const parseStatus = getParseStatusBadge(file.parse_status);
                     const docTypeInfo = DOC_TYPE_LABELS[file.doc_type] || { label: file.doc_type.toUpperCase(), color: 'var(--text-muted)' };
+                    const carrierBadge = detectDocumentCarrier({
+                      file_name: file.file_name,
+                      doc_type: file.doc_type,
+                      carrier_name: file.carrier_name,
+                      source: file.source,
+                      created_by: file.created_by,
+                    });
 
                     return (
                       <div key={file.id} className={styles.fileItem}>
@@ -231,6 +239,19 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                               >
                                 {docTypeInfo.label}
                               </span>
+                              {carrierBadge && (
+                                <span
+                                  className={styles.carrierBadge}
+                                  style={{
+                                    backgroundColor: carrierBadge.bgColor,
+                                    color: carrierBadge.textColor,
+                                    borderColor: carrierBadge.borderColor,
+                                  }}
+                                  title={carrierBadge.tooltip}
+                                >
+                                  {carrierBadge.label}
+                                </span>
+                              )}
                               <span className={styles.fileNameText}>{file.file_name || 'Document'}</span>
                               {!file.policy_id && (
                                 <span
