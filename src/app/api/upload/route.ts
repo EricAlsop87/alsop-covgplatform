@@ -187,14 +187,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
         const now = new Date().toISOString();
         const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-        // Check for existing duplicate (exact file match by same account)
+        // Check for existing duplicate (exact file match across all accounts)
         // Only block if the original was successfully processed or is actively processing.
         // Stuck/errored submissions should NOT block re-uploads (Tahseen Halool bug fix).
         const { data: existingDuplicate } = await supabaseAdmin
             .from('dec_page_submissions')
             .select('id, status, error_message, processing_step')
             .eq('file_hash', fileHash)
-            .eq('account_id', accountId)
             .neq('status', 'failed')
             .neq('status', 'duplicate')
             .limit(1)

@@ -177,12 +177,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<DocumentU
         // ---------------------------------------------------------------
         const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-        // Check for duplicate
+        // Check for duplicate across the entire system (global dedup)
         const { data: existingDuplicate } = await supabaseAdmin
             .from('platform_documents')
-            .select('id, parse_status, match_status')
+            .select('id, parse_status, match_status, file_name')
             .eq('file_hash', fileHash)
-            .eq('account_id', accountId)
             .not('parse_status', 'eq', 'failed')
             .limit(1);
 
@@ -191,11 +190,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<DocumentU
             logger.warn('DocumentUpload', 'Duplicate file detected', {
                 existingId: existing.id,
                 fileHash,
+                fileName: existing.file_name,
             });
             return NextResponse.json(
                 {
                     success: false,
-                    message: 'This exact file has already been uploaded.',
+                    message: `This exact file has already been uploaded${existing.file_name ? ` as "${existing.file_name}"` : ''}.`,
                     error: 'DUPLICATE_FILE',
                     errorCode: 'DUPLICATE',
                     data: {
