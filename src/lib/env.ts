@@ -118,11 +118,10 @@ export const env = {
     // ── App Base URL ──
 
     /**
-     * Base URL of the Next.js application for internal API calls.
-     * Used to construct URLs for server-to-server fetch requests.
-     * Falls back to http://localhost:3000 in development.
+     * Base URL for generating absolute links (e.g., in emails).
+     * Falls back to http://localhost:3001 in development.
      */
     get APP_BASE_URL(): string {
-        return getOptional(process.env.APP_BASE_URL, 'http://localhost:3000');
+        return getOptional(process.env.APP_BASE_URL, 'http://localhost:3001');
     },
 } as const;
