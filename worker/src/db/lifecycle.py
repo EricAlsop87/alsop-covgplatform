@@ -156,6 +156,27 @@ def upsert_policy(client_id: str, account_id: str, policy_number: str, property_
         sb.table("policies").update(payload).eq("id", policy_id).execute()
         return policy_id
 
+    # Strategy 3: Check for pending_dec Bamboo placeholder matching this property address
+    if norm_address:
+        pending_match = (
+            sb.table("policies")
+            .select("id")
+            .eq("status", "pending_dec")
+            .eq("property_address_norm", norm_address)
+            .limit(1)
+            .execute()
+        )
+        if pending_match.data:
+            policy_id = pending_match.data[0]["id"]
+            logger.info(
+                "Graduating pending_dec Bamboo policy %s to official CFP policy %s for address %s",
+                policy_id, base_policy_num, property_address
+            )
+            # Update status to active and assign the official CFP policy number
+            payload["status"] = "active"
+            sb.table("policies").update(payload).eq("id", policy_id).execute()
+            return policy_id
+
     # No match at all — insert new policy
     result = sb.table("policies").insert(payload).execute()
     if not result.data:

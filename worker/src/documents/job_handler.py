@@ -33,14 +33,40 @@ PROCESSOR_REGISTRY = {
 }
 
 
-def classify_document_text(text: str) -> str:
+def classify_document_text(text: str, file_name: str = "") -> str:
     """
     Classify document text to determine document type when uploaded as 'other'.
-    Returns one of: 'es_doc', 'dic_dec_page', 'rce'.
+    Returns one of: 'dec_page', 'es_doc', 'dic_dec_page', 'rce'.
     """
     upper_text = text.upper()
+    upper_fn = file_name.upper()
 
-    # Check DIC indicators FIRST (including American Modern Homeowners Flex Quote / DIC)
+    # 0. Check filename signals FIRST (e.g. "Martha Manriquez CFP Dec.pdf")
+    if (
+        (upper_fn.find("CFP") != -1 and (upper_fn.find("DEC") != -1 or upper_fn.find("PAGE") != -1)) or
+        upper_fn.find("FAIR PLAN DEC") != -1 or
+        upper_fn.find("CFP DEC") != -1
+    ):
+        logger.info("Auto-classified document as 'dec_page' via filename: %s", file_name)
+        return "dec_page"
+
+    # 1. Check for California FAIR Plan Dec Page FIRST (highest priority)
+    # Note: Every CFP renewal offer and dec page contains a standard legal comparison chart:
+    # "Difference in Conditions (DIC) Policy", which previously caused false-positive DIC classifications.
+    # Therefore, CFP must ALWAYS be checked before DIC!
+    cfp_markers = [
+        "CALIFORNIA FAIR PLAN",
+        "FAIR PLAN ASSOCIATION",
+        "DWELLING INSURANCE POLICY DECLARATIONS",
+        "DWELLING PROPERTY POLICY DECLARATIONS",
+        "CFPNET.COM",
+        "CALIFORNIA FAIR PLAN PROPERTY INSURANCE",
+    ]
+    if any(m in upper_text for m in cfp_markers):
+        logger.info("Auto-classified document as 'dec_page' via California FAIR Plan markers")
+        return "dec_page"
+
+    # 2. Check DIC indicators (only if NOT a California FAIR Plan dec page)
     dic_markers = [
         "DIFFERENCE IN CONDITIONS", "DIC", "BAMBOO", "PACIFIC SPECIALTY", "PSIC",
         "HOMEOWNERS FLEX", "HOMEOWNERS FLEX QUOTE", "DIC - FIRE",
@@ -161,9 +187,51 @@ def process_document_job(job: dict) -> None:
             from ..extract.pdf_text import extract_text_from_bytes
             text_result = extract_text_from_bytes(pdf_bytes)
             raw_text = text_result["raw_text"]
-            classified_type = classify_document_text(raw_text)
+            classified_type = classify_document_text(raw_text, doc.get("file_name", ""))
 
             logger.info("job=%s auto-classified 'other' document -> '%s'", job_id, classified_type)
+
+            if classified_type == "dec_page":
+                import uuid
+                sub_id = str(uuid.uuid4())
+                dec_storage_path = f"submissions/{account_id}/{sub_id}.pdf"
+                logger.info("job=%s bridging CFP Dec Page to dec_page_submissions id=%s", job_id, sub_id)
+                try:
+                    sb.storage.from_("cfp-raw-decpage").upload(
+                        dec_storage_path,
+                        pdf_bytes,
+                        file_options={"content-type": "application/pdf"}
+                    )
+                    sub_row = {
+                        "id": sub_id,
+                        "account_id": account_id,
+                        "bucket": "cfp-raw-decpage",
+                        "storage_path": dec_storage_path,
+                        "file_name": doc.get("file_name"),
+                        "file_size": len(pdf_bytes),
+                        "file_type": "application/pdf",
+                        "file_hash": doc.get("file_hash"),
+                        "status": "queued",
+                        "processing_step": "init",
+                    }
+                    sb.table("dec_page_submissions").insert(sub_row).execute()
+                    job_row = {
+                        "submission_id": sub_id,
+                        "account_id": account_id,
+                        "status": "queued",
+                    }
+                    sb.table("ingestion_jobs").insert(job_row).execute()
+                    sb.table("platform_documents").update({
+                        "doc_type": "dec_page",
+                        "parse_status": "parsed",
+                        "processing_step": "complete",
+                        "match_status": "matched",
+                    }).eq("id", document_id).execute()
+                    complete_job(job_id)
+                    job_completed = True
+                    return
+                except Exception as e:
+                    logger.error("job=%s failed bridging CFP Dec Page to dec_page_submissions: %s", job_id, e)
 
             # Update document record in database with classified doc_type
             try:

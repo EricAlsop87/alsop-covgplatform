@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         const upperText = rawText.toUpperCase();
 
         // Classify based on keyword matching (mirrors Python worker's classify_document_text)
-        const detectedType = classifyDocument(upperText);
+        const detectedType = classifyDocument(upperText, file.name);
 
         // Find the label for the detected type
         const typeLabels: Record<string, string> = {
@@ -88,20 +88,45 @@ function extractPdfText(buffer: Buffer): string {
 }
 
 /**
- * Classify document type based on keyword matching.
+ * Classify document type based on keyword matching and filename.
  * Priority order matches Python worker's classify_document_text().
  */
-function classifyDocument(upperText: string): string {
+function classifyDocument(upperText: string, fileName: string = ''): string {
+    const fnUpper = fileName.toUpperCase();
+
+    // 0. Check filename signals FIRST (e.g. "Martha Manriquez CFP Dec.pdf")
+    if (
+        (fnUpper.includes('CFP') && (fnUpper.includes('DEC') || fnUpper.includes('DECLARATION') || fnUpper.includes('PAGE'))) ||
+        fnUpper.includes('FAIR PLAN DEC') ||
+        fnUpper.includes('FAIR_PLAN_DEC') ||
+        fnUpper.includes('CFP DEC') ||
+        fnUpper.includes('CFP_DEC')
+    ) {
+        return 'dec_page';
+    }
+    if (fnUpper.includes('RCE') || fnUpper.includes('360VALUE') || fnUpper.includes('VALUATION')) {
+        return 'rce';
+    }
+    if (fnUpper.includes('DIC') && !fnUpper.includes('CFP')) {
+        return 'dic_dec_page';
+    }
+
     // 1. Check for FAIR Plan Dec Page (highest priority)
+    // Note: CFP Dec Pages contain legal disclosures with "Difference in Conditions (DIC)",
+    // so CFP must ALWAYS be checked before DIC to prevent false DIC classification.
     const decPageMarkers = [
         'CALIFORNIA FAIR PLAN',
+        'FAIR PLAN ASSOCIATION',
         'FAIR PLAN',
         'DWELLING INSURANCE POLICY DECLARATIONS',
+        'DWELLING PROPERTY POLICY DECLARATIONS',
+        'CFPNET.COM',
         'DWELLING FIRE',
         'POLICY PERIOD',
     ];
+    const isCfp = upperText.includes('CALIFORNIA FAIR PLAN') || upperText.includes('FAIR PLAN ASSOCIATION') || upperText.includes('CFPNET.COM');
     const decPageHits = decPageMarkers.filter(m => upperText.includes(m)).length;
-    if (decPageHits >= 2) return 'dec_page';
+    if (isCfp || decPageHits >= 2) return 'dec_page';
 
     // 2. Check for DIC documents (BEFORE general RCE/E&S so American Modern DIC quotes are classified as DIC)
     const dicMarkers = [

@@ -26,13 +26,22 @@ export interface CFPTermRow {
     payment_status: string | null;
     payment_plan: string | null;
     is_current: boolean;
-    // Document presence
+    // Document presence & files
     has_dec: boolean;
+    dec_storage_path?: string | null;
+    dec_file_name?: string | null;
     has_rce: boolean;
     rce_carrier: string | null;
+    rce_storage_path?: string | null;
+    rce_file_name?: string | null;
     has_dic: boolean;
     dic_carrier: string | null;
+    dic_storage_path?: string | null;
+    dic_file_name?: string | null;
     has_es: boolean;
+    es_storage_path?: string | null;
+    es_file_name?: string | null;
+    is_pending_dec: boolean;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
     term_index: number;
@@ -113,6 +122,7 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
 
 export interface CFPSummaryStats {
     total_policies: number;
+    total_bamboo_pending?: number;
     total_families: number;
     expiring_this_month: number;
     missing_dec: number;
@@ -134,6 +144,7 @@ export async function GET(req: NextRequest) {
     const year = searchParams.get('year');
     const month = searchParams.get('month'); // optional, 1-12
     const search = searchParams.get('search')?.trim() || '';
+    const view = searchParams.get('view') || 'active_cfp'; // 'active_cfp' | 'bamboo_pipeline' | 'all'
     const statsOnly = searchParams.get('stats_only') === 'true';
 
     const admin = getSupabaseAdmin();
@@ -145,7 +156,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 2. Main data query ────────────────────────────────────────────────
-    // Fetch all CFP policy_terms filtered by expiration year/month
+    // Fetch policy_terms filtered by expiration year/month and view mode
     let termsQuery = admin
         .from('policy_terms')
         .select(`
@@ -164,17 +175,38 @@ export async function GET(req: NextRequest) {
                 policy_number,
                 property_address_raw,
                 carrier_name,
+                status,
                 client_id,
                 clients!inner (
                     id,
                     named_insured
                 )
             )
-        `)
-        .ilike('policies.policy_number', 'CFP %');
+        `);
 
-    // Year filter
-    if (year) {
+    if (view === 'bamboo_pipeline') {
+        termsQuery = termsQuery.eq('policies.status', 'pending_dec');
+    } else if (view === 'all') {
+        termsQuery = termsQuery.or('policy_number.ilike.CFP %,status.eq.pending_dec', { foreignTable: 'policies' });
+    } else {
+        // active_cfp (default)
+        termsQuery = termsQuery
+            .ilike('policies.policy_number', 'CFP %')
+            .neq('policies.status', 'pending_dec');
+    }
+
+    // Date range filter
+    if (year && month) {
+        const y = parseInt(year, 10);
+        const m = parseInt(month, 10);
+        const monthNum = m.toString().padStart(2, '0');
+        const lastDay = new Date(y, m, 0).getDate();
+        const startDate = `${y}-${monthNum}-01`;
+        const endDate = `${y}-${monthNum}-${lastDay.toString().padStart(2, '0')}`;
+        termsQuery = termsQuery
+            .gte('expiration_date', startDate)
+            .lte('expiration_date', endDate);
+    } else if (year) {
         const yearNum = parseInt(year, 10);
         const startDate = `${yearNum}-01-01`;
         const endDate = `${yearNum}-12-31`;
@@ -183,25 +215,33 @@ export async function GET(req: NextRequest) {
             .lte('expiration_date', endDate);
     }
 
-    // Month filter (within the year)
-    if (year && month) {
-        const monthNum = parseInt(month, 10).toString().padStart(2, '0');
-        const yearNum = year;
-        const startDate = `${yearNum}-${monthNum}-01`;
-        // End of month
-        const endDate = new Date(parseInt(yearNum), parseInt(month), 0)
-            .toISOString().split('T')[0];
-        termsQuery = termsQuery
-            .gte('expiration_date', startDate)
-            .lte('expiration_date', endDate);
-    }
-
     termsQuery = termsQuery.order('expiration_date', { ascending: true });
 
-    const { data: terms, error: termsError } = await termsQuery;
-    if (termsError) {
-        return NextResponse.json({ success: false, error: termsError.message }, { status: 500 });
+    // Supabase PostgREST defaults to a limit of 1,000 rows.
+    // Fetch in paginated chunks to ensure no terms are truncated.
+    const allFetchedTerms: any[] = [];
+    const PAGE_CHUNK = 1000;
+    let pageOffset = 0;
+    let keepFetching = true;
+
+    while (keepFetching) {
+        const { data: chunkData, error: chunkError } = await termsQuery.range(pageOffset, pageOffset + PAGE_CHUNK - 1);
+        if (chunkError) {
+            return NextResponse.json({ success: false, error: chunkError.message }, { status: 500 });
+        }
+        if (chunkData && chunkData.length > 0) {
+            allFetchedTerms.push(...chunkData);
+            if (chunkData.length < PAGE_CHUNK) {
+                keepFetching = false;
+            } else {
+                pageOffset += PAGE_CHUNK;
+            }
+        } else {
+            keepFetching = false;
+        }
     }
+
+    const terms = allFetchedTerms;
 
     if (!terms || terms.length === 0) {
         return NextResponse.json({ success: true, families: [], total_terms: 0 });
@@ -210,8 +250,8 @@ export async function GET(req: NextRequest) {
     // ── 3. Gather all policy_ids from result ──────────────────────────────
     const policyIds = [...new Set((terms as any[]).map((t: any) => t.policy_id))];
 
-    // Helper to batch large in() queries in chunks of 150 to respect HTTP URL limits
-    const CHUNK_SIZE = 150;
+    // Helper to batch large in() queries in chunks of 250 and run concurrently
+    const CHUNK_SIZE = 250;
     async function chunkedInQuery<T>(
         table: string,
         select: string,
@@ -219,45 +259,76 @@ export async function GET(req: NextRequest) {
         inValues: string[],
         extraFilter?: (q: any) => any
     ): Promise<T[]> {
-        const results: T[] = [];
+        if (inValues.length === 0) return [];
+        const chunks: string[][] = [];
         for (let i = 0; i < inValues.length; i += CHUNK_SIZE) {
-            const chunk = inValues.slice(i, i + CHUNK_SIZE);
-            let q = admin.from(table).select(select).in(inCol, chunk);
-            if (extraFilter) q = extraFilter(q);
-            const { data } = await q;
-            if (data) results.push(...(data as T[]));
+            chunks.push(inValues.slice(i, i + CHUNK_SIZE));
+        }
+        const responses = await Promise.all(
+            chunks.map(chunk => {
+                let q = admin.from(table).select(select).in(inCol, chunk);
+                if (extraFilter) q = extraFilter(q);
+                return q;
+            })
+        );
+        const results: T[] = [];
+        for (const res of responses) {
+            if (res.data) results.push(...(res.data as T[]));
         }
         return results;
     }
 
-    // ── 4. Check dec_pages (by policy_id) ────────────────────────────────
-    const decPages = await chunkedInQuery<{ policy_id: string }>(
-        'dec_pages',
-        'policy_id',
-        'policy_id',
-        policyIds
-    );
+    // ── 4. Fetch dec_pages, platform_documents, and overrides in PARALLEL ──
+    const [decPages, docs, bambooOverrides] = await Promise.all([
+        chunkedInQuery<{
+            id: string;
+            policy_id: string;
+            dec_page_submissions?: any;
+        }>(
+            'dec_pages',
+            'id, policy_id, dec_page_submissions(storage_path, file_name)',
+            'policy_id',
+            policyIds
+        ),
+        chunkedInQuery<{
+            id: string;
+            policy_id: string;
+            policy_term_id?: string;
+            doc_type: string;
+            file_name?: string;
+            storage_path?: string;
+        }>(
+            'platform_documents',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path',
+            'policy_id',
+            policyIds,
+            q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc'])
+        ),
+        chunkedInQuery<{ policy_id: string; new_value: string }>(
+            'manual_overrides',
+            'policy_id, new_value',
+            'policy_id',
+            policyIds,
+            q => q.eq('field_name', 'has_bamboo_coverage')
+        ),
+    ]);
+
+    const policyDecDocMap: Record<string, { storage_path?: string; file_name?: string }> = {};
+    for (const d of decPages) {
+        const sub = Array.isArray(d.dec_page_submissions) ? d.dec_page_submissions[0] : d.dec_page_submissions;
+        if (!policyDecDocMap[d.policy_id] && sub?.storage_path) {
+            policyDecDocMap[d.policy_id] = { storage_path: sub.storage_path, file_name: sub.file_name };
+        }
+    }
     const policyIdsWithDec = new Set(decPages.map(d => d.policy_id));
 
-    // ── 5. Check platform_documents (by policy_id and doc_type) ──────────
-    const docs = await chunkedInQuery<{
-        policy_id: string;
-        policy_term_id?: string;
-        doc_type: string;
-        file_name?: string;
-        raw_text?: string;
-    }>(
-        'platform_documents',
-        'policy_id, policy_term_id, doc_type, file_name, raw_text',
-        'policy_id',
-        policyIds,
-        q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc'])
-    );
-
-    // Build per-policy doc sets and carrier maps
+    // Build per-policy doc sets, carrier maps, and file storage info
     const policyDocTypes: Record<string, Set<string>> = {};
     const policyRceCarrier: Record<string, string> = {};
     const policyDicCarrier: Record<string, string> = {};
+    const policyRceDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
+    const policyDicDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
+    const policyEsDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
 
     for (const doc of docs) {
         if (!policyDocTypes[doc.policy_id]) {
@@ -265,22 +336,27 @@ export async function GET(req: NextRequest) {
         }
         policyDocTypes[doc.policy_id].add(doc.doc_type);
 
-        const detected = detectDocCarrier(doc.file_name, doc.raw_text, doc.doc_type);
-        if (doc.doc_type === 'rce' && detected && !policyRceCarrier[doc.policy_id]) {
-            policyRceCarrier[doc.policy_id] = detected;
-        } else if (doc.doc_type === 'dic_dec_page' && detected && !policyDicCarrier[doc.policy_id]) {
-            policyDicCarrier[doc.policy_id] = detected;
+        const detected = detectDocCarrier(doc.file_name, null, doc.doc_type);
+        if (doc.doc_type === 'rce') {
+            if (detected && !policyRceCarrier[doc.policy_id]) {
+                policyRceCarrier[doc.policy_id] = detected;
+            }
+            if (doc.storage_path && !policyRceDoc[doc.policy_id]) {
+                policyRceDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+            }
+        } else if (doc.doc_type === 'dic_dec_page') {
+            if (detected && !policyDicCarrier[doc.policy_id]) {
+                policyDicCarrier[doc.policy_id] = detected;
+            }
+            if (doc.storage_path && !policyDicDoc[doc.policy_id]) {
+                policyDicDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+            }
+        } else if (doc.doc_type === 'es_doc') {
+            if (doc.storage_path && !policyEsDoc[doc.policy_id]) {
+                policyEsDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+            }
         }
     }
-
-    // ── 5b. Check Bamboo coverage via manual_overrides ───────────────────
-    const bambooOverrides = await chunkedInQuery<{ policy_id: string; new_value: string }>(
-        'manual_overrides',
-        'policy_id, new_value',
-        'policy_id',
-        policyIds,
-        q => q.eq('field_name', 'has_bamboo_coverage')
-    );
 
     const bambooCoverageSet = new Set<string>();
     for (const ov of bambooOverrides) {
@@ -304,6 +380,7 @@ export async function GET(req: NextRequest) {
         const hasDic = docSet.has('dic_dec_page') || !!t.dic_exists;
         const dicFromPn = detectDocCarrier(t.dic_policy_number, null, 'dic_dec_page');
         const dicCarrier = policyDicCarrier[policyId] || dicFromPn || (hasDic ? 'DIC' : null);
+        const isPendingDec = policy?.status === 'pending_dec';
 
         return {
             policy_id: policyId,
@@ -323,11 +400,20 @@ export async function GET(req: NextRequest) {
             payment_plan: t.payment_plan,
             is_current: t.is_current,
             has_dec: policyIdsWithDec.has(policyId),
+            dec_storage_path: policyDecDocMap[policyId]?.storage_path || null,
+            dec_file_name: policyDecDocMap[policyId]?.file_name || null,
             has_rce: hasRce,
             rce_carrier: rceCarrier,
+            rce_storage_path: policyRceDoc[policyId]?.storage_path || null,
+            rce_file_name: policyRceDoc[policyId]?.file_name || null,
             has_dic: hasDic,
             dic_carrier: dicCarrier,
+            dic_storage_path: policyDicDoc[policyId]?.storage_path || null,
+            dic_file_name: policyDicDoc[policyId]?.file_name || null,
             has_es: docSet.has('es_doc') || !!t.es_exists,
+            es_storage_path: policyEsDoc[policyId]?.storage_path || null,
+            es_file_name: policyEsDoc[policyId]?.file_name || null,
+            is_pending_dec: isPendingDec,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };
@@ -429,29 +515,37 @@ async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise
     const lastDay = new Date(thisYear, thisMonth, 0).getDate();
     const monthEnd = `${thisYear}-${monthStr}-${lastDay.toString().padStart(2, '0')}`;
 
-    // Total CFP policies
+    // Total active CFP policies (strictly non-pending_dec)
     const { count: total_policies } = await admin
         .from('policies')
         .select('id', { count: 'exact', head: true })
-        .ilike('policy_number', 'CFP %');
+        .ilike('policy_number', 'CFP %')
+        .neq('status', 'pending_dec');
+
+    // Total Bamboo in-force pending accounts
+    const { count: total_bamboo_pending } = await admin
+        .from('policies')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending_dec');
 
     const total = total_policies || 0;
 
-    // Expiring this month (current terms)
+    // Expiring this month (current terms, active CFP only)
     const { count: expiring_this_month } = await admin
         .from('policy_terms')
-        .select('id, policies!inner(id, policy_number)', { count: 'exact', head: true })
+        .select('id, policies!inner(id, policy_number, status)', { count: 'exact', head: true })
         .eq('is_current', true)
         .gte('expiration_date', monthStart)
         .lte('expiration_date', monthEnd)
-        .ilike('policies.policy_number', 'CFP %');
+        .ilike('policies.policy_number', 'CFP %')
+        .neq('policies.status', 'pending_dec');
 
     // Document counts via exact joins
     const [decRes, rceRes, dicRes, esRes] = await Promise.all([
-        admin.from('dec_pages').select('id, policies!inner(policy_number)', { count: 'exact', head: true }).ilike('policies.policy_number', 'CFP %'),
-        admin.from('platform_documents').select('id, policies!inner(policy_number)', { count: 'exact', head: true }).eq('doc_type', 'rce').ilike('policies.policy_number', 'CFP %'),
-        admin.from('platform_documents').select('id, policies!inner(policy_number)', { count: 'exact', head: true }).eq('doc_type', 'dic_dec_page').ilike('policies.policy_number', 'CFP %'),
-        admin.from('platform_documents').select('id, policies!inner(policy_number)', { count: 'exact', head: true }).eq('doc_type', 'es_doc').ilike('policies.policy_number', 'CFP %'),
+        admin.from('dec_pages').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
+        admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'rce').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
+        admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'dic_dec_page').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
+        admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'es_doc').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
     ]);
 
     const hasDec = decRes.count || 0;
@@ -461,6 +555,7 @@ async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise
 
     return {
         total_policies: total,
+        total_bamboo_pending: total_bamboo_pending || 0,
         total_families: total,
         expiring_this_month: expiring_this_month || 0,
         missing_dec: Math.max(0, total - hasDec),

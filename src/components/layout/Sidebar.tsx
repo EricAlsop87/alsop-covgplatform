@@ -24,6 +24,7 @@ import {
     Mail,
     FileUp,
     Calendar,
+    Clock,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -51,6 +52,7 @@ export function Sidebar({ userRole }: SidebarProps) {
     // Admin/Service shared nav items
     const adminNavItems = (userRole === 'admin' || userRole === 'service') ? [
         { label: 'Operations', href: '/admin/submissions', icon: FileText },
+        { label: 'Recent Activity', href: '/operations/activity', icon: Clock },
     ] : [];
 
     // Client nav items

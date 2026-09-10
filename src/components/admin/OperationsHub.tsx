@@ -243,7 +243,7 @@ function ReviewCard({ doc, onDelete, isDeleting, onConfirm, isConfirming }: {
                                 textDecoration: 'none', transition: 'all 0.15s',
                             }}
                         >
-                            Reassign
+                            <RefreshCw size={13} /> Review & Assign
                         </Link>
                     </>
                 ) : (

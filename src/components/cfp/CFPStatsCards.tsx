@@ -36,7 +36,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
         {
             title: 'CFP Policies',
             value: stats.total_policies.toLocaleString(),
-            sublabel: 'Total tracked policies',
+            sublabel: stats.total_bamboo_pending ? `+ ${stats.total_bamboo_pending.toLocaleString()} Bamboo in-force pending` : 'Total tracked policies',
             uploaded: undefined,
             color: '#2243B6',
             bg: 'rgba(34, 67, 182, 0.1)',

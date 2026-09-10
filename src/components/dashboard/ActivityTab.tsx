@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     FileText, Upload, Loader2, CheckCircle, CheckCircle2, Clock, AlertTriangle,
     XCircle, RefreshCw, Sparkles, Shield, Timer, Merge, ExternalLink,
-    Layers, FileUp, Files, Filter, RotateCcw
+    Layers, FileUp, Files, Filter, RotateCcw, ArrowRight, FileSearch
 } from 'lucide-react';
 import { fetchActivityFeed, ActivityFeedItem } from '@/lib/api';
 import styles from './ActivityTab.module.css';
@@ -117,7 +117,7 @@ export function ActivityTab() {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
-            const data = await fetchActivityFeed(50);
+            const data = await fetchActivityFeed(100);
             setActivities(data);
         } catch (err) {
             logger.error('ActivityTab', 'Activity feed error:', { error: err instanceof Error ? err.message : String(err) })
@@ -333,6 +333,53 @@ export function ActivityTab() {
                                             </>
                                         )}
 
+                                        {/* "Review & Assign" button for all document types needing attention or assignment */}
+                                        {isDoc && (isDocNeedsAction || activity.match_status === 'needs_review' || activity.match_status === 'no_match' || (activity.event_type || '').includes('needs_review') || (activity.event_type || '').includes('no_match')) && (
+                                            <>
+                                                <span className={styles.divider}>·</span>
+                                                <button
+                                                    type="button"
+                                                    className={styles.reviewActionBtn}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (activity.document_id) {
+                                                            router.push(`/upload-document?reassign=${activity.document_id}`);
+                                                        } else {
+                                                            router.push('/admin/submissions?tab=review');
+                                                        }
+                                                    }}
+                                                    title="Review and assign document to policy/client"
+                                                >
+                                                    <FileSearch size={11} />
+                                                    Review & Assign
+                                                    <ArrowRight size={10} />
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* "Retry / Review" button for failed document processing */}
+                                        {((isDoc && isDocFailed) || isFailed) && (
+                                            <>
+                                                <span className={styles.divider}>·</span>
+                                                <button
+                                                    type="button"
+                                                    className={styles.failedActionBtn}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (activity.document_id) {
+                                                            router.push(`/upload-document?reassign=${activity.document_id}`);
+                                                        } else {
+                                                            router.push('/admin/submissions');
+                                                        }
+                                                    }}
+                                                    title="Inspect failed document"
+                                                >
+                                                    <RefreshCw size={10} />
+                                                    Review & Retry
+                                                </button>
+                                            </>
+                                        )}
+
                                         {/* "View RCE Data" verification link for processed RCE documents */}
                                         {isDoc && activity.policy_id && (isDocProcessed || isDocUpload) && activity.doc_type === 'rce' && (
                                             <>
@@ -350,8 +397,8 @@ export function ActivityTab() {
                                             </>
                                         )}
 
-                                        {/* "Reassign RCE" link for RCE upload events */}
-                                        {isDoc && activity.document_id && activity.doc_type === 'rce' && (
+                                        {/* "Reassign" link for RCE upload events */}
+                                        {isDoc && activity.document_id && activity.doc_type === 'rce' && !isDocNeedsAction && activity.match_status !== 'needs_review' && (
                                             <>
                                                 <span className={styles.divider}>·</span>
                                                 <span

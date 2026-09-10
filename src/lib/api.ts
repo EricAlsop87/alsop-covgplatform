@@ -3035,10 +3035,42 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                     }
                 }
 
+                // Batch lookup: platform_documents for metadata & staleness check
+                const docMetaIds = new Set<string>();
+                for (const evt of docEvents) {
+                    if (evt.meta?.document_id) docMetaIds.add(evt.meta.document_id);
+                }
+                const platDocMap = new Map<string, { id: string; doc_type: string; match_status: string; policy_id: string | null; file_name: string }>();
+                if (docMetaIds.size > 0) {
+                    const { data: platDocs } = await supabase
+                        .from('platform_documents')
+                        .select('id, doc_type, match_status, policy_id, file_name')
+                        .in('id', Array.from(docMetaIds))
+                        .limit(200);
+                    if (platDocs) {
+                        for (const pd of platDocs) {
+                            platDocMap.set(pd.id, pd);
+                        }
+                    }
+                }
+
                 for (const evt of docEvents) {
                     const meta = evt.meta || {};
+
+                    // If this event points to a specific document_id that was deleted or converted, skip it
+                    if (meta.document_id && !platDocMap.has(meta.document_id)) {
+                        continue;
+                    }
+
+                    const platDoc = meta.document_id ? platDocMap.get(meta.document_id) : undefined;
+
+                    // If this was a "needs_review" event, but the document has already been matched/assigned, skip the obsolete prompt
+                    if (evt.event_type === 'document.needs_review' && platDoc && (platDoc.policy_id || platDoc.match_status === 'matched' || platDoc.match_status === 'manual')) {
+                        continue;
+                    }
+
                     const isUploadEvent = (evt.event_type || '').startsWith('doc.uploaded.');
-                    const docType = meta.doc_type || (isUploadEvent ? evt.event_type.replace('doc.uploaded.', '') : undefined);
+                    const docType = platDoc?.doc_type || meta.doc_type || (isUploadEvent ? evt.event_type.replace('doc.uploaded.', '') : undefined);
 
                     // Resolve insured_name: client table → meta.owner_name → null
                     const resolvedInsuredName = (evt.client_id && clientNameMap.get(evt.client_id))

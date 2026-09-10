@@ -20,18 +20,24 @@ import {
     ShieldAlert,
     ShieldOff,
     FileQuestion,
+    Plus,
+    Copy,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
+import {
+    getPlatformDocDownloadUrl,
+    getDecPageFileDownloadUrl,
+    fetchDecPageFilesByPolicyId,
+    fetchPlatformDocumentsByPolicyId,
+} from '@/lib/api';
 
 export interface ColumnFilters {
     policy?: string;
     insured?: string;
     address?: string;
-    effective?: string;
-    expiration?: string;
     dec?: string;
     rce?: string;
     dic?: string;
@@ -85,9 +91,11 @@ interface CFPSummaryTableProps {
     year: string;
     month: string;
     search: string;
+    view?: 'active_cfp' | 'bamboo_pipeline' | 'all';
     onYearChange: (y: string) => void;
     onMonthChange: (m: string) => void;
     onSearchChange: (s: string) => void;
+    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'all') => void;
     onRefresh: () => void;
     totalTerms: number;
     totalFamilies: number;
@@ -111,12 +119,22 @@ const MONTH_NAMES = [
     { value: '12', label: 'December' },
 ];
 
-function renderCarrierBadge(carrier: string | null | undefined, docName: 'RCE' | 'DIC') {
+function renderCarrierBadge(
+    carrier: string | null | undefined,
+    docName: 'RCE' | 'DIC',
+    policyId?: string,
+    onPreview?: () => void
+) {
     if (!carrier) {
         return (
-            <span className={`${styles.docBadge} ${styles.no}`} title={`Missing ${docName}`}>
-                <X size={13} /> None
-            </span>
+            <Link
+                href={`/upload-document?policy_id=${policyId || ''}&doc_type=${docName.toLowerCase()}`}
+                className={`${styles.docBadge} ${styles.no}`}
+                title={`Missing ${docName} — click to upload`}
+                target="_blank"
+            >
+                <Plus size={12} /> None
+            </Link>
         );
     }
 
@@ -131,9 +149,17 @@ function renderCarrierBadge(carrier: string | null | undefined, docName: 'RCE' |
     const displayLabel = carrier === 'AM' ? 'AM' : carrier;
 
     return (
-        <span className={`${styles.carrierBadge} ${badgeClass}`} title={`${docName} uploaded: ${carrier}`}>
+        <button
+            type="button"
+            className={`${styles.carrierBadge} ${badgeClass} ${styles.clickableBadge}`}
+            onClick={(e) => {
+                e.stopPropagation();
+                onPreview?.();
+            }}
+            title={`Click to preview ${docName} (${displayLabel})`}
+        >
             <Check size={12} /> {displayLabel}
-        </span>
+        </button>
     );
 }
 
@@ -143,19 +169,146 @@ export function CFPSummaryTable({
     year,
     month,
     search,
+    view = 'active_cfp',
     onYearChange,
     onMonthChange,
     onSearchChange,
+    onViewChange,
     onRefresh,
     totalTerms,
     totalFamilies,
 }: CFPSummaryTableProps) {
     // Local copy of families to support optimistic updates for Bamboo toggle
     const [families, setFamilies] = useState<CFPFamily[]>(initialFamilies);
+
+    // Synchronize local families state when initialFamilies prop updates (e.g. Month, Year, Search or View changes)
+    useEffect(() => {
+        setFamilies(initialFamilies);
+    }, [initialFamilies]);
+
     const [docFilter, setDocFilter] = useState<DocFilterType>('all');
     const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 25;
+
+    // Feedback state for quick copy buttons
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    const handleCopy = (text: string, key: string) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopiedKey(key);
+        setTimeout(() => {
+            setCopiedKey(prev => (prev === key ? null : prev));
+        }, 1500);
+    };
+
+    // ── Document Preview Modal State ──────────────────────────────────────
+    interface DocPreviewState {
+        title: string;
+        subtitle?: string;
+        fileName?: string;
+        policyId?: string;
+        docType?: 'dec' | 'rce' | 'dic' | 'quote';
+        url: string | null;
+        loading: boolean;
+        error: string | null;
+    }
+
+    const [previewDoc, setPreviewDoc] = useState<DocPreviewState | null>(null);
+
+    const handlePreviewDoc = async (opts: {
+        title: string;
+        subtitle?: string;
+        docType: 'dec' | 'rce' | 'dic' | 'quote';
+        storagePath?: string | null;
+        bucket: 'cfp-platform-documents' | 'cfp-raw-decpage';
+        fileName?: string | null;
+        policyId: string;
+    }) => {
+        setPreviewDoc({
+            title: opts.title,
+            subtitle: opts.subtitle,
+            fileName: opts.fileName || undefined,
+            policyId: opts.policyId,
+            docType: opts.docType,
+            url: null,
+            loading: true,
+            error: null,
+        });
+
+        try {
+            let path = opts.storagePath;
+            let bucket = opts.bucket;
+
+            // If storagePath not present on row, try finding it dynamically
+            if (!path) {
+                if (opts.docType === 'dec') {
+                    const decFiles = await fetchDecPageFilesByPolicyId(opts.policyId);
+                    if (decFiles.length > 0 && decFiles[0].storage_path) {
+                        path = decFiles[0].storage_path;
+                        bucket = 'cfp-raw-decpage';
+                    }
+                } else {
+                    const platDocs = await fetchPlatformDocumentsByPolicyId(opts.policyId);
+                    const targetDocType = opts.docType === 'rce' ? 'rce' : (opts.docType === 'dic' ? 'dic_dec_page' : 'es_doc');
+                    const match = platDocs.find(d => d.doc_type === targetDocType && d.storage_path);
+                    if (match?.storage_path) {
+                        path = match.storage_path;
+                        bucket = 'cfp-platform-documents';
+                    }
+                }
+            }
+
+            if (!path) {
+                setPreviewDoc(prev => prev ? {
+                    ...prev,
+                    loading: false,
+                    error: 'Document record is logged in the system, but the file has not been uploaded to cloud storage yet.',
+                } : null);
+                return;
+            }
+
+            let url: string | null = null;
+            if (bucket === 'cfp-raw-decpage') {
+                url = await getDecPageFileDownloadUrl(path);
+            } else {
+                url = await getPlatformDocDownloadUrl(path, bucket);
+            }
+
+            if (!url) {
+                setPreviewDoc(prev => prev ? {
+                    ...prev,
+                    loading: false,
+                    error: 'Could not generate a secure preview link for this document.',
+                } : null);
+                return;
+            }
+
+            setPreviewDoc(prev => prev ? {
+                ...prev,
+                url,
+                loading: false,
+                error: null,
+            } : null);
+        } catch (err) {
+            setPreviewDoc(prev => prev ? {
+                ...prev,
+                loading: false,
+                error: err instanceof Error ? err.message : 'An error occurred while loading the document preview.',
+            } : null);
+        }
+    };
+
+    // Close preview modal on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && previewDoc) {
+                setPreviewDoc(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [previewDoc]);
 
     // ── Column-Specific Filters State ─────────────────────────────────────
     const [showColumnFilters, setShowColumnFilters] = useState(true);
@@ -419,28 +572,59 @@ export function CFPSummaryTable({
 
         // 2. Column-specific filters
         if (columnFilters.policy) {
-            const q = columnFilters.policy.toLowerCase().trim();
-            result = result.filter(t => t.policy_number?.toLowerCase().includes(q));
+            if (columnFilters.policy === 'available') {
+                result = result.filter(t => 
+                    !t.is_pending_dec && 
+                    !!t.policy_number && 
+                    !t.policy_number.toLowerCase().includes('pending') && 
+                    t.policy_number.trim() !== '' && 
+                    t.policy_number.trim() !== '—'
+                );
+            } else if (columnFilters.policy === 'not_available') {
+                result = result.filter(t => 
+                    t.is_pending_dec || 
+                    !t.policy_number || 
+                    t.policy_number.toLowerCase().includes('pending') || 
+                    t.policy_number.trim() === '' || 
+                    t.policy_number.trim() === '—'
+                );
+            }
         }
 
         if (columnFilters.insured) {
-            const q = columnFilters.insured.toLowerCase().trim();
-            result = result.filter(t => t.named_insured?.toLowerCase().includes(q));
+            if (columnFilters.insured === 'available') {
+                result = result.filter(t => 
+                    !!t.named_insured && 
+                    t.named_insured.trim() !== '' && 
+                    t.named_insured.trim() !== '—' && 
+                    t.named_insured.trim().toLowerCase() !== 'unknown'
+                );
+            } else if (columnFilters.insured === 'not_available') {
+                result = result.filter(t => 
+                    !t.named_insured || 
+                    t.named_insured.trim() === '' || 
+                    t.named_insured.trim() === '—' || 
+                    t.named_insured.trim().toLowerCase() === 'unknown'
+                );
+            }
         }
 
         if (columnFilters.address) {
-            const q = columnFilters.address.toLowerCase().trim();
-            result = result.filter(t => t.property_address?.toLowerCase().includes(q));
-        }
-
-        if (columnFilters.effective) {
-            const q = columnFilters.effective.toLowerCase().trim();
-            result = result.filter(t => t.effective_date?.toLowerCase().includes(q));
-        }
-
-        if (columnFilters.expiration) {
-            const q = columnFilters.expiration.toLowerCase().trim();
-            result = result.filter(t => t.expiration_date?.toLowerCase().includes(q));
+            if (columnFilters.address === 'available') {
+                result = result.filter(t => 
+                    !!t.property_address && 
+                    t.property_address.trim() !== '' && 
+                    t.property_address.trim() !== '—' && 
+                    t.property_address.trim().toLowerCase() !== 'unknown'
+                );
+            } else if (columnFilters.address === 'not_available') {
+                result = result.filter(t => 
+                    !t.property_address || 
+                    t.property_address.trim() === '' || 
+                    t.property_address.trim() === '—' || 
+                    t.property_address.trim().toLowerCase() === 'unknown'
+                );
+            }
         }
 
         if (columnFilters.dec) {
@@ -574,6 +758,9 @@ export function CFPSummaryTable({
             }
             if (docFilter !== 'all') parts.push(docFilter);
             if (search) parts.push(`Search_${search.slice(0, 10)}`);
+            if (columnFilters.policy) parts.push(`Policy_${columnFilters.policy}`);
+            if (columnFilters.insured) parts.push(`Insured_${columnFilters.insured}`);
+            if (columnFilters.address) parts.push(`Address_${columnFilters.address}`);
             if (columnFilters.rce) parts.push(`RCE_${columnFilters.rce}`);
             if (columnFilters.dic) parts.push(`DIC_${columnFilters.dic}`);
             if (columnFilters.dec) parts.push(`DEC_${columnFilters.dec}`);
@@ -597,6 +784,20 @@ export function CFPSummaryTable({
     const renderCell = (colKey: CFPColumnKey, term: CFPTermRow) => {
         switch (colKey) {
             case 'policy':
+                if (term.is_pending_dec) {
+                    return (
+                        <div className={styles.policyNumberCell}>
+                            <span
+                                className={`${styles.carrierBadge} ${styles.bamboo}`}
+                                style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}
+                                title="Bamboo in-force policy waiting for Olga to upload CFP DEC page"
+                            >
+                                Pending DEC
+                            </span>
+                        </div>
+                    );
+                }
+
                 return (
                     <div className={styles.policyNumberCell}>
                         <Link
@@ -608,35 +809,91 @@ export function CFPSummaryTable({
                             <span className={styles.cellText}>{term.policy_number}</span>
                             <ExternalLink size={12} className={styles.linkIcon} />
                         </Link>
-                        {term.suffix && (
-                            <span className={`${styles.typeBadge} ${styles.renewal}`} style={{ flexShrink: 0 }}>
-                                {term.suffix}
-                            </span>
+                        {term.policy_number && (
+                            <button
+                                type="button"
+                                className={`${styles.copyBtn} ${copiedKey === `policy-${term.policy_term_id}` ? styles.copied : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(term.policy_number, `policy-${term.policy_term_id}`);
+                                }}
+                                title="Copy Policy #"
+                            >
+                                {copiedKey === `policy-${term.policy_term_id}` ? (
+                                    <Check size={11} style={{ color: '#16a34a' }} />
+                                ) : (
+                                    <Copy size={11} />
+                                )}
+                            </button>
                         )}
                     </div>
                 );
 
             case 'insured':
-                return term.client_id ? (
-                    <Link
-                        href={`/client/${term.client_id}`}
-                        className={`${styles.linkButton} ${styles.cellText}`}
-                        target="_blank"
-                        title={term.named_insured || 'Unknown'}
-                    >
-                        {term.named_insured || 'Unknown'}
-                    </Link>
-                ) : (
-                    <span className={styles.cellText} title={term.named_insured || '—'}>
-                        {term.named_insured || '—'}
-                    </span>
+                const insuredText = term.named_insured || 'Unknown';
+                const canCopyInsured = !!term.named_insured && term.named_insured !== '—' && term.named_insured !== 'Unknown';
+                return (
+                    <div className={styles.copyableCell}>
+                        {term.client_id ? (
+                            <Link
+                                href={`/client/${term.client_id}`}
+                                className={`${styles.linkButton} ${styles.cellText}`}
+                                target="_blank"
+                                title={insuredText}
+                            >
+                                {insuredText}
+                            </Link>
+                        ) : (
+                            <span className={styles.cellText} title={insuredText}>
+                                {insuredText}
+                            </span>
+                        )}
+                        {canCopyInsured && (
+                            <button
+                                type="button"
+                                className={`${styles.copyBtn} ${copiedKey === `insured-${term.policy_term_id}` ? styles.copied : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(term.named_insured!, `insured-${term.policy_term_id}`);
+                                }}
+                                title="Copy Insured Name"
+                            >
+                                {copiedKey === `insured-${term.policy_term_id}` ? (
+                                    <Check size={11} style={{ color: '#16a34a' }} />
+                                ) : (
+                                    <Copy size={11} />
+                                )}
+                            </button>
+                        )}
+                    </div>
                 );
 
             case 'address':
+                const addressText = term.property_address || '—';
+                const canCopyAddress = !!term.property_address && term.property_address !== '—' && term.property_address !== 'Unknown';
                 return (
-                    <span className={styles.cellText} title={term.property_address || '—'}>
-                        {term.property_address || '—'}
-                    </span>
+                    <div className={styles.copyableCell}>
+                        <span className={styles.cellText} title={addressText}>
+                            {addressText}
+                        </span>
+                        {canCopyAddress && (
+                            <button
+                                type="button"
+                                className={`${styles.copyBtn} ${copiedKey === `address-${term.policy_term_id}` ? styles.copied : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(term.property_address!, `address-${term.policy_term_id}`);
+                                }}
+                                title="Copy Property Address"
+                            >
+                                {copiedKey === `address-${term.policy_term_id}` ? (
+                                    <Check size={11} style={{ color: '#16a34a' }} />
+                                ) : (
+                                    <Copy size={11} />
+                                )}
+                            </button>
+                        )}
+                    </div>
                 );
 
             case 'effective':
@@ -667,30 +924,102 @@ export function CFPSummaryTable({
 
             case 'dec':
                 return term.has_dec ? (
-                    <span className={`${styles.docBadge} ${styles.yes}`} title="DEC Page on file">
+                    <button
+                        type="button"
+                        className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreviewDoc({
+                                title: `DEC Page — ${term.policy_number}`,
+                                subtitle: term.named_insured || undefined,
+                                docType: 'dec',
+                                storagePath: term.dec_storage_path,
+                                bucket: 'cfp-raw-decpage',
+                                fileName: term.dec_file_name || `${term.policy_number}_DEC.pdf`,
+                                policyId: term.policy_id,
+                            });
+                        }}
+                        title="Click to preview DEC Page"
+                    >
                         <Check size={13} /> DEC
-                    </span>
+                    </button>
                 ) : (
-                    <span className={`${styles.docBadge} ${styles.no}`} title="Missing DEC Page">
-                        <X size={13} /> None
-                    </span>
+                    <Link
+                        href={`/upload-document?policy_id=${term.policy_id}&doc_type=dec_page`}
+                        className={`${styles.docBadge} ${styles.no}`}
+                        title="Missing DEC Page — click to upload"
+                        target="_blank"
+                    >
+                        <Plus size={12} /> None
+                    </Link>
                 );
 
             case 'rce':
-                return renderCarrierBadge(term.rce_carrier, 'RCE');
+                return renderCarrierBadge(
+                    term.rce_carrier,
+                    'RCE',
+                    term.policy_id,
+                    () => {
+                        handlePreviewDoc({
+                            title: `RCE Document — ${term.rce_carrier || 'Uploaded'} (${term.policy_number})`,
+                            subtitle: term.named_insured || undefined,
+                            docType: 'rce',
+                            storagePath: term.rce_storage_path,
+                            bucket: 'cfp-platform-documents',
+                            fileName: term.rce_file_name || `${term.policy_number}_RCE.pdf`,
+                            policyId: term.policy_id,
+                        });
+                    }
+                );
 
             case 'dic':
-                return renderCarrierBadge(term.dic_carrier, 'DIC');
+                return renderCarrierBadge(
+                    term.dic_carrier,
+                    'DIC',
+                    term.policy_id,
+                    () => {
+                        handlePreviewDoc({
+                            title: `DIC Document — ${term.dic_carrier || 'Uploaded'} (${term.policy_number})`,
+                            subtitle: term.named_insured || undefined,
+                            docType: 'dic',
+                            storagePath: term.dic_storage_path,
+                            bucket: 'cfp-platform-documents',
+                            fileName: term.dic_file_name || `${term.policy_number}_DIC.pdf`,
+                            policyId: term.policy_id,
+                        });
+                    }
+                );
 
             case 'quote':
                 return term.has_es ? (
-                    <span className={`${styles.docBadge} ${styles.yes}`} title="Quote / E&S document on file">
+                    <button
+                        type="button"
+                        className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreviewDoc({
+                                title: `Quote / E&S Document — ${term.policy_number}`,
+                                subtitle: term.named_insured || undefined,
+                                docType: 'quote',
+                                storagePath: term.es_storage_path,
+                                bucket: 'cfp-platform-documents',
+                                fileName: term.es_file_name || `${term.policy_number}_Quote.pdf`,
+                                policyId: term.policy_id,
+                            });
+                        }}
+                        title="Click to preview Quote / E&S document"
+                    >
                         <Check size={13} /> Quote
-                    </span>
+                    </button>
                 ) : (
-                    <span className={`${styles.docBadge} ${styles.no}`} title="Missing Quote/E&S">
-                        <X size={13} /> None
-                    </span>
+                    <Link
+                        href={`/upload-document?policy_id=${term.policy_id}&doc_type=quote`}
+                        className={`${styles.docBadge} ${styles.no}`}
+                        title="Missing Quote/E&S — click to upload"
+                        target="_blank"
+                    >
+                        <Plus size={12} /> None
+                    </Link>
                 );
 
             case 'bamboo':
@@ -734,53 +1063,39 @@ export function CFPSummaryTable({
         switch (colKey) {
             case 'policy':
                 return (
-                    <input
-                        type="text"
-                        placeholder="Filter CFP #..."
+                    <select
                         value={columnFilters.policy || ''}
                         onChange={e => handleColumnFilterChange('policy', e.target.value)}
-                        className={`${styles.columnFilterInput} ${columnFilters.policy ? styles.activeFilter : ''}`}
-                    />
+                        className={`${styles.columnFilterSelect} ${columnFilters.policy ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All CFP #</option>
+                        <option value="available">Available</option>
+                        <option value="not_available">Not Available</option>
+                    </select>
                 );
             case 'insured':
                 return (
-                    <input
-                        type="text"
-                        placeholder="Filter insured..."
+                    <select
                         value={columnFilters.insured || ''}
                         onChange={e => handleColumnFilterChange('insured', e.target.value)}
-                        className={`${styles.columnFilterInput} ${columnFilters.insured ? styles.activeFilter : ''}`}
-                    />
+                        className={`${styles.columnFilterSelect} ${columnFilters.insured ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Insured</option>
+                        <option value="available">Available</option>
+                        <option value="not_available">Not Available</option>
+                    </select>
                 );
             case 'address':
                 return (
-                    <input
-                        type="text"
-                        placeholder="Filter address..."
+                    <select
                         value={columnFilters.address || ''}
                         onChange={e => handleColumnFilterChange('address', e.target.value)}
-                        className={`${styles.columnFilterInput} ${columnFilters.address ? styles.activeFilter : ''}`}
-                    />
-                );
-            case 'effective':
-                return (
-                    <input
-                        type="text"
-                        placeholder="Date..."
-                        value={columnFilters.effective || ''}
-                        onChange={e => handleColumnFilterChange('effective', e.target.value)}
-                        className={`${styles.columnFilterInput} ${columnFilters.effective ? styles.activeFilter : ''}`}
-                    />
-                );
-            case 'expiration':
-                return (
-                    <input
-                        type="text"
-                        placeholder="Date..."
-                        value={columnFilters.expiration || ''}
-                        onChange={e => handleColumnFilterChange('expiration', e.target.value)}
-                        className={`${styles.columnFilterInput} ${columnFilters.expiration ? styles.activeFilter : ''}`}
-                    />
+                        className={`${styles.columnFilterSelect} ${columnFilters.address ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Addresses</option>
+                        <option value="available">Available</option>
+                        <option value="not_available">Not Available</option>
+                    </select>
                 );
             case 'dec':
                 return (
@@ -861,6 +1176,43 @@ export function CFPSummaryTable({
 
     return (
         <div className={styles.tableContainer}>
+            {/* ── View Switcher Tabs ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <button
+                    type="button"
+                    onClick={() => {
+                        onViewChange?.('active_cfp');
+                        setCurrentPage(1);
+                    }}
+                    className={`${styles.filterPill} ${view === 'active_cfp' ? styles.active : ''}`}
+                    style={{ fontSize: '0.8125rem', padding: '0.35rem 0.85rem', fontWeight: 600 }}
+                >
+                    Official CFP Policies
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        onViewChange?.('bamboo_pipeline');
+                        setCurrentPage(1);
+                    }}
+                    className={`${styles.filterPill} ${view === 'bamboo_pipeline' ? styles.active : ''}`}
+                    style={{ fontSize: '0.8125rem', padding: '0.35rem 0.85rem', fontWeight: 600 }}
+                >
+                    🌿 Bamboo In-Force Pipeline (Pending DEC)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        onViewChange?.('all');
+                        setCurrentPage(1);
+                    }}
+                    className={`${styles.filterPill} ${view === 'all' ? styles.active : ''}`}
+                    style={{ fontSize: '0.8125rem', padding: '0.35rem 0.85rem', fontWeight: 600 }}
+                >
+                    Combined All
+                </button>
+            </div>
+
             {/* ── Controls Card ── */}
             <div className={styles.controlsCard}>
                 <div className={styles.controlsRow}>
@@ -1363,6 +1715,89 @@ export function CFPSummaryTable({
                     </div>
                 )}
             </div>
+
+            {/* ── Document Preview Modal ── */}
+            {previewDoc && (
+                <div className={styles.previewOverlay} onClick={() => setPreviewDoc(null)}>
+                    <div className={styles.previewModal} onClick={e => e.stopPropagation()}>
+                        <div className={styles.previewHeader}>
+                            <div className={styles.previewHeaderInfo}>
+                                <div className={styles.previewTitleRow}>
+                                    <FileText size={18} className={styles.previewIcon} />
+                                    <h3 className={styles.previewTitle}>{previewDoc.title}</h3>
+                                </div>
+                                {previewDoc.subtitle && (
+                                    <span className={styles.previewSubtitle}>{previewDoc.subtitle}</span>
+                                )}
+                            </div>
+                            <div className={styles.previewActions}>
+                                {previewDoc.url && (
+                                    <>
+                                        <a
+                                            href={previewDoc.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={styles.previewActionBtn}
+                                            title="Open in new browser tab"
+                                        >
+                                            <ExternalLink size={14} />
+                                            <span>Open in Tab</span>
+                                        </a>
+                                        <a
+                                            href={previewDoc.url}
+                                            download={previewDoc.fileName || 'document.pdf'}
+                                            className={styles.previewActionBtn}
+                                            title="Download document file"
+                                        >
+                                            <Download size={14} />
+                                            <span>Download</span>
+                                        </a>
+                                    </>
+                                )}
+                                <button
+                                    type="button"
+                                    className={styles.previewCloseBtn}
+                                    onClick={() => setPreviewDoc(null)}
+                                    title="Close preview (Esc)"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className={styles.previewBody}>
+                            {previewDoc.loading ? (
+                                <div className={styles.previewLoading}>
+                                    <Loader2 size={36} className="animate-spin text-primary" />
+                                    <span>Loading document preview...</span>
+                                </div>
+                            ) : previewDoc.error ? (
+                                <div className={styles.previewError}>
+                                    <AlertCircle size={36} style={{ color: '#ef4444' }} />
+                                    <span style={{ fontWeight: 600, color: 'var(--text-high)' }}>Unable to load document</span>
+                                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{previewDoc.error}</span>
+                                    {previewDoc.policyId && (
+                                        <Link
+                                            href={`/upload-document?policy_id=${previewDoc.policyId}&doc_type=${previewDoc.docType || 'rce'}`}
+                                            target="_blank"
+                                            className={styles.previewRetryBtn}
+                                        >
+                                            Upload Document
+                                        </Link>
+                                    )}
+                                </div>
+                            ) : previewDoc.url ? (
+                                <iframe
+                                    src={previewDoc.url}
+                                    className={styles.previewIframe}
+                                    title={previewDoc.title}
+                                />
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

@@ -35,6 +35,7 @@ function CFPSummaryContent() {
     const [year, setYear] = useState('2026');
     const [month, setMonth] = useState('');
     const [search, setSearch] = useState('');
+    const [view, setView] = useState<'active_cfp' | 'bamboo_pipeline' | 'all'>('active_cfp');
 
     // Fetch Stats
     const fetchStats = useCallback(async () => {
@@ -71,6 +72,7 @@ function CFPSummaryContent() {
             if (year) params.set('year', year);
             if (month) params.set('month', month);
             if (search) params.set('search', search);
+            if (view) params.set('view', view);
 
             const res = await fetch(`/api/cfp-summary?${params.toString()}`, {
                 headers: {
@@ -89,7 +91,7 @@ function CFPSummaryContent() {
         } finally {
             setDataLoading(false);
         }
-    }, [year, month, search]);
+    }, [year, month, search, view]);
 
     useEffect(() => {
         fetchStats();
@@ -142,9 +144,11 @@ function CFPSummaryContent() {
                 year={year}
                 month={month}
                 search={search}
+                view={view}
                 onYearChange={setYear}
                 onMonthChange={setMonth}
                 onSearchChange={setSearch}
+                onViewChange={setView}
                 onRefresh={() => {
                     fetchStats();
                     fetchData();

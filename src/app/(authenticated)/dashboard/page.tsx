@@ -6,18 +6,12 @@ import { AgentDashboardStats } from '@/components/dashboard/AgentDashboardStats'
 import { DataTable } from '@/components/dashboard/DataTable';
 import { DashboardChart } from '@/components/dashboard/DashboardChart';
 import { LineChartKPI } from '@/components/dashboard/LineChartKPI';
-import { ActivityTab } from '@/components/dashboard/ActivityTab';
 import { CSVUploadModal } from '@/components/dashboard/CSVUploadModal';
 import { BatchEnrichModal } from '@/components/dashboard/BatchEnrichModal';
-import { Tabs } from '@/components/ui/Tabs/Tabs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button/Button';
-import { Upload, Zap, BarChart2, ChevronDown, FileUp } from 'lucide-react';
+import { Upload, Zap, BarChart2, ChevronDown, FileUp, Clock, ArrowRight } from 'lucide-react';
 import { useSidebar } from '@/components/layout/SidebarContext';
-
-const tabs = [
-    { id: 'activity', label: 'ACTIVITY' },
-];
 
 export default function DashboardPage() {
     return (
@@ -68,8 +62,6 @@ function DashboardContent() {
     }, [expirationFrom, expirationTo, renewalWindow]);
 
     const hasDrillDownFilters = !!(expirationFrom || expirationTo || statusFilter || renewalWindow || searchInit || enrichmentFilter || flagFilter);
-
-    const [activeTab, setActiveTab] = useState('activity');
 
     // Human-readable flag names (match the flag rule registry)
     const FLAG_LABELS: Record<string, string> = {
@@ -258,10 +250,58 @@ function DashboardContent() {
                     </div>
                 </div>
 
-                {/* ── Activity tab (secondary) ── */}
-                <div style={{ marginTop: '1.25rem' }}>
-                    <Tabs tabs={tabs} defaultTab="activity" onChange={setActiveTab} />
-                    {activeTab === 'activity' && <ActivityTab />}
+                {/* ── Shortcut to Recent Activity & Operations ── */}
+                <div style={{
+                    marginTop: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.875rem 1.25rem',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-lg)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                        <div style={{
+                            width: '2rem',
+                            height: '2rem',
+                            borderRadius: '0.5rem',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <Clock size={15} style={{ color: '#3b82f6' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-high)' }}>
+                                Recent Document & Ingestion Activity
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                View live uploads, processing status, and documents requiring review in Operations
+                            </div>
+                        </div>
+                    </div>
+                    <Link
+                        href="/operations/activity"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '0.5rem',
+                            background: 'var(--bg-surface-raised)',
+                            border: '1px solid var(--border-default)',
+                            color: 'var(--text-high)',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        Open Recent Activity
+                        <ArrowRight size={13} style={{ opacity: 0.6 }} />
+                    </Link>
                 </div>
 
             </div>

@@ -192,7 +192,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
         // Stuck/errored submissions should NOT block re-uploads (Tahseen Halool bug fix).
         const { data: existingDuplicate } = await supabaseAdmin
             .from('dec_page_submissions')
-            .select('id, status, error_message, processing_step')
+            .select('id, status, error_message, processing_step, file_name')
             .eq('file_hash', fileHash)
             .neq('status', 'failed')
             .neq('status', 'duplicate')
@@ -239,86 +239,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
 
                 // Fall through to normal upload flow below (no return)
             } else {
-                logger.info('Upload', 'Duplicate file detected, skipping upload and processing', {
+                logger.warn('Upload', 'Duplicate file detected, rejecting upload', {
                     fileHash,
                     existingId: existingDuplicate.id,
-                    accountId
+                    fileName: existingDuplicate.file_name,
+                    accountId,
                 });
 
-            // Insert a tracking record for the duplicate attempt (status='duplicate')
-            // This displays beautifully on the Agent Activity Feed without breaking things.
-            const { data: dupRow, error: dupError } = await supabaseAdmin
-                .from('dec_page_submissions')
-                .insert({
-                    account_id: accountId,
-                    first_name: account.first_name || '',
-                    last_name: account.last_name || '',
-                    email: account.email || '',
-                    phone: account.phone || '',
-                    file_path: '',
-                    file_name: file.name,
-                    file_size: file.size,
-                    file_type: file.type,
-                    status: 'duplicate',
-                    error_message: 'Duplicate matched against an existing document',
-                    bucket: 'cfp-raw-decpage',
-                    file_hash: fileHash,
-                    duplicate_of: existingDuplicate.id,
-                    created_at: now,
-                    updated_at: now,
-                })
-                .select('id')
-                .single();
-
-            if (dupError) {
-                logger.error('Upload', 'Failed to insert duplicate tracking row (non-fatal)', { error: dupError.message });
-            } else if (dupRow?.id) {
-                // CRITICAL FIX: The DB has an auto-trigger that queues an ingestion job for ALL inserts.
-                // We must instantly delete the job that the trigger just created, or the worker will crash 
-                // trying to process this dummy tracking row.
-                await supabaseAdmin
-                    .from('ingestion_jobs')
-                    .delete()
-                    .eq('submission_id', dupRow.id);
-
-                // FEATURE REQUEST: Link this duplicate tracker to the original policy so it shows in the Activity Feed beautifully
-                // 1. Find if the original `existingDuplicate.id` has a linked `dec_pages` record yet.
-                const { data: originalDecPage } = await supabaseAdmin
-                    .from('dec_pages')
-                    .select('policy_id, client_id, insured_name, policy_number')
-                    .eq('submission_id', existingDuplicate.id)
-                    .maybeSingle();
-
-                // 2. If it does, clone that mapping for our new tracking row!
-                if (originalDecPage) {
-                    await supabaseAdmin.from('dec_pages').insert({
-                        submission_id: dupRow.id,
-                        policy_id: originalDecPage.policy_id,
-                        client_id: originalDecPage.client_id,
-                        insured_name: originalDecPage.insured_name,
-                        policy_number: originalDecPage.policy_number,
-                        parse_status: 'manual' // Skips AI pipeline dependencies
-                    });
-                }
-            }
-
-            const submittedBy = [account.first_name, account.last_name].filter(Boolean).join(' ') || account.email || 'User';
-
-            return NextResponse.json(
-                {
-                    success: true,
-                    message: 'Duplicate document recognized. Linking to existing record.',
-                    data: {
-                        submissionId: existingDuplicate.id, // Always return the parent ID that actually gets processed!
-                        storagePath: '',
-                        fileName: file.name,
-                        fileSize: file.size,
-                        submittedBy,
-                        submittedAt: now,
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: `This exact file has already been uploaded${existingDuplicate.file_name ? ` as "${existingDuplicate.file_name}"` : ''}.`,
+                        error: 'DUPLICATE_FILE',
+                        errorCode: 'DUPLICATE',
+                        data: {
+                            existingSubmissionId: existingDuplicate.id,
+                            existingStatus: existingDuplicate.status,
+                        },
                     },
-                },
-                { status: 200 } // Send success so the UI clears the upload state smoothly
-            );
+                    { status: 409 }
+                );
             } // end else (not stuck)
         }
 
