@@ -4,12 +4,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
     Search,
-    ChevronDown,
-    ChevronRight,
     ExternalLink,
     Check,
     X,
-    Filter,
     Layers,
     Loader2,
     Calendar,
@@ -46,7 +43,7 @@ interface ColumnDef {
 }
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-    { key: 'policy', label: 'Policy / Family', width: 175, minWidth: 120, align: 'left' },
+    { key: 'policy', label: 'Policy #', width: 175, minWidth: 120, align: 'left' },
     { key: 'insured', label: 'Named Insured', width: 150, minWidth: 100, align: 'left' },
     { key: 'address', label: 'Property Address', width: 200, minWidth: 120, align: 'left' },
     { key: 'effective', label: 'Effective', width: 95, minWidth: 80, align: 'left' },
@@ -138,7 +135,6 @@ export function CFPSummaryTable({
 }: CFPSummaryTableProps) {
     // Local copy of families to support optimistic updates for Bamboo toggle
     const [families, setFamilies] = useState<CFPFamily[]>(initialFamilies);
-    const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
     const [docFilter, setDocFilter] = useState<DocFilterType>('all');
     const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -287,39 +283,13 @@ export function CFPSummaryTable({
     // Sync initialFamilies to local state
     useEffect(() => {
         setFamilies(initialFamilies);
-        // By default expand all multi-term families
-        const multi = new Set<string>();
-        initialFamilies.forEach(f => {
-            if (f.terms.length > 1) {
-                multi.add(f.base_policy);
-            }
-        });
-        setExpandedFamilies(multi);
         setCurrentPage(1);
     }, [initialFamilies]);
 
-    // Toggle family accordion
-    const toggleFamily = (basePolicy: string) => {
-        setExpandedFamilies(prev => {
-            const next = new Set(prev);
-            if (next.has(basePolicy)) {
-                next.delete(basePolicy);
-            } else {
-                next.add(basePolicy);
-            }
-            return next;
-        });
-    };
-
-    // Expand / Collapse all
-    const handleExpandAll = () => {
-        const all = new Set(families.map(f => f.base_policy));
-        setExpandedFamilies(all);
-    };
-
-    const handleCollapseAll = () => {
-        setExpandedFamilies(new Set());
-    };
+    // Flatten all policy terms into a clean single list
+    const allTerms = useMemo(() => {
+        return families.flatMap(f => f.terms);
+    }, [families]);
 
     // Toggle Bamboo Coverage via PATCH API with optimistic update
     const handleToggleBamboo = async (policyId: string, currentVal: boolean) => {
@@ -378,49 +348,42 @@ export function CFPSummaryTable({
         }
     };
 
-    // Filter families based on docFilter pill
-    const filteredFamilies = useMemo(() => {
-        if (docFilter === 'all') return families;
+    // Filter terms based on docFilter pill
+    const filteredTerms = useMemo(() => {
+        if (docFilter === 'all') return allTerms;
 
-        return families
-            .map(f => {
-                const matchingTerms = f.terms.filter(t => {
-                    switch (docFilter) {
-                        case 'missing_dec':
-                            return !t.has_dec;
-                        case 'missing_rce':
-                            return !t.has_rce;
-                        case 'missing_dic':
-                            return !t.has_dic;
-                        case 'missing_es':
-                            return !t.has_es;
-                        case 'has_bamboo':
-                            return t.has_bamboo_coverage;
-                        case 'missing_bamboo':
-                            return !t.has_bamboo_coverage;
-                        default:
-                            return true;
-                    }
-                });
-
-                if (matchingTerms.length === 0) return null;
-                return { ...f, terms: matchingTerms };
-            })
-            .filter((f): f is CFPFamily => f !== null);
-    }, [families, docFilter]);
+        return allTerms.filter(t => {
+            switch (docFilter) {
+                case 'missing_dec':
+                    return !t.has_dec;
+                case 'missing_rce':
+                    return !t.has_rce;
+                case 'missing_dic':
+                    return !t.has_dic;
+                case 'missing_es':
+                    return !t.has_es;
+                case 'has_bamboo':
+                    return t.has_bamboo_coverage;
+                case 'missing_bamboo':
+                    return !t.has_bamboo_coverage;
+                default:
+                    return true;
+            }
+        });
+    }, [allTerms, docFilter]);
 
     // Pagination
-    const totalPages = Math.max(1, Math.ceil(filteredFamilies.length / PAGE_SIZE));
-    const paginatedFamilies = useMemo(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredTerms.length / PAGE_SIZE));
+    const paginatedTerms = useMemo(() => {
         const start = (currentPage - 1) * PAGE_SIZE;
-        return filteredFamilies.slice(start, start + PAGE_SIZE);
-    }, [filteredFamilies, currentPage]);
+        return filteredTerms.slice(start, start + PAGE_SIZE);
+    }, [filteredTerms, currentPage]);
 
     const [isExporting, setIsExporting] = useState(false);
 
-    // Export currently filtered families to Excel (.xlsx)
+    // Export currently filtered policies to Excel (.xlsx)
     const handleExportExcel = async () => {
-        if (filteredFamilies.length === 0 || isExporting) return;
+        if (filteredTerms.length === 0 || isExporting) return;
         setIsExporting(true);
         try {
             const parts: string[] = [];
@@ -433,7 +396,7 @@ export function CFPSummaryTable({
             if (search) parts.push(`Search_${search.slice(0, 10)}`);
             const desc = parts.length > 0 ? parts.join('_') : 'All';
 
-            await exportCFPToExcel(filteredFamilies, desc);
+            await exportCFPToExcel(filteredTerms, desc);
         } catch (err) {
             console.error('Failed to export to Excel:', err);
         } finally {
@@ -447,28 +410,17 @@ export function CFPSummaryTable({
     }, [columnOrder, columnWidths]);
 
     // Render individual cell content by column key
-    const renderCell = (colKey: CFPColumnKey, term: CFPTermRow, isMultiTerm: boolean) => {
+    const renderCell = (colKey: CFPColumnKey, term: CFPTermRow) => {
         switch (colKey) {
             case 'policy':
                 return (
                     <div className={styles.policyNumberCell}>
-                        {isMultiTerm && (
-                            <span style={{ color: 'var(--text-muted)', marginRight: '2px', flexShrink: 0 }}>
-                                ↳
-                            </span>
-                        )}
-                        <span className={styles.cellText} title={term.policy_number}>{term.policy_number}</span>
-                        <span
-                            className={`${styles.typeBadge} ${
-                                term.term_type === 'ORIGINAL' ? styles.original : styles.renewal
-                            }`}
-                            style={{ flexShrink: 0 }}
-                        >
-                            {term.term_type}
+                        <span className={styles.cellText} title={term.policy_number}>
+                            {term.policy_number}
                         </span>
-                        {term.is_current && (
-                            <span className={styles.currentBadge} style={{ flexShrink: 0 }}>
-                                Current
+                        {term.suffix && (
+                            <span className={`${styles.typeBadge} ${styles.renewal}`} style={{ flexShrink: 0 }}>
+                                {term.suffix}
                             </span>
                         )}
                     </div>
@@ -660,13 +612,13 @@ export function CFPSummaryTable({
                         </div>
                     </div>
 
-                    {/* Right side controls: Export, Layout, Expand/Collapse & refresh */}
+                    {/* Right side controls: Export, Layout & refresh */}
                     <div className={styles.filterGroup}>
                         <button
                             type="button"
                             className={styles.exportBtn}
                             onClick={handleExportExcel}
-                            disabled={isExporting || filteredFamilies.length === 0}
+                            disabled={isExporting || filteredTerms.length === 0}
                             title="Export currently filtered policies to Excel (.xlsx)"
                         >
                             {isExporting ? (
@@ -692,22 +644,6 @@ export function CFPSummaryTable({
                             Reset Columns
                         </button>
 
-                        <button
-                            type="button"
-                            className={styles.filterPill}
-                            onClick={handleExpandAll}
-                            title="Expand all families"
-                        >
-                            Expand All
-                        </button>
-                        <button
-                            type="button"
-                            className={styles.filterPill}
-                            onClick={handleCollapseAll}
-                            title="Collapse all families"
-                        >
-                            Collapse All
-                        </button>
                         <button
                             type="button"
                             className={styles.filterPill}
@@ -771,7 +707,7 @@ export function CFPSummaryTable({
                             💡 <em>Drag headers to reorder • Drag column edges to resize</em>
                         </span>
                         <span className={styles.countsBadge}>
-                            Showing <strong>{filteredFamilies.length}</strong> families ({totalTerms} terms total)
+                            Showing <strong>{filteredTerms.length}</strong> policies
                         </span>
                     </div>
                 </div>
@@ -854,16 +790,16 @@ export function CFPSummaryTable({
                         </thead>
 
                         <tbody>
-                            {loading && families.length === 0 ? (
+                            {loading && allTerms.length === 0 ? (
                                 <tr>
                                     <td colSpan={columnOrder.length}>
                                         <div className={styles.emptyState}>
                                             <Loader2 size={28} className="animate-spin text-primary" />
-                                            <span>Loading CFP policy families...</span>
+                                            <span>Loading CFP policies...</span>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : paginatedFamilies.length === 0 ? (
+                            ) : paginatedTerms.length === 0 ? (
                                 <tr>
                                     <td colSpan={columnOrder.length}>
                                         <div className={styles.emptyState}>
@@ -873,65 +809,26 @@ export function CFPSummaryTable({
                                     </td>
                                 </tr>
                             ) : (
-                                paginatedFamilies.map(family => {
-                                    const isMultiTerm = family.terms.length > 1;
-                                    const isExpanded = expandedFamilies.has(family.base_policy);
-                                    const primaryTerm = family.terms[family.terms.length - 1] || family.terms[0];
-
-                                    return (
-                                        <React.Fragment key={family.base_policy}>
-                                            {/* Family Header Row (only shown if multi-term) */}
-                                            {isMultiTerm && (
-                                                <tr
-                                                    className={styles.familyHeaderRow}
-                                                    onClick={() => toggleFamily(family.base_policy)}
+                                paginatedTerms.map((term) => (
+                                    <tr
+                                        key={term.policy_term_id}
+                                        className={styles.termRow}
+                                    >
+                                        {columnOrder.map((colKey) => {
+                                            const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
+                                            return (
+                                                <td
+                                                    key={colKey}
+                                                    style={{
+                                                        textAlign: colDef.align || 'left',
+                                                    }}
                                                 >
-                                                    <td colSpan={columnOrder.length}>
-                                                        <div className={styles.familyCell}>
-                                                            {isExpanded ? (
-                                                                <ChevronDown size={16} />
-                                                            ) : (
-                                                                <ChevronRight size={16} />
-                                                            )}
-                                                            <span className={styles.familyTitle}>
-                                                                {family.base_policy}
-                                                            </span>
-                                                            <span className={styles.termCountBadge}>
-                                                                {family.terms.length} terms in family
-                                                            </span>
-                                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
-                                                                {primaryTerm.named_insured} — {primaryTerm.property_address}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-
-                                            {/* Term Rows */}
-                                            {(!isMultiTerm || isExpanded) &&
-                                                family.terms.map((term) => (
-                                                    <tr
-                                                        key={term.policy_term_id}
-                                                        className={`${styles.termRow} ${isMultiTerm ? styles.childRow : ''}`}
-                                                    >
-                                                        {columnOrder.map((colKey) => {
-                                                            const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
-                                                            return (
-                                                                <td
-                                                                    key={colKey}
-                                                                    style={{
-                                                                        textAlign: colDef.align || 'left',
-                                                                    }}
-                                                                >
-                                                                    {renderCell(colKey, term, isMultiTerm)}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                ))}
-                                        </React.Fragment>
-                                    );
-                                })
+                                                    {renderCell(colKey, term)}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))
                             )}
                         </tbody>
                     </table>
