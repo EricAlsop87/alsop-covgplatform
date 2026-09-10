@@ -650,3 +650,135 @@
     color: #fff;
     margin-left: 0.25rem;
 }
+
+/* ── Filtered Period Quick Summary Strip ── */
+.periodSummaryStrip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 0.875rem;
+    background: var(--bg-surface-subtle, #f8fafc);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md, 8px);
+}
+
+.periodSummaryHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.periodSummaryTitle {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-high);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.periodSummaryCards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.625rem;
+
+    @media (max-width: 900px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.summaryMiniCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md, 6px);
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+    transition: all 0.15s ease;
+
+    &:hover {
+        border-color: var(--color-primary, #2243B6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+}
+
+.miniCardLabel {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.miniCardValue {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-high);
+    line-height: 1.1;
+}
+
+.miniCardSub {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+}
+
+.miniCardMetrics {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-wrap: wrap;
+}
+
+.metricAvail {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: #16a34a;
+    background: rgba(34, 197, 94, 0.1);
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+}
+
+.metricMissing {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.08);
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.18);
+    }
+}
+
+.miniProgressBar {
+    width: 100%;
+    height: 4px;
+    background: rgba(239, 68, 68, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.1rem;
+}
+
+.miniProgressFill {
+    height: 100%;
+    background: #16a34a;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}

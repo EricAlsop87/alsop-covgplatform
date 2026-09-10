@@ -519,6 +519,34 @@ export function CFPSummaryTable({
         return result;
     }, [allTerms, docFilter, columnFilters]);
 
+    // Quick summary statistics for the filtered month & year
+    const periodStats = useMemo(() => {
+        const total = allTerms.length;
+        let decAvailable = 0;
+        let rceAvailable = 0;
+        let dicAvailable = 0;
+        let quoteAvailable = 0;
+
+        for (const t of allTerms) {
+            if (t.has_dec) decAvailable++;
+            if (t.has_rce || t.rce_carrier) rceAvailable++;
+            if (t.has_dic || t.dic_carrier) dicAvailable++;
+            if (t.has_es) quoteAvailable++;
+        }
+
+        return {
+            total,
+            decAvailable,
+            decMissing: Math.max(0, total - decAvailable),
+            rceAvailable,
+            rceMissing: Math.max(0, total - rceAvailable),
+            dicAvailable,
+            dicMissing: Math.max(0, total - dicAvailable),
+            quoteAvailable,
+            quoteMissing: Math.max(0, total - quoteAvailable),
+        };
+    }, [allTerms]);
+
     // Pagination
     const totalPages = Math.max(1, Math.ceil(filteredTerms.length / PAGE_SIZE));
     const paginatedTerms = useMemo(() => {
@@ -954,6 +982,124 @@ export function CFPSummaryTable({
                             <RotateCcw size={12} style={{ display: 'inline', marginRight: '4px' }} />
                             Refresh
                         </button>
+                    </div>
+                </div>
+
+                {/* ── Quick Summary Card for Filtered Month and Year ── */}
+                <div className={styles.periodSummaryStrip}>
+                    <div className={styles.periodSummaryHeader}>
+                        <div className={styles.periodSummaryTitle}>
+                            <span>
+                                📅 {month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}
+                                {year ? year : 'All Years'} Summary
+                            </span>
+                        </div>
+                        <span className={styles.miniCardSub}>
+                            Live snapshot for selected month & year
+                        </span>
+                    </div>
+
+                    <div className={styles.periodSummaryCards}>
+                        {/* 1. Total Policies */}
+                        <div className={styles.summaryMiniCard}>
+                            <span className={styles.miniCardLabel}>Total Policies</span>
+                            <span className={styles.miniCardValue}>{periodStats.total.toLocaleString()}</span>
+                            <span className={styles.miniCardSub}>
+                                in {month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}{year || 'all years'}
+                            </span>
+                        </div>
+
+                        {/* 2. DEC Page */}
+                        <div className={styles.summaryMiniCard}>
+                            <span className={styles.miniCardLabel}>DEC Page</span>
+                            <div className={styles.miniCardMetrics}>
+                                <span className={styles.metricAvail} title="DEC pages on file">
+                                    <Check size={11} /> {periodStats.decAvailable.toLocaleString()} available
+                                </span>
+                                <span 
+                                    className={styles.metricMissing} 
+                                    title="Click to filter by Missing DEC"
+                                    onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
+                                >
+                                    <X size={11} /> {periodStats.decMissing.toLocaleString()} missing
+                                </span>
+                            </div>
+                            <div className={styles.miniProgressBar}>
+                                <div 
+                                    className={styles.miniProgressFill} 
+                                    style={{ width: `${periodStats.total > 0 ? (periodStats.decAvailable / periodStats.total) * 100 : 0}%` }} 
+                                />
+                            </div>
+                        </div>
+
+                        {/* 3. RCE */}
+                        <div className={styles.summaryMiniCard}>
+                            <span className={styles.miniCardLabel}>RCE Document</span>
+                            <div className={styles.miniCardMetrics}>
+                                <span className={styles.metricAvail} title="RCE documents on file">
+                                    <Check size={11} /> {periodStats.rceAvailable.toLocaleString()} available
+                                </span>
+                                <span 
+                                    className={styles.metricMissing} 
+                                    title="Click to filter by Missing RCE"
+                                    onClick={() => { setDocFilter('missing_rce'); setCurrentPage(1); }}
+                                >
+                                    <X size={11} /> {periodStats.rceMissing.toLocaleString()} missing
+                                </span>
+                            </div>
+                            <div className={styles.miniProgressBar}>
+                                <div 
+                                    className={styles.miniProgressFill} 
+                                    style={{ width: `${periodStats.total > 0 ? (periodStats.rceAvailable / periodStats.total) * 100 : 0}%` }} 
+                                />
+                            </div>
+                        </div>
+
+                        {/* 4. DIC */}
+                        <div className={styles.summaryMiniCard}>
+                            <span className={styles.miniCardLabel}>DIC Policy / Doc</span>
+                            <div className={styles.miniCardMetrics}>
+                                <span className={styles.metricAvail} title="DIC documents on file">
+                                    <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} available
+                                </span>
+                                <span 
+                                    className={styles.metricMissing} 
+                                    title="Click to filter by Missing DIC"
+                                    onClick={() => { setDocFilter('missing_dic'); setCurrentPage(1); }}
+                                >
+                                    <X size={11} /> {periodStats.dicMissing.toLocaleString()} missing
+                                </span>
+                            </div>
+                            <div className={styles.miniProgressBar}>
+                                <div 
+                                    className={styles.miniProgressFill} 
+                                    style={{ width: `${periodStats.total > 0 ? (periodStats.dicAvailable / periodStats.total) * 100 : 0}%` }} 
+                                />
+                            </div>
+                        </div>
+
+                        {/* 5. Quote / E&S */}
+                        <div className={styles.summaryMiniCard}>
+                            <span className={styles.miniCardLabel}>Quote / E&S</span>
+                            <div className={styles.miniCardMetrics}>
+                                <span className={styles.metricAvail} title="Quote/E&S documents on file">
+                                    <Check size={11} /> {periodStats.quoteAvailable.toLocaleString()} available
+                                </span>
+                                <span 
+                                    className={styles.metricMissing} 
+                                    title="Click to filter by Missing Quote/E&S"
+                                    onClick={() => { setDocFilter('missing_es'); setCurrentPage(1); }}
+                                >
+                                    <X size={11} /> {periodStats.quoteMissing.toLocaleString()} missing
+                                </span>
+                            </div>
+                            <div className={styles.miniProgressBar}>
+                                <div 
+                                    className={styles.miniProgressFill} 
+                                    style={{ width: `${periodStats.total > 0 ? (periodStats.quoteAvailable / periodStats.total) * 100 : 0}%` }} 
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
