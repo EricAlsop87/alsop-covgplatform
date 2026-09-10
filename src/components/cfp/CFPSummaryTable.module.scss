@@ -1,0 +1,385 @@
+.tableContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+.controlsCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.controlsRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.filterGroup {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+}
+
+.selectWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.selectInput {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--text-high);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &:hover, &:focus {
+        border-color: var(--color-primary);
+    }
+}
+
+.searchBox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 260px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    color: var(--text-high);
+    outline: none;
+    transition: border-color 0.15s;
+
+    &:focus {
+        border-color: var(--color-primary);
+    }
+
+    &::placeholder {
+        color: var(--text-muted);
+    }
+}
+
+.filterPills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-default);
+}
+
+.pillLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-right: 0.25rem;
+}
+
+.filterPill {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: var(--bg-surface-elevated, #f1f5f9);
+        color: var(--text-high);
+    }
+
+    &.active {
+        background: var(--color-primary, #2243B6);
+        color: #fff;
+        border-color: var(--color-primary, #2243B6);
+    }
+}
+
+.countsBadge {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ── Table Container ── */
+.tableCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.tableScroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    text-align: left;
+    white-space: nowrap;
+
+    th {
+        background: var(--bg-surface-subtle);
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        border-bottom: 1px solid var(--border-default);
+    }
+
+    td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-default);
+        color: var(--text-high);
+        vertical-align: middle;
+    }
+}
+
+/* ── Family Header Row ── */
+.familyHeaderRow {
+    background: var(--bg-surface-subtle);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+
+    &:hover {
+        background: var(--bg-surface-hover, rgba(0, 0, 0, 0.03));
+    }
+
+    td {
+        padding: 0.65rem 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-default);
+        border-top: 1px solid var(--border-default);
+    }
+}
+
+.familyCell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.familyTitle {
+    font-weight: 700;
+    color: var(--text-high);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.875rem;
+}
+
+.termCountBadge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(34, 67, 182, 0.1);
+    color: var(--color-primary, #2243B6);
+}
+
+/* ── Term Row ── */
+.termRow {
+    transition: background 0.15s ease;
+
+    &:hover {
+        background: var(--bg-surface-hover, rgba(0, 0, 0, 0.02));
+    }
+
+    &.childRow td:first-child {
+        padding-left: 2.25rem;
+    }
+}
+
+.policyNumberCell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono, monospace);
+    font-weight: 500;
+}
+
+.typeBadge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+
+    &.original {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+    }
+
+    &.renewal {
+        background: rgba(59, 130, 246, 0.12);
+        color: #1d4ed8;
+    }
+}
+
+.currentBadge {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(14, 165, 233, 0.15);
+    color: #0369a1;
+}
+
+.linkButton {
+    color: var(--color-primary, #2243B6);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+/* ── Document Indicator Badges ── */
+.docBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+
+    &.yes {
+        background: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+    }
+
+    &.no {
+        background: rgba(239, 68, 68, 0.08);
+        color: #dc2626;
+    }
+}
+
+/* ── Bamboo Toggle ── */
+.bambooToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+
+    &.active {
+        background: #ecfdf5;
+        border-color: #86efac;
+        color: #15803d;
+
+        &:hover {
+            background: #dcfce7;
+        }
+    }
+
+    &.inactive {
+        background: var(--bg-surface-subtle);
+        border-color: var(--border-default);
+        color: var(--text-muted);
+
+        &:hover {
+            border-color: #94a3b8;
+            color: var(--text-high);
+        }
+    }
+}
+
+/* ── Empty & Loading States ── */
+.emptyState {
+    padding: 3.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.paginationRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--border-default);
+    background: var(--bg-surface);
+}
+
+.pageButtons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pageBtn {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--text-high);
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    &:not(:disabled):hover {
+        background: var(--bg-surface-hover, #f8fafc);
+        border-color: var(--color-primary);
+    }
+}

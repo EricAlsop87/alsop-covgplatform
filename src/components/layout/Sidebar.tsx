@@ -12,6 +12,7 @@ import { type UserRole } from '@/lib/auth';
 import { BrandLogo, BrandEmblem } from '@/components/brand/BrandLogo';
 import {
     LayoutDashboard,
+    FileSpreadsheet,
     FileText,
     Settings,
     LogOut,
@@ -40,6 +41,7 @@ export function Sidebar({ userRole }: SidebarProps) {
 
     const agentNavItems = [
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { label: 'CFP Summary', href: '/cfp-summary', icon: FileSpreadsheet },
         { label: 'Flags', href: '/flags', icon: Flag },
         { label: 'Email Center', href: '/email', icon: Mail },
         { label: 'Campaigns', href: '/campaigns', icon: Calendar },
