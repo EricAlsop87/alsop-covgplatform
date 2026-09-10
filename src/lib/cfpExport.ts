@@ -66,8 +66,8 @@ export async function exportCFPToExcel(families: CFPFamily[], filterDescription:
                 payment_status: term.payment_status || '',
                 payment_plan: term.payment_plan || '',
                 has_dec: term.has_dec ? 'Uploaded' : 'Missing',
-                has_rce: term.has_rce ? 'Uploaded' : 'Missing',
-                has_dic: term.has_dic ? 'Verified' : 'Missing',
+                has_rce: term.rce_carrier || (term.has_rce ? 'Uploaded' : 'Missing'),
+                has_dic: term.dic_carrier || (term.has_dic ? 'Verified' : 'Missing'),
                 has_es: term.has_es ? 'Uploaded' : 'Missing',
                 has_bamboo: term.has_bamboo_coverage ? 'Yes' : 'No',
             });

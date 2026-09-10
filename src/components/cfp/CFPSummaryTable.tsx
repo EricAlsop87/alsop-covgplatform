@@ -53,6 +53,32 @@ const MONTH_NAMES = [
     { value: '12', label: 'December' },
 ];
 
+function renderCarrierBadge(carrier: string | null | undefined, docName: 'RCE' | 'DIC') {
+    if (!carrier) {
+        return (
+            <span className={`${styles.docBadge} ${styles.no}`} title={`Missing ${docName}`}>
+                <X size={13} /> None
+            </span>
+        );
+    }
+
+    const cLower = carrier.toLowerCase();
+    let badgeClass = styles.other;
+    if (cLower === 'bamboo') badgeClass = styles.bamboo;
+    else if (cLower === 'am' || cLower === 'american modern') badgeClass = styles.am;
+    else if (cLower === 'aegis') badgeClass = styles.aegis;
+    else if (cLower === 'sagesure') badgeClass = styles.sagesure;
+    else if (cLower === 'psic') badgeClass = styles.psic;
+
+    const displayLabel = carrier === 'AM' ? 'AM' : carrier;
+
+    return (
+        <span className={`${styles.carrierBadge} ${badgeClass}`} title={`${docName} uploaded: ${carrier}`}>
+            <Check size={12} /> {displayLabel}
+        </span>
+    );
+}
+
 export function CFPSummaryTable({
     families: initialFamilies,
     loading,
@@ -559,28 +585,12 @@ export function CFPSummaryTable({
 
                                                         {/* RCE */}
                                                         <td style={{ textAlign: 'center' }}>
-                                                            {term.has_rce ? (
-                                                                <span className={`${styles.docBadge} ${styles.yes}`} title="RCE document on file">
-                                                                    <Check size={13} /> RCE
-                                                                </span>
-                                                            ) : (
-                                                                <span className={`${styles.docBadge} ${styles.no}`} title="Missing RCE">
-                                                                    <X size={13} /> None
-                                                                </span>
-                                                            )}
+                                                            {renderCarrierBadge(term.rce_carrier, 'RCE')}
                                                         </td>
 
                                                         {/* DIC */}
                                                         <td style={{ textAlign: 'center' }}>
-                                                            {term.has_dic ? (
-                                                                <span className={`${styles.docBadge} ${styles.yes}`} title="DIC coverage verified">
-                                                                    <Check size={13} /> DIC
-                                                                </span>
-                                                            ) : (
-                                                                <span className={`${styles.docBadge} ${styles.no}`} title="Missing DIC">
-                                                                    <X size={13} /> None
-                                                                </span>
-                                                            )}
+                                                            {renderCarrierBadge(term.dic_carrier, 'DIC')}
                                                         </td>
 
                                                         {/* Quote / E&S */}

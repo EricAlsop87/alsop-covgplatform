@@ -29,7 +29,9 @@ export interface CFPTermRow {
     // Document presence
     has_dec: boolean;
     has_rce: boolean;
+    rce_carrier: string | null;
     has_dic: boolean;
+    dic_carrier: string | null;
     has_es: boolean;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
@@ -39,6 +41,74 @@ export interface CFPTermRow {
 export interface CFPFamily {
     base_policy: string;
     terms: CFPTermRow[];
+}
+
+// ── Carrier Detection Helper ──────────────────────────────────────────────
+function detectDocCarrier(fileName?: string | null, rawText?: string | null, docType?: string | null): string | null {
+    const fn = (fileName || '').toLowerCase();
+    const txt = (rawText || '').toLowerCase().slice(0, 3000);
+    const combined = `${fn} ${txt}`;
+
+    // 1. American Modern (AM)
+    if (
+        combined.includes('american modern') ||
+        combined.includes('americanmodern') ||
+        combined.includes('homeowners flex') ||
+        combined.includes('rce am') ||
+        combined.includes('rcm am') ||
+        combined.includes('rce_am') ||
+        combined.includes('quote am') ||
+        combined.includes('dic am') ||
+        combined.includes('dic_am') ||
+        /[\s_\-]AM[\s_\.\(\)\-]/i.test(fileName || '') ||
+        /[\s_]AM$/i.test(fileName || '') ||
+        /(?:^|[^0-9])005[0-9]{6,}/.test(fileName || '')
+    ) {
+        return 'AM';
+    }
+
+    // 2. Aegis (including Obsidian, Aegis Security, Aegis General, Q55 quotes)
+    if (
+        combined.includes('aegis') ||
+        combined.includes('obsidian') ||
+        /(?:^|[^0-9])Q55[0-9]{4,}/i.test(fileName || '')
+    ) {
+        return 'Aegis';
+    }
+
+    // 3. SageSure (CASNH, CASNL, CAICH, CAASL, CAICL, etc.)
+    if (
+        combined.includes('sagesure') ||
+        combined.includes('sage sure') ||
+        /(?:^|[^A-Za-z0-9])CA[A-Za-z]{3}[0-9]{5,}/.test(fileName || '')
+    ) {
+        return 'SageSure';
+    }
+
+    // 4. PSIC (Pacific Specialty)
+    if (
+        combined.includes('psic') ||
+        combined.includes('pacific specialty') ||
+        combined.includes('pacificspecialty')
+    ) {
+        return 'PSIC';
+    }
+
+    // 5. Bamboo
+    if (
+        combined.includes('bamboo') ||
+        combined.includes('360value') ||
+        combined.includes('360 value') ||
+        /(?:^|[^A-Za-z0-9])Q100[0-9]{6,}/i.test(fileName || '')
+    ) {
+        return 'Bamboo';
+    }
+
+    if (docType === 'rce') {
+        return 'Bamboo';
+    }
+
+    return null;
 }
 
 export interface CFPSummaryStats {
@@ -135,41 +205,81 @@ export async function GET(req: NextRequest) {
 
     // ── 3. Gather all policy_ids from result ──────────────────────────────
     const policyIds = [...new Set((terms as any[]).map((t: any) => t.policy_id))];
-    const termIds = (terms as any[]).map((t: any) => t.id);
+
+    // Helper to batch large in() queries in chunks of 150 to respect HTTP URL limits
+    const CHUNK_SIZE = 150;
+    async function chunkedInQuery<T>(
+        table: string,
+        select: string,
+        inCol: string,
+        inValues: string[],
+        extraFilter?: (q: any) => any
+    ): Promise<T[]> {
+        const results: T[] = [];
+        for (let i = 0; i < inValues.length; i += CHUNK_SIZE) {
+            const chunk = inValues.slice(i, i + CHUNK_SIZE);
+            let q = admin.from(table).select(select).in(inCol, chunk);
+            if (extraFilter) q = extraFilter(q);
+            const { data } = await q;
+            if (data) results.push(...(data as T[]));
+        }
+        return results;
+    }
 
     // ── 4. Check dec_pages (by policy_id) ────────────────────────────────
-    const { data: decPages } = await admin
-        .from('dec_pages')
-        .select('policy_id')
-        .in('policy_id', policyIds);
-
-    const policyIdsWithDec = new Set((decPages || []).map((d: any) => d.policy_id));
+    const decPages = await chunkedInQuery<{ policy_id: string }>(
+        'dec_pages',
+        'policy_id',
+        'policy_id',
+        policyIds
+    );
+    const policyIdsWithDec = new Set(decPages.map(d => d.policy_id));
 
     // ── 5. Check platform_documents (by policy_id and doc_type) ──────────
-    const { data: docs } = await admin
-        .from('platform_documents')
-        .select('policy_id, policy_term_id, doc_type')
-        .in('policy_id', policyIds)
-        .in('doc_type', ['rce', 'dic_dec_page', 'es_doc']);
+    const docs = await chunkedInQuery<{
+        policy_id: string;
+        policy_term_id?: string;
+        doc_type: string;
+        file_name?: string;
+        raw_text?: string;
+    }>(
+        'platform_documents',
+        'policy_id, policy_term_id, doc_type, file_name, raw_text',
+        'policy_id',
+        policyIds,
+        q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc'])
+    );
 
-    // Build per-policy doc sets
+    // Build per-policy doc sets and carrier maps
     const policyDocTypes: Record<string, Set<string>> = {};
-    for (const doc of (docs || [])) {
+    const policyRceCarrier: Record<string, string> = {};
+    const policyDicCarrier: Record<string, string> = {};
+
+    for (const doc of docs) {
         if (!policyDocTypes[doc.policy_id]) {
             policyDocTypes[doc.policy_id] = new Set();
         }
         policyDocTypes[doc.policy_id].add(doc.doc_type);
+
+        const detected = detectDocCarrier(doc.file_name, doc.raw_text, doc.doc_type);
+        if (doc.doc_type === 'rce' && detected && !policyRceCarrier[doc.policy_id]) {
+            policyRceCarrier[doc.policy_id] = detected;
+        } else if (doc.doc_type === 'dic_dec_page' && detected && !policyDicCarrier[doc.policy_id]) {
+            policyDicCarrier[doc.policy_id] = detected;
+        }
     }
 
     // ── 5b. Check Bamboo coverage via manual_overrides ───────────────────
-    const { data: bambooOverrides } = await admin
-        .from('manual_overrides')
-        .select('policy_id, new_value')
-        .in('policy_id', policyIds)
-        .eq('field_name', 'has_bamboo_coverage');
+    const bambooOverrides = await chunkedInQuery<{ policy_id: string; new_value: string }>(
+        'manual_overrides',
+        'policy_id, new_value',
+        'policy_id',
+        policyIds,
+        q => q.eq('field_name', 'has_bamboo_coverage')
+    );
 
     const bambooCoverageSet = new Set<string>();
-    for (const ov of (bambooOverrides || [])) {
+    for (const ov of bambooOverrides) {
         if (ov.new_value === 'true' || ov.new_value === '1') {
             bambooCoverageSet.add(ov.policy_id);
         }
@@ -183,6 +293,13 @@ export async function GET(req: NextRequest) {
         const docSet = policyDocTypes[policyId] || new Set<string>();
 
         const { basePolicy, suffix } = normalizePolicyNumber(policy?.policy_number);
+
+        const hasRce = docSet.has('rce');
+        const rceCarrier = policyRceCarrier[policyId] || (hasRce ? 'Bamboo' : null);
+
+        const hasDic = docSet.has('dic_dec_page') || !!t.dic_exists;
+        const dicFromPn = detectDocCarrier(t.dic_policy_number, null, 'dic_dec_page');
+        const dicCarrier = policyDicCarrier[policyId] || dicFromPn || (hasDic ? 'DIC' : null);
 
         return {
             policy_id: policyId,
@@ -202,8 +319,10 @@ export async function GET(req: NextRequest) {
             payment_plan: t.payment_plan,
             is_current: t.is_current,
             has_dec: policyIdsWithDec.has(policyId),
-            has_rce: docSet.has('rce'),
-            has_dic: docSet.has('dic_dec_page') || !!t.dic_exists,
+            has_rce: hasRce,
+            rce_carrier: rceCarrier,
+            has_dic: hasDic,
+            dic_carrier: dicCarrier,
             has_es: docSet.has('es_doc') || !!t.es_exists,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,

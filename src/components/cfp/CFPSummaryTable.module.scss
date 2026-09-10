@@ -328,6 +328,54 @@
     }
 }
 
+.carrierBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
+
+    &.bamboo {
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    &.am {
+        background: rgba(30, 64, 175, 0.1);
+        color: #1d4ed8;
+        border: 1px solid rgba(30, 64, 175, 0.2);
+    }
+
+    &.aegis {
+        background: rgba(124, 58, 237, 0.1);
+        color: #6d28d9;
+        border: 1px solid rgba(124, 58, 237, 0.25);
+    }
+
+    &.sagesure {
+        background: rgba(217, 119, 6, 0.1);
+        color: #b45309;
+        border: 1px solid rgba(217, 119, 6, 0.25);
+    }
+
+    &.psic {
+        background: rgba(2, 132, 199, 0.1);
+        color: #0284c7;
+        border: 1px solid rgba(2, 132, 199, 0.25);
+    }
+
+    &.other {
+        background: rgba(100, 116, 139, 0.1);
+        color: #475569;
+        border: 1px solid rgba(100, 116, 139, 0.2);
+    }
+}
+
 /* ── Bamboo Toggle ── */
 .bambooToggle {
     display: inline-flex;
