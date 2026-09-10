@@ -116,9 +116,13 @@ export interface CFPSummaryStats {
     total_families: number;
     expiring_this_month: number;
     missing_dec: number;
+    uploaded_dec?: number;
     missing_rce: number;
+    uploaded_rce?: number;
     missing_dic: number;
+    uploaded_dic?: number;
     missing_es: number;
+    uploaded_es?: number;
 }
 
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
@@ -460,8 +464,12 @@ async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise
         total_families: total,
         expiring_this_month: expiring_this_month || 0,
         missing_dec: Math.max(0, total - hasDec),
+        uploaded_dec: hasDec,
         missing_rce: Math.max(0, total - hasRce),
+        uploaded_rce: hasRce,
         missing_dic: Math.max(0, total - hasDic),
+        uploaded_dic: hasDic,
         missing_es: Math.max(0, total - hasEs),
+        uploaded_es: hasEs,
     };
 }
