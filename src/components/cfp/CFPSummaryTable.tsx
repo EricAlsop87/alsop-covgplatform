@@ -31,8 +31,7 @@ export type CFPColumnKey =
     | 'rce'
     | 'dic'
     | 'quote'
-    | 'bamboo'
-    | 'action';
+    | 'bamboo';
 
 interface ColumnDef {
     key: CFPColumnKey;
@@ -43,18 +42,17 @@ interface ColumnDef {
 }
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-    { key: 'policy', label: 'Policy #', width: 175, minWidth: 120, align: 'left' },
-    { key: 'insured', label: 'Named Insured', width: 150, minWidth: 100, align: 'left' },
-    { key: 'address', label: 'Property Address', width: 200, minWidth: 120, align: 'left' },
+    { key: 'policy', label: 'CFP Number', width: 180, minWidth: 130, align: 'left' },
+    { key: 'insured', label: 'Named Insured', width: 155, minWidth: 100, align: 'left' },
+    { key: 'address', label: 'Property Address', width: 210, minWidth: 120, align: 'left' },
     { key: 'effective', label: 'Effective', width: 95, minWidth: 80, align: 'left' },
     { key: 'expiration', label: 'Expiration', width: 95, minWidth: 80, align: 'left' },
-    { key: 'premium', label: 'Premium', width: 90, minWidth: 70, align: 'left' },
+    { key: 'premium', label: 'Premium', width: 95, minWidth: 70, align: 'left' },
     { key: 'dec', label: 'DEC Page', width: 85, minWidth: 70, align: 'center' },
     { key: 'rce', label: 'RCE', width: 100, minWidth: 75, align: 'center' },
     { key: 'dic', label: 'DIC', width: 100, minWidth: 75, align: 'center' },
     { key: 'quote', label: 'Quote / E&S', width: 95, minWidth: 70, align: 'center' },
-    { key: 'bamboo', label: 'Bamboo Coverage', width: 125, minWidth: 90, align: 'center' },
-    { key: 'action', label: 'Action', width: 75, minWidth: 60, align: 'center' },
+    { key: 'bamboo', label: 'Bamboo Coverage', width: 130, minWidth: 90, align: 'center' },
 ];
 
 const DEFAULT_COLUMN_KEYS = DEFAULT_COLUMNS.map(c => c.key);
@@ -147,8 +145,13 @@ export function CFPSummaryTable({
                 const saved = localStorage.getItem('cfp_summary_column_order');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length === DEFAULT_COLUMN_KEYS.length) {
-                        return parsed;
+                    if (Array.isArray(parsed)) {
+                        const filtered = parsed.filter((k: string): k is CFPColumnKey =>
+                            DEFAULT_COLUMN_KEYS.includes(k as CFPColumnKey)
+                        );
+                        if (filtered.length === DEFAULT_COLUMN_KEYS.length) {
+                            return filtered;
+                        }
                     }
                 }
             } catch {}
@@ -415,9 +418,15 @@ export function CFPSummaryTable({
             case 'policy':
                 return (
                     <div className={styles.policyNumberCell}>
-                        <span className={styles.cellText} title={term.policy_number}>
-                            {term.policy_number}
-                        </span>
+                        <Link
+                            href={`/policy/${term.policy_id}`}
+                            className={styles.policyLink}
+                            target="_blank"
+                            title={`Open policy ${term.policy_number} in new tab`}
+                        >
+                            <span className={styles.cellText}>{term.policy_number}</span>
+                            <ExternalLink size={12} className={styles.linkIcon} />
+                        </Link>
                         {term.suffix && (
                             <span className={`${styles.typeBadge} ${styles.renewal}`} style={{ flexShrink: 0 }}>
                                 {term.suffix}
@@ -533,18 +542,6 @@ export function CFPSummaryTable({
                     </button>
                 );
 
-            case 'action':
-                return (
-                    <Link
-                        href={`/policy/${term.policy_id}`}
-                        className={styles.linkButton}
-                        target="_blank"
-                        title="Open policy in new tab"
-                    >
-                        <span>View</span>
-                        <ExternalLink size={12} />
-                    </Link>
-                );
 
             default:
                 return null;

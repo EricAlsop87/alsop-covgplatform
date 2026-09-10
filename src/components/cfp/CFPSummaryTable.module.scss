@@ -346,6 +346,31 @@
     font-weight: 500;
 }
 
+.policyLink {
+    color: var(--color-primary, #2243B6);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+
+    &:hover {
+        text-decoration: underline;
+        color: var(--color-primary-hover, #1b3593);
+    }
+}
+
+.linkIcon {
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+
+    .policyLink:hover & {
+        opacity: 1;
+    }
+}
+
 .typeBadge {
     font-size: 0.625rem;
     font-weight: 700;
