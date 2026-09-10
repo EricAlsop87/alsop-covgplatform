@@ -693,17 +693,113 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md, 6px);
-    padding: 0.5rem 0.75rem;
+    padding: 0.55rem 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
     min-width: 0;
-    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.18s ease;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--card-theme-color, #94a3b8);
+    }
 
     &:hover {
-        border-color: var(--color-primary, #2243B6);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border-color: var(--card-theme-color, var(--color-primary));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
+
+    /* Card 1: Total Policies (Blue) */
+    &.cardPolicies {
+        --card-theme-color: #2243B6;
+        background: linear-gradient(180deg, rgba(34, 67, 182, 0.05) 0%, var(--bg-surface) 100%);
+        border-color: rgba(34, 67, 182, 0.22);
+
+        .miniCardLabel {
+            color: #1e3a8a;
+        }
+        .miniCardValue {
+            color: #1e3a8a;
+        }
+    }
+
+    /* Card 2: DEC Page (Amber / Gold) */
+    &.cardDec {
+        --card-theme-color: #f59e0b;
+        background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, var(--bg-surface) 100%);
+        border-color: rgba(245, 158, 11, 0.25);
+
+        .miniCardLabel {
+            color: #b45309;
+        }
+        .miniProgressFill {
+            background: #f59e0b;
+        }
+    }
+
+    /* Card 3: RCE Document (Purple / Violet) */
+    &.cardRce {
+        --card-theme-color: #8b5cf6;
+        background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, var(--bg-surface) 100%);
+        border-color: rgba(139, 92, 246, 0.25);
+
+        .miniCardLabel {
+            color: #6d28d9;
+        }
+        .miniProgressFill {
+            background: #8b5cf6;
+        }
+    }
+
+    /* Card 4: DIC Policy (Pink / Rose) */
+    &.cardDic {
+        --card-theme-color: #ec4899;
+        background: linear-gradient(180deg, rgba(236, 72, 153, 0.06) 0%, var(--bg-surface) 100%);
+        border-color: rgba(236, 72, 153, 0.25);
+
+        .miniCardLabel {
+            color: #be185d;
+        }
+        .miniProgressFill {
+            background: #ec4899;
+        }
+    }
+
+    /* Card 5: Quote / E&S (Red / Coral) */
+    &.cardQuote {
+        --card-theme-color: #ef4444;
+        background: linear-gradient(180deg, rgba(239, 68, 68, 0.06) 0%, var(--bg-surface) 100%);
+        border-color: rgba(239, 68, 68, 0.25);
+
+        .miniCardLabel {
+            color: #b91c1c;
+        }
+        .miniProgressFill {
+            background: #ef4444;
+        }
+    }
+}
+
+.miniCardTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+}
+
+.miniCardIcon {
+    color: var(--card-theme-color);
+    opacity: 0.85;
+    flex-shrink: 0;
 }
 
 .miniCardLabel {
@@ -770,7 +866,7 @@
 .miniProgressBar {
     width: 100%;
     height: 4px;
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(0, 0, 0, 0.08);
     border-radius: 2px;
     overflow: hidden;
     margin-top: 0.1rem;

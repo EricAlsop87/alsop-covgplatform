@@ -15,6 +15,11 @@ import {
     GripVertical,
     SlidersHorizontal,
     Filter,
+    FileText,
+    AlertCircle,
+    ShieldAlert,
+    ShieldOff,
+    FileQuestion,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
@@ -1001,8 +1006,11 @@ export function CFPSummaryTable({
 
                     <div className={styles.periodSummaryCards}>
                         {/* 1. Total Policies */}
-                        <div className={styles.summaryMiniCard}>
-                            <span className={styles.miniCardLabel}>Total Policies</span>
+                        <div className={`${styles.summaryMiniCard} ${styles.cardPolicies}`}>
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>Total Policies</span>
+                                <FileText size={13} className={styles.miniCardIcon} />
+                            </div>
                             <span className={styles.miniCardValue}>{periodStats.total.toLocaleString()}</span>
                             <span className={styles.miniCardSub}>
                                 in {month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}{year || 'all years'}
@@ -1010,8 +1018,11 @@ export function CFPSummaryTable({
                         </div>
 
                         {/* 2. DEC Page */}
-                        <div className={styles.summaryMiniCard}>
-                            <span className={styles.miniCardLabel}>DEC Page</span>
+                        <div className={`${styles.summaryMiniCard} ${styles.cardDec}`}>
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>DEC Page</span>
+                                <AlertCircle size={13} className={styles.miniCardIcon} />
+                            </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="DEC pages on file">
                                     <Check size={11} /> {periodStats.decAvailable.toLocaleString()} available
@@ -1033,8 +1044,11 @@ export function CFPSummaryTable({
                         </div>
 
                         {/* 3. RCE */}
-                        <div className={styles.summaryMiniCard}>
-                            <span className={styles.miniCardLabel}>RCE Document</span>
+                        <div className={`${styles.summaryMiniCard} ${styles.cardRce}`}>
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>RCE Document</span>
+                                <ShieldAlert size={13} className={styles.miniCardIcon} />
+                            </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="RCE documents on file">
                                     <Check size={11} /> {periodStats.rceAvailable.toLocaleString()} available
@@ -1056,8 +1070,11 @@ export function CFPSummaryTable({
                         </div>
 
                         {/* 4. DIC */}
-                        <div className={styles.summaryMiniCard}>
-                            <span className={styles.miniCardLabel}>DIC Policy / Doc</span>
+                        <div className={`${styles.summaryMiniCard} ${styles.cardDic}`}>
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>DIC Policy / Doc</span>
+                                <ShieldOff size={13} className={styles.miniCardIcon} />
+                            </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="DIC documents on file">
                                     <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} available
@@ -1079,8 +1096,11 @@ export function CFPSummaryTable({
                         </div>
 
                         {/* 5. Quote / E&S */}
-                        <div className={styles.summaryMiniCard}>
-                            <span className={styles.miniCardLabel}>Quote / E&S</span>
+                        <div className={`${styles.summaryMiniCard} ${styles.cardQuote}`}>
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>Quote / E&S</span>
+                                <FileQuestion size={13} className={styles.miniCardIcon} />
+                            </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="Quote/E&S documents on file">
                                     <Check size={11} /> {periodStats.quoteAvailable.toLocaleString()} available
