@@ -15,11 +15,55 @@ import {
     Calendar,
     RotateCcw,
     Download,
+    GripVertical,
+    SlidersHorizontal,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
+
+export type CFPColumnKey =
+    | 'policy'
+    | 'insured'
+    | 'address'
+    | 'effective'
+    | 'expiration'
+    | 'premium'
+    | 'dec'
+    | 'rce'
+    | 'dic'
+    | 'quote'
+    | 'bamboo'
+    | 'action';
+
+interface ColumnDef {
+    key: CFPColumnKey;
+    label: string;
+    width: number;
+    minWidth: number;
+    align?: 'left' | 'center' | 'right';
+}
+
+const DEFAULT_COLUMNS: ColumnDef[] = [
+    { key: 'policy', label: 'Policy / Family', width: 175, minWidth: 120, align: 'left' },
+    { key: 'insured', label: 'Named Insured', width: 150, minWidth: 100, align: 'left' },
+    { key: 'address', label: 'Property Address', width: 200, minWidth: 120, align: 'left' },
+    { key: 'effective', label: 'Effective', width: 95, minWidth: 80, align: 'left' },
+    { key: 'expiration', label: 'Expiration', width: 95, minWidth: 80, align: 'left' },
+    { key: 'premium', label: 'Premium', width: 90, minWidth: 70, align: 'left' },
+    { key: 'dec', label: 'DEC Page', width: 85, minWidth: 70, align: 'center' },
+    { key: 'rce', label: 'RCE', width: 100, minWidth: 75, align: 'center' },
+    { key: 'dic', label: 'DIC', width: 100, minWidth: 75, align: 'center' },
+    { key: 'quote', label: 'Quote / E&S', width: 95, minWidth: 70, align: 'center' },
+    { key: 'bamboo', label: 'Bamboo Coverage', width: 125, minWidth: 90, align: 'center' },
+    { key: 'action', label: 'Action', width: 75, minWidth: 60, align: 'center' },
+];
+
+const DEFAULT_COLUMN_KEYS = DEFAULT_COLUMNS.map(c => c.key);
+const DEFAULT_COLUMN_WIDTHS: Record<CFPColumnKey, number> = Object.fromEntries(
+    DEFAULT_COLUMNS.map(c => [c.key, c.width])
+) as Record<CFPColumnKey, number>;
 
 interface CFPSummaryTableProps {
     families: CFPFamily[];
@@ -99,6 +143,146 @@ export function CFPSummaryTable({
     const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 25;
+
+    // ── Column Reorder & Resize State ─────────────────────────────────────
+    const [columnOrder, setColumnOrder] = useState<CFPColumnKey[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem('cfp_summary_column_order');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length === DEFAULT_COLUMN_KEYS.length) {
+                        return parsed;
+                    }
+                }
+            } catch {}
+        }
+        return DEFAULT_COLUMN_KEYS;
+    });
+
+    const [columnWidths, setColumnWidths] = useState<Record<CFPColumnKey, number>>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem('cfp_summary_column_widths');
+                if (saved) {
+                    return { ...DEFAULT_COLUMN_WIDTHS, ...JSON.parse(saved) };
+                }
+            } catch {}
+        }
+        return DEFAULT_COLUMN_WIDTHS;
+    });
+
+    // Column resizing drag state
+    const [resizingColumn, setResizingColumn] = useState<{
+        key: CFPColumnKey;
+        startX: number;
+        startWidth: number;
+    } | null>(null);
+
+    // Column reorder drag state
+    const [draggedColumnKey, setDraggedColumnKey] = useState<CFPColumnKey | null>(null);
+    const [dragOverColumnKey, setDragOverColumnKey] = useState<CFPColumnKey | null>(null);
+
+    // Handle mouse move for column resizing
+    useEffect(() => {
+        if (!resizingColumn) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const delta = e.clientX - resizingColumn.startX;
+            const colDef = DEFAULT_COLUMNS.find(c => c.key === resizingColumn.key);
+            const minW = colDef?.minWidth || 60;
+            const newWidth = Math.max(minW, Math.min(800, resizingColumn.startWidth + delta));
+
+            setColumnWidths(prev => {
+                const updated = { ...prev, [resizingColumn.key]: newWidth };
+                try {
+                    localStorage.setItem('cfp_summary_column_widths', JSON.stringify(updated));
+                } catch {}
+                return updated;
+            });
+        };
+
+        const handleMouseUp = () => {
+            setResizingColumn(null);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, [resizingColumn]);
+
+    // Resize Start Handler
+    const handleResizeStart = (e: React.MouseEvent, columnKey: CFPColumnKey) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setResizingColumn({
+            key: columnKey,
+            startX: e.clientX,
+            startWidth: columnWidths[columnKey] || DEFAULT_COLUMN_WIDTHS[columnKey] || 100,
+        });
+    };
+
+    // Column Drag & Drop Reorder Handlers
+    const handleDragStart = (e: React.DragEvent, colKey: CFPColumnKey) => {
+        if (resizingColumn) return;
+        setDraggedColumnKey(colKey);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', colKey);
+    };
+
+    const handleDragOver = (e: React.DragEvent, colKey: CFPColumnKey) => {
+        if (!draggedColumnKey || draggedColumnKey === colKey) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverColumnKey(colKey);
+    };
+
+    const handleDragLeave = () => {
+        setDragOverColumnKey(null);
+    };
+
+    const handleDrop = (e: React.DragEvent, targetKey: CFPColumnKey) => {
+        e.preventDefault();
+        if (!draggedColumnKey || draggedColumnKey === targetKey) {
+            setDraggedColumnKey(null);
+            setDragOverColumnKey(null);
+            return;
+        }
+
+        const newOrder = [...columnOrder];
+        const dragIdx = newOrder.indexOf(draggedColumnKey);
+        const targetIdx = newOrder.indexOf(targetKey);
+
+        if (dragIdx !== -1 && targetIdx !== -1) {
+            newOrder.splice(dragIdx, 1);
+            newOrder.splice(targetIdx, 0, draggedColumnKey);
+            setColumnOrder(newOrder);
+            try {
+                localStorage.setItem('cfp_summary_column_order', JSON.stringify(newOrder));
+            } catch {}
+        }
+
+        setDraggedColumnKey(null);
+        setDragOverColumnKey(null);
+    };
+
+    // Reset Column Order & Widths
+    const handleResetColumns = () => {
+        setColumnOrder(DEFAULT_COLUMN_KEYS);
+        setColumnWidths(DEFAULT_COLUMN_WIDTHS);
+        try {
+            localStorage.removeItem('cfp_summary_column_order');
+            localStorage.removeItem('cfp_summary_column_widths');
+        } catch {}
+    };
 
     // Sync initialFamilies to local state
     useEffect(() => {
@@ -257,6 +441,164 @@ export function CFPSummaryTable({
         }
     };
 
+    // Total table width calculated from sum of columnWidths
+    const totalTableWidth = useMemo(() => {
+        return columnOrder.reduce((sum, key) => sum + (columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key]), 0);
+    }, [columnOrder, columnWidths]);
+
+    // Render individual cell content by column key
+    const renderCell = (colKey: CFPColumnKey, term: CFPTermRow, isMultiTerm: boolean) => {
+        switch (colKey) {
+            case 'policy':
+                return (
+                    <div className={styles.policyNumberCell}>
+                        {isMultiTerm && (
+                            <span style={{ color: 'var(--text-muted)', marginRight: '2px', flexShrink: 0 }}>
+                                ↳
+                            </span>
+                        )}
+                        <span className={styles.cellText} title={term.policy_number}>{term.policy_number}</span>
+                        <span
+                            className={`${styles.typeBadge} ${
+                                term.term_type === 'ORIGINAL' ? styles.original : styles.renewal
+                            }`}
+                            style={{ flexShrink: 0 }}
+                        >
+                            {term.term_type}
+                        </span>
+                        {term.is_current && (
+                            <span className={styles.currentBadge} style={{ flexShrink: 0 }}>
+                                Current
+                            </span>
+                        )}
+                    </div>
+                );
+
+            case 'insured':
+                return term.client_id ? (
+                    <Link
+                        href={`/client/${term.client_id}`}
+                        className={`${styles.linkButton} ${styles.cellText}`}
+                        target="_blank"
+                        title={term.named_insured || 'Unknown'}
+                    >
+                        {term.named_insured || 'Unknown'}
+                    </Link>
+                ) : (
+                    <span className={styles.cellText} title={term.named_insured || '—'}>
+                        {term.named_insured || '—'}
+                    </span>
+                );
+
+            case 'address':
+                return (
+                    <span className={styles.cellText} title={term.property_address || '—'}>
+                        {term.property_address || '—'}
+                    </span>
+                );
+
+            case 'effective':
+                return (
+                    <span className={styles.cellText} title={term.effective_date || '—'}>
+                        {term.effective_date || '—'}
+                    </span>
+                );
+
+            case 'expiration':
+                return (
+                    <strong className={styles.cellText} title={term.expiration_date || '—'}>
+                        {term.expiration_date || '—'}
+                    </strong>
+                );
+
+            case 'premium':
+                return (
+                    <span className={styles.cellText}>
+                        {term.annual_premium
+                            ? `$${term.annual_premium.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                              })}`
+                            : '—'}
+                    </span>
+                );
+
+            case 'dec':
+                return term.has_dec ? (
+                    <span className={`${styles.docBadge} ${styles.yes}`} title="DEC Page on file">
+                        <Check size={13} /> DEC
+                    </span>
+                ) : (
+                    <span className={`${styles.docBadge} ${styles.no}`} title="Missing DEC Page">
+                        <X size={13} /> None
+                    </span>
+                );
+
+            case 'rce':
+                return renderCarrierBadge(term.rce_carrier, 'RCE');
+
+            case 'dic':
+                return renderCarrierBadge(term.dic_carrier, 'DIC');
+
+            case 'quote':
+                return term.has_es ? (
+                    <span className={`${styles.docBadge} ${styles.yes}`} title="Quote / E&S document on file">
+                        <Check size={13} /> Quote
+                    </span>
+                ) : (
+                    <span className={`${styles.docBadge} ${styles.no}`} title="Missing Quote/E&S">
+                        <X size={13} /> None
+                    </span>
+                );
+
+            case 'bamboo':
+                return (
+                    <button
+                        type="button"
+                        disabled={togglingPolicyId === term.policy_id}
+                        onClick={() =>
+                            handleToggleBamboo(
+                                term.policy_id,
+                                term.has_bamboo_coverage
+                            )
+                        }
+                        className={`${styles.bambooToggle} ${
+                            term.has_bamboo_coverage
+                                ? styles.active
+                                : styles.inactive
+                        }`}
+                        title="Click to toggle Bamboo full coverage"
+                    >
+                        {term.has_bamboo_coverage ? (
+                            <>
+                                <Check size={12} /> Yes
+                            </>
+                        ) : (
+                            <>
+                                <X size={12} /> No
+                            </>
+                        )}
+                    </button>
+                );
+
+            case 'action':
+                return (
+                    <Link
+                        href={`/policy/${term.policy_id}`}
+                        className={styles.linkButton}
+                        target="_blank"
+                        title="Open policy in new tab"
+                    >
+                        <span>View</span>
+                        <ExternalLink size={12} />
+                    </Link>
+                );
+
+            default:
+                return null;
+        }
+    };
+
     return (
         <div className={styles.tableContainer}>
             {/* ── Controls Card ── */}
@@ -318,7 +660,7 @@ export function CFPSummaryTable({
                         </div>
                     </div>
 
-                    {/* Right side controls: Export, Expand/Collapse & refresh */}
+                    {/* Right side controls: Export, Layout, Expand/Collapse & refresh */}
                     <div className={styles.filterGroup}>
                         <button
                             type="button"
@@ -339,6 +681,17 @@ export function CFPSummaryTable({
                                 </>
                             )}
                         </button>
+
+                        <button
+                            type="button"
+                            className={styles.filterPill}
+                            onClick={handleResetColumns}
+                            title="Reset column widths and order to system defaults"
+                        >
+                            <SlidersHorizontal size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                            Reset Columns
+                        </button>
+
                         <button
                             type="button"
                             className={styles.filterPill}
@@ -413,7 +766,10 @@ export function CFPSummaryTable({
                         Bamboo Full Coverage: Yes
                     </button>
 
-                    <div style={{ marginLeft: 'auto' }}>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            💡 <em>Drag headers to reorder • Drag column edges to resize</em>
+                        </span>
                         <span className={styles.countsBadge}>
                             Showing <strong>{filteredFamilies.length}</strong> families ({totalTerms} terms total)
                         </span>
@@ -424,27 +780,83 @@ export function CFPSummaryTable({
             {/* ── Table Card ── */}
             <div className={styles.tableCard}>
                 <div className={styles.tableScroll}>
-                    <table className={styles.table}>
+                    <table className={styles.table} style={{ width: `${totalTableWidth}px`, minWidth: '100%' }}>
+                        {/* Colgroup to enforce exact column widths */}
+                        <colgroup>
+                            {columnOrder.map((colKey) => (
+                                <col
+                                    key={colKey}
+                                    style={{
+                                        width: `${columnWidths[colKey] || DEFAULT_COLUMN_WIDTHS[colKey]}px`,
+                                    }}
+                                />
+                            ))}
+                        </colgroup>
+
                         <thead>
                             <tr>
-                                <th style={{ minWidth: 200 }}>Policy / Family</th>
-                                <th style={{ minWidth: 160 }}>Named Insured</th>
-                                <th style={{ minWidth: 220 }}>Property Address</th>
-                                <th style={{ minWidth: 100 }}>Effective</th>
-                                <th style={{ minWidth: 100 }}>Expiration</th>
-                                <th style={{ minWidth: 90 }}>Premium</th>
-                                <th style={{ minWidth: 80, textAlign: 'center' }}>DEC Page</th>
-                                <th style={{ minWidth: 80, textAlign: 'center' }}>RCE</th>
-                                <th style={{ minWidth: 80, textAlign: 'center' }}>DIC</th>
-                                <th style={{ minWidth: 90, textAlign: 'center' }}>Quote / E&S</th>
-                                <th style={{ minWidth: 120, textAlign: 'center' }}>Bamboo Coverage</th>
-                                <th style={{ minWidth: 90, textAlign: 'center' }}>Action</th>
+                                {columnOrder.map((colKey) => {
+                                    const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
+                                    const width = columnWidths[colKey] || colDef.width;
+                                    const isDragging = draggedColumnKey === colKey;
+                                    const isDragOver = dragOverColumnKey === colKey;
+
+                                    return (
+                                        <th
+                                            key={colKey}
+                                            style={{
+                                                width: `${width}px`,
+                                                textAlign: colDef.align || 'left',
+                                            }}
+                                            className={`${isDragOver ? styles.dragOver : ''} ${
+                                                isDragging ? styles.isDragging : ''
+                                            }`}
+                                            draggable={!resizingColumn}
+                                            onDragStart={(e) => handleDragStart(e, colKey)}
+                                            onDragOver={(e) => handleDragOver(e, colKey)}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, colKey)}
+                                        >
+                                            <div
+                                                className={styles.thInner}
+                                                style={{
+                                                    justifyContent:
+                                                        colDef.align === 'center'
+                                                            ? 'center'
+                                                            : colDef.align === 'right'
+                                                            ? 'flex-end'
+                                                            : 'flex-start',
+                                                }}
+                                                title="Drag to reorder column"
+                                            >
+                                                <GripVertical
+                                                    size={11}
+                                                    style={{ opacity: 0.4, flexShrink: 0 }}
+                                                />
+                                                <span>{colDef.label}</span>
+                                            </div>
+
+                                            {/* Drag to resize column width handle */}
+                                            <div
+                                                className={`${styles.colResizer} ${
+                                                    resizingColumn?.key === colKey
+                                                        ? styles.colResizerActive
+                                                        : ''
+                                                }`}
+                                                onMouseDown={(e) => handleResizeStart(e, colKey)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                title="Drag to resize column width"
+                                            />
+                                        </th>
+                                    );
+                                })}
                             </tr>
                         </thead>
+
                         <tbody>
                             {loading && families.length === 0 ? (
                                 <tr>
-                                    <td colSpan={12}>
+                                    <td colSpan={columnOrder.length}>
                                         <div className={styles.emptyState}>
                                             <Loader2 size={28} className="animate-spin text-primary" />
                                             <span>Loading CFP policy families...</span>
@@ -453,7 +865,7 @@ export function CFPSummaryTable({
                                 </tr>
                             ) : paginatedFamilies.length === 0 ? (
                                 <tr>
-                                    <td colSpan={12}>
+                                    <td colSpan={columnOrder.length}>
                                         <div className={styles.emptyState}>
                                             <Layers size={32} />
                                             <span>No CFP policies match the selected filters.</span>
@@ -474,7 +886,7 @@ export function CFPSummaryTable({
                                                     className={styles.familyHeaderRow}
                                                     onClick={() => toggleFamily(family.base_policy)}
                                                 >
-                                                    <td colSpan={12}>
+                                                    <td colSpan={columnOrder.length}>
                                                         <div className={styles.familyCell}>
                                                             {isExpanded ? (
                                                                 <ChevronDown size={16} />
@@ -495,159 +907,26 @@ export function CFPSummaryTable({
                                                 </tr>
                                             )}
 
-                                            {/* Term Rows: if multi-term, render children if expanded; if single-term, render directly */}
+                                            {/* Term Rows */}
                                             {(!isMultiTerm || isExpanded) &&
-                                                family.terms.map((term, index) => (
+                                                family.terms.map((term) => (
                                                     <tr
                                                         key={term.policy_term_id}
                                                         className={`${styles.termRow} ${isMultiTerm ? styles.childRow : ''}`}
                                                     >
-                                                        {/* Policy Number & Badge */}
-                                                        <td>
-                                                            <div className={styles.policyNumberCell}>
-                                                                {isMultiTerm && (
-                                                                    <span style={{ color: 'var(--text-muted)', marginRight: '2px' }}>
-                                                                        ↳
-                                                                    </span>
-                                                                )}
-                                                                <span>{term.policy_number}</span>
-                                                                <span
-                                                                    className={`${styles.typeBadge} ${
-                                                                        term.term_type === 'ORIGINAL'
-                                                                            ? styles.original
-                                                                            : styles.renewal
-                                                                    }`}
+                                                        {columnOrder.map((colKey) => {
+                                                            const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
+                                                            return (
+                                                                <td
+                                                                    key={colKey}
+                                                                    style={{
+                                                                        textAlign: colDef.align || 'left',
+                                                                    }}
                                                                 >
-                                                                    {term.term_type}
-                                                                </span>
-                                                                {term.is_current && (
-                                                                    <span className={styles.currentBadge}>
-                                                                        Current
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-
-                                                        {/* Named Insured */}
-                                                        <td>
-                                                            {term.client_id ? (
-                                                                <Link
-                                                                    href={`/client/${term.client_id}`}
-                                                                    className={styles.linkButton}
-                                                                    target="_blank"
-                                                                >
-                                                                    {term.named_insured || 'Unknown'}
-                                                                </Link>
-                                                            ) : (
-                                                                <span>{term.named_insured || '—'}</span>
-                                                            )}
-                                                        </td>
-
-                                                        {/* Property Address */}
-                                                        <td>
-                                                            <span title={term.property_address}>
-                                                                {term.property_address || '—'}
-                                                            </span>
-                                                        </td>
-
-                                                        {/* Effective Date */}
-                                                        <td>
-                                                            {term.effective_date || '—'}
-                                                        </td>
-
-                                                        {/* Expiration Date */}
-                                                        <td>
-                                                            <strong>{term.expiration_date || '—'}</strong>
-                                                        </td>
-
-                                                        {/* Annual Premium */}
-                                                        <td>
-                                                            {term.annual_premium
-                                                                ? `$${term.annual_premium.toLocaleString(undefined, {
-                                                                      minimumFractionDigits: 2,
-                                                                      maximumFractionDigits: 2,
-                                                                  })}`
-                                                                : '—'}
-                                                        </td>
-
-                                                        {/* DEC Page */}
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            {term.has_dec ? (
-                                                                <span className={`${styles.docBadge} ${styles.yes}`} title="DEC Page on file">
-                                                                    <Check size={13} /> DEC
-                                                                </span>
-                                                            ) : (
-                                                                <span className={`${styles.docBadge} ${styles.no}`} title="Missing DEC Page">
-                                                                    <X size={13} /> None
-                                                                </span>
-                                                            )}
-                                                        </td>
-
-                                                        {/* RCE */}
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            {renderCarrierBadge(term.rce_carrier, 'RCE')}
-                                                        </td>
-
-                                                        {/* DIC */}
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            {renderCarrierBadge(term.dic_carrier, 'DIC')}
-                                                        </td>
-
-                                                        {/* Quote / E&S */}
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            {term.has_es ? (
-                                                                <span className={`${styles.docBadge} ${styles.yes}`} title="Quote / E&S document on file">
-                                                                    <Check size={13} /> Quote
-                                                                </span>
-                                                            ) : (
-                                                                <span className={`${styles.docBadge} ${styles.no}`} title="Missing Quote/E&S">
-                                                                    <X size={13} /> None
-                                                                </span>
-                                                            )}
-                                                        </td>
-
-                                                        {/* Bamboo Coverage Toggle */}
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <button
-                                                                type="button"
-                                                                disabled={togglingPolicyId === term.policy_id}
-                                                                onClick={() =>
-                                                                    handleToggleBamboo(
-                                                                        term.policy_id,
-                                                                        term.has_bamboo_coverage
-                                                                    )
-                                                                }
-                                                                className={`${styles.bambooToggle} ${
-                                                                    term.has_bamboo_coverage
-                                                                        ? styles.active
-                                                                        : styles.inactive
-                                                                }`}
-                                                                title="Click to toggle Bamboo full coverage"
-                                                            >
-                                                                {term.has_bamboo_coverage ? (
-                                                                    <>
-                                                                        <Check size={12} /> Yes
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <X size={12} /> No
-                                                                    </>
-                                                                )}
-                                                            </button>
-                                                        </td>
-
-                                                        {/* View Policy */}
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <Link
-                                                                href={`/policy/${term.policy_id}`}
-                                                                className={styles.linkButton}
-                                                                target="_blank"
-                                                                title="Open policy in new tab"
-                                                            >
-                                                                <span>View</span>
-                                                                <ExternalLink size={12} />
-                                                            </Link>
-                                                        </td>
+                                                                    {renderCell(colKey, term, isMultiTerm)}
+                                                                </td>
+                                                            );
+                                                        })}
                                                     </tr>
                                                 ))}
                                         </React.Fragment>
