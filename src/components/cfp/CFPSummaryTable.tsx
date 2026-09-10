@@ -22,11 +22,6 @@ import {
     FileQuestion,
     Plus,
     Copy,
-    ChevronLeft,
-    ChevronRight,
-    MoveHorizontal,
-    Pin,
-    PinOff,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
@@ -785,14 +780,10 @@ export function CFPSummaryTable({
         return columnOrder.reduce((sum, key) => sum + (columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key]), 0);
     }, [columnOrder, columnWidths]);
 
-    // ── Table Horizontal Scroll & Pan Navigation ────────────────────────
+    // ── Table Horizontal Scroll Synchronization (Top & Bottom Scrollbars) ──
     const tableScrollRef = useRef<HTMLDivElement>(null);
     const topScrollRef = useRef<HTMLDivElement>(null);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
-    const [scrollProgress, setScrollProgress] = useState(0); // 0 to 100
     const [maxScrollLeft, setMaxScrollLeft] = useState(0);
-    const [freezePolicyColumn, setFreezePolicyColumn] = useState(true);
 
     // Mouse drag-to-scroll state
     const [isDraggingTable, setIsDraggingTable] = useState(false);
@@ -800,19 +791,12 @@ export function CFPSummaryTable({
     const dragStartScrollLeft = useRef(0);
     const isDraggingActive = useRef(false);
 
-    // Synchronize and update scroll status indicators
+    // Synchronize and update scroll status
     const updateScrollState = useCallback(() => {
         const el = tableScrollRef.current;
         if (!el) return;
         const maxScroll = el.scrollWidth - el.clientWidth;
         setMaxScrollLeft(Math.max(0, maxScroll));
-        setCanScrollLeft(el.scrollLeft > 6);
-        setCanScrollRight(el.scrollLeft < maxScroll - 6);
-        if (maxScroll > 0) {
-            setScrollProgress(Math.min(100, Math.max(0, (el.scrollLeft / maxScroll) * 100)));
-        } else {
-            setScrollProgress(0);
-        }
     }, []);
 
     // Main table scroll handler
@@ -832,37 +816,6 @@ export function CFPSummaryTable({
                 tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
             }
         }
-    }, []);
-
-    // Scroll by direction or amount
-    const scrollTable = useCallback((direction: 'left' | 'right', amount?: number) => {
-        const el = tableScrollRef.current;
-        if (!el) return;
-        const scrollAmount = amount || Math.max(320, el.clientWidth * 0.45);
-        el.scrollBy({
-            left: direction === 'right' ? scrollAmount : -scrollAmount,
-            behavior: 'smooth',
-        });
-    }, []);
-
-    // Scroll to preset column groups
-    const scrollToPreset = useCallback((preset: 'start' | 'middle' | 'end') => {
-        const el = tableScrollRef.current;
-        if (!el) return;
-        let target = 0;
-        if (preset === 'middle') target = (el.scrollWidth - el.clientWidth) * 0.5;
-        if (preset === 'end') target = el.scrollWidth - el.clientWidth;
-        el.scrollTo({ left: target, behavior: 'smooth' });
-    }, []);
-
-    // Handle range slider scrubber
-    const handleSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const percent = Number(e.target.value);
-        setScrollProgress(percent);
-        const el = tableScrollRef.current;
-        if (!el) return;
-        const maxScroll = el.scrollWidth - el.clientWidth;
-        el.scrollLeft = (percent / 100) * maxScroll;
     }, []);
 
     // Mouse drag-to-scroll handlers
@@ -1682,101 +1635,6 @@ export function CFPSummaryTable({
                 </div>
             </div>
 
-            {/* ── Table Navigation & Pan Strip ── */}
-            <div className={styles.tableNavStrip}>
-                <div className={styles.tableNavControls}>
-                    <span className={styles.tableNavLabel} title="Move the table horizontally across columns">
-                        <MoveHorizontal size={14} style={{ color: 'var(--color-primary, #2243B6)' }} />
-                        <span>Move Table:</span>
-                    </span>
-
-                    <button
-                        type="button"
-                        className={styles.navMoveBtn}
-                        onClick={() => scrollTable('left')}
-                        disabled={!canScrollLeft}
-                        title="Move table left (view policy & insured details)"
-                    >
-                        <ChevronLeft size={16} />
-                        <span>Left</span>
-                    </button>
-
-                    <div className={styles.sliderContainer} title="Drag slider or click to scroll table horizontally">
-                        <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={Math.round(scrollProgress)}
-                            onChange={handleSliderChange}
-                            className={styles.horizontalSlider}
-                            aria-label="Table horizontal scroll position"
-                        />
-                    </div>
-
-                    <button
-                        type="button"
-                        className={styles.navMoveBtn}
-                        onClick={() => scrollTable('right')}
-                        disabled={!canScrollRight}
-                        title="Move table right (view DEC, RCE, DIC, Quote & Bamboo coverages)"
-                    >
-                        <span>Right</span>
-                        <ChevronRight size={16} />
-                    </button>
-                </div>
-
-                {/* Quick Jump Column Presets */}
-                <div className={styles.navPresets}>
-                    <span className={styles.presetLabel}>Jump to:</span>
-                    <button
-                        type="button"
-                        className={`${styles.presetBtn} ${scrollProgress < 20 ? styles.presetActive : ''}`}
-                        onClick={() => scrollToPreset('start')}
-                        title="Scroll to CFP Number and Named Insured"
-                    >
-                        Policy & Insured
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.presetBtn} ${scrollProgress >= 20 && scrollProgress <= 70 ? styles.presetActive : ''}`}
-                        onClick={() => scrollToPreset('middle')}
-                        title="Scroll to Property Address, Effective & Expiration Dates"
-                    >
-                        Address & Dates
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.presetBtn} ${scrollProgress > 70 ? styles.presetActive : ''}`}
-                        onClick={() => scrollToPreset('end')}
-                        title="Scroll to DEC Page, RCE, DIC, Quote/E&S & Bamboo Coverage"
-                    >
-                        Documents & Bamboo 🌿
-                    </button>
-                </div>
-
-                <div className={styles.navRightGroup}>
-                    <button
-                        type="button"
-                        className={`${styles.freezeBtn} ${freezePolicyColumn ? styles.freezeActive : ''}`}
-                        onClick={() => setFreezePolicyColumn(prev => !prev)}
-                        title={freezePolicyColumn ? "First column pinned to left edge while scrolling. Click to unfreeze." : "Pin first column to left edge while scrolling."}
-                    >
-                        {freezePolicyColumn ? <Pin size={13} style={{ color: 'var(--color-primary, #2243B6)' }} /> : <PinOff size={13} />}
-                        <span>{freezePolicyColumn ? 'Policy # Pinned' : 'Pin Policy #'}</span>
-                    </button>
-
-                    <span className={styles.columnStatusBadge}>
-                        {canScrollRight ? (
-                            scrollProgress < 20 
-                                ? '👉 Move right for DEC, RCE, DIC, Bamboo' 
-                                : `Column ${Math.min(columnOrder.length, Math.round((scrollProgress / 100) * 6) + 1)} of ${columnOrder.length}`
-                        ) : (
-                            '✓ Showing all coverages'
-                        )}
-                    </span>
-                </div>
-            </div>
-
             {/* ── Table Card ── */}
             <div className={styles.tableCard}>
                 {/* Top Synchronized Scrollbar */}
@@ -1789,29 +1647,6 @@ export function CFPSummaryTable({
                     >
                         <div style={{ width: `${totalTableWidth}px`, height: '1px' }} />
                     </div>
-                )}
-
-                {/* Floating Navigation Edge Arrows */}
-                {canScrollLeft && (
-                    <button
-                        type="button"
-                        className={`${styles.floatingEdgeBtn} ${styles.floatingLeftBtn}`}
-                        onClick={() => scrollTable('left')}
-                        title="Scroll table left (Policy & Insured)"
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-                )}
-
-                {canScrollRight && (
-                    <button
-                        type="button"
-                        className={`${styles.floatingEdgeBtn} ${styles.floatingRightBtn}`}
-                        onClick={() => scrollTable('right')}
-                        title="Scroll table right (DEC, RCE, DIC, Bamboo coverages)"
-                    >
-                        <ChevronRight size={20} />
-                    </button>
                 )}
 
                 <div
@@ -1835,12 +1670,11 @@ export function CFPSummaryTable({
 
                         <thead>
                             <tr>
-                                {columnOrder.map((colKey, colIndex) => {
+                                {columnOrder.map((colKey) => {
                                     const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
                                     const width = columnWidths[colKey] || colDef.width;
                                     const isDragging = draggedColumnKey === colKey;
                                     const isDragOver = dragOverColumnKey === colKey;
-                                    const isSticky = freezePolicyColumn && colIndex === 0;
 
                                     return (
                                         <th
@@ -1848,13 +1682,6 @@ export function CFPSummaryTable({
                                             style={{
                                                 width: `${width}px`,
                                                 textAlign: colDef.align || 'left',
-                                                ...(isSticky ? {
-                                                    position: 'sticky',
-                                                    left: 0,
-                                                    zIndex: 15,
-                                                    backgroundColor: 'var(--bg-surface-subtle)',
-                                                    boxShadow: canScrollLeft ? '3px 0 8px rgba(0, 0, 0, 0.12)' : 'none',
-                                                } : {}),
                                             }}
                                             className={`${isDragOver ? styles.dragOver : ''} ${
                                                 isDragging ? styles.isDragging : ''
@@ -1917,23 +1744,15 @@ export function CFPSummaryTable({
                             {/* Column Filter Row */}
                             {showColumnFilters && (
                                 <tr className={styles.filterRow}>
-                                    {columnOrder.map((colKey, colIndex) => {
+                                    {columnOrder.map((colKey) => {
                                         const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
                                         const width = columnWidths[colKey] || colDef.width;
-                                        const isSticky = freezePolicyColumn && colIndex === 0;
                                         return (
                                             <th
                                                 key={`filter-${colKey}`}
                                                 style={{
                                                     width: `${width}px`,
                                                     textAlign: colDef.align || 'left',
-                                                    ...(isSticky ? {
-                                                        position: 'sticky',
-                                                        left: 0,
-                                                        zIndex: 14,
-                                                        backgroundColor: 'var(--bg-surface-subtle)',
-                                                        boxShadow: canScrollLeft ? '3px 0 8px rgba(0, 0, 0, 0.12)' : 'none',
-                                                    } : {}),
                                                 }}
                                             >
                                                 {renderFilterCell(colKey)}
@@ -1969,21 +1788,13 @@ export function CFPSummaryTable({
                                         key={term.policy_term_id}
                                         className={styles.termRow}
                                     >
-                                        {columnOrder.map((colKey, colIndex) => {
+                                        {columnOrder.map((colKey) => {
                                             const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
-                                            const isSticky = freezePolicyColumn && colIndex === 0;
                                             return (
                                                 <td
                                                     key={colKey}
                                                     style={{
                                                         textAlign: colDef.align || 'left',
-                                                        ...(isSticky ? {
-                                                            position: 'sticky',
-                                                            left: 0,
-                                                            zIndex: 2,
-                                                            backgroundColor: 'var(--bg-surface)',
-                                                            boxShadow: canScrollLeft ? '3px 0 8px rgba(0, 0, 0, 0.08)' : 'none',
-                                                        } : {}),
                                                     }}
                                                 >
                                                     {renderCell(colKey, term)}
