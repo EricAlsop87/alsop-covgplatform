@@ -14,11 +14,25 @@ import {
     Download,
     GripVertical,
     SlidersHorizontal,
+    Filter,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
+
+export interface ColumnFilters {
+    policy?: string;
+    insured?: string;
+    address?: string;
+    effective?: string;
+    expiration?: string;
+    dec?: string;
+    rce?: string;
+    dic?: string;
+    quote?: string;
+    bamboo?: string;
+}
 
 export type CFPColumnKey =
     | 'policy'
@@ -137,6 +151,27 @@ export function CFPSummaryTable({
     const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 25;
+
+    // ── Column-Specific Filters State ─────────────────────────────────────
+    const [showColumnFilters, setShowColumnFilters] = useState(true);
+    const [columnFilters, setColumnFilters] = useState<ColumnFilters>({});
+
+    const activeFilterCount = useMemo(() => {
+        return Object.values(columnFilters).filter(Boolean).length;
+    }, [columnFilters]);
+
+    const handleColumnFilterChange = (key: keyof ColumnFilters, value: string) => {
+        setColumnFilters(prev => ({
+            ...prev,
+            [key]: value || undefined,
+        }));
+        setCurrentPage(1);
+    };
+
+    const handleClearColumnFilters = () => {
+        setColumnFilters({});
+        setCurrentPage(1);
+    };
 
     // ── Column Reorder & Resize State ─────────────────────────────────────
     const [columnOrder, setColumnOrder] = useState<CFPColumnKey[]>(() => {
@@ -351,29 +386,138 @@ export function CFPSummaryTable({
         }
     };
 
-    // Filter terms based on docFilter pill
+    // Filter terms based on docFilter pill AND column-specific filters
     const filteredTerms = useMemo(() => {
-        if (docFilter === 'all') return allTerms;
+        let result = allTerms;
 
-        return allTerms.filter(t => {
-            switch (docFilter) {
-                case 'missing_dec':
-                    return !t.has_dec;
-                case 'missing_rce':
-                    return !t.has_rce;
-                case 'missing_dic':
-                    return !t.has_dic;
-                case 'missing_es':
-                    return !t.has_es;
-                case 'has_bamboo':
-                    return t.has_bamboo_coverage;
-                case 'missing_bamboo':
-                    return !t.has_bamboo_coverage;
-                default:
-                    return true;
+        // 1. DocFilter pill
+        if (docFilter !== 'all') {
+            result = result.filter(t => {
+                switch (docFilter) {
+                    case 'missing_dec':
+                        return !t.has_dec;
+                    case 'missing_rce':
+                        return !t.has_rce;
+                    case 'missing_dic':
+                        return !t.has_dic;
+                    case 'missing_es':
+                        return !t.has_es;
+                    case 'has_bamboo':
+                        return t.has_bamboo_coverage;
+                    case 'missing_bamboo':
+                        return !t.has_bamboo_coverage;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        // 2. Column-specific filters
+        if (columnFilters.policy) {
+            const q = columnFilters.policy.toLowerCase().trim();
+            result = result.filter(t => t.policy_number?.toLowerCase().includes(q));
+        }
+
+        if (columnFilters.insured) {
+            const q = columnFilters.insured.toLowerCase().trim();
+            result = result.filter(t => t.named_insured?.toLowerCase().includes(q));
+        }
+
+        if (columnFilters.address) {
+            const q = columnFilters.address.toLowerCase().trim();
+            result = result.filter(t => t.property_address?.toLowerCase().includes(q));
+        }
+
+        if (columnFilters.effective) {
+            const q = columnFilters.effective.toLowerCase().trim();
+            result = result.filter(t => t.effective_date?.toLowerCase().includes(q));
+        }
+
+        if (columnFilters.expiration) {
+            const q = columnFilters.expiration.toLowerCase().trim();
+            result = result.filter(t => t.expiration_date?.toLowerCase().includes(q));
+        }
+
+        if (columnFilters.dec) {
+            if (columnFilters.dec === 'uploaded') {
+                result = result.filter(t => t.has_dec);
+            } else if (columnFilters.dec === 'missing') {
+                result = result.filter(t => !t.has_dec);
             }
-        });
-    }, [allTerms, docFilter]);
+        }
+
+        if (columnFilters.rce) {
+            if (columnFilters.rce === 'has_rce') {
+                result = result.filter(t => t.has_rce || !!t.rce_carrier);
+            } else if (columnFilters.rce === 'missing') {
+                result = result.filter(t => !t.has_rce && !t.rce_carrier);
+            } else if (columnFilters.rce === 'Bamboo') {
+                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'bamboo');
+            } else if (columnFilters.rce === 'AM') {
+                result = result.filter(t => {
+                    const c = t.rce_carrier?.toLowerCase();
+                    return c === 'am' || c === 'american modern';
+                });
+            } else if (columnFilters.rce === 'Aegis') {
+                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'aegis');
+            } else if (columnFilters.rce === 'SageSure') {
+                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'sagesure');
+            } else if (columnFilters.rce === 'PSIC') {
+                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'psic');
+            } else if (columnFilters.rce === 'Other') {
+                result = result.filter(t => {
+                    if (!t.rce_carrier) return false;
+                    const c = t.rce_carrier.toLowerCase();
+                    return !['bamboo', 'am', 'american modern', 'aegis', 'sagesure', 'psic'].includes(c);
+                });
+            }
+        }
+
+        if (columnFilters.dic) {
+            if (columnFilters.dic === 'has_dic') {
+                result = result.filter(t => t.has_dic || !!t.dic_carrier);
+            } else if (columnFilters.dic === 'missing') {
+                result = result.filter(t => !t.has_dic && !t.dic_carrier);
+            } else if (columnFilters.dic === 'Bamboo') {
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'bamboo');
+            } else if (columnFilters.dic === 'AM') {
+                result = result.filter(t => {
+                    const c = t.dic_carrier?.toLowerCase();
+                    return c === 'am' || c === 'american modern';
+                });
+            } else if (columnFilters.dic === 'Aegis') {
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'aegis');
+            } else if (columnFilters.dic === 'SageSure') {
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'sagesure');
+            } else if (columnFilters.dic === 'PSIC') {
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'psic');
+            } else if (columnFilters.dic === 'Other') {
+                result = result.filter(t => {
+                    if (!t.dic_carrier) return false;
+                    const c = t.dic_carrier.toLowerCase();
+                    return !['bamboo', 'am', 'american modern', 'aegis', 'sagesure', 'psic'].includes(c);
+                });
+            }
+        }
+
+        if (columnFilters.quote) {
+            if (columnFilters.quote === 'uploaded') {
+                result = result.filter(t => t.has_es);
+            } else if (columnFilters.quote === 'missing') {
+                result = result.filter(t => !t.has_es);
+            }
+        }
+
+        if (columnFilters.bamboo) {
+            if (columnFilters.bamboo === 'yes') {
+                result = result.filter(t => t.has_bamboo_coverage);
+            } else if (columnFilters.bamboo === 'no') {
+                result = result.filter(t => !t.has_bamboo_coverage);
+            }
+        }
+
+        return result;
+    }, [allTerms, docFilter, columnFilters]);
 
     // Pagination
     const totalPages = Math.max(1, Math.ceil(filteredTerms.length / PAGE_SIZE));
@@ -397,6 +541,10 @@ export function CFPSummaryTable({
             }
             if (docFilter !== 'all') parts.push(docFilter);
             if (search) parts.push(`Search_${search.slice(0, 10)}`);
+            if (columnFilters.rce) parts.push(`RCE_${columnFilters.rce}`);
+            if (columnFilters.dic) parts.push(`DIC_${columnFilters.dic}`);
+            if (columnFilters.dec) parts.push(`DEC_${columnFilters.dec}`);
+            if (columnFilters.bamboo) parts.push(`Bamboo_${columnFilters.bamboo}`);
             const desc = parts.length > 0 ? parts.join('_') : 'All';
 
             await exportCFPToExcel(filteredTerms, desc);
@@ -548,6 +696,136 @@ export function CFPSummaryTable({
         }
     };
 
+    // Render individual column filter control for the filter row
+    const renderFilterCell = (colKey: CFPColumnKey) => {
+        switch (colKey) {
+            case 'policy':
+                return (
+                    <input
+                        type="text"
+                        placeholder="Filter CFP #..."
+                        value={columnFilters.policy || ''}
+                        onChange={e => handleColumnFilterChange('policy', e.target.value)}
+                        className={`${styles.columnFilterInput} ${columnFilters.policy ? styles.activeFilter : ''}`}
+                    />
+                );
+            case 'insured':
+                return (
+                    <input
+                        type="text"
+                        placeholder="Filter insured..."
+                        value={columnFilters.insured || ''}
+                        onChange={e => handleColumnFilterChange('insured', e.target.value)}
+                        className={`${styles.columnFilterInput} ${columnFilters.insured ? styles.activeFilter : ''}`}
+                    />
+                );
+            case 'address':
+                return (
+                    <input
+                        type="text"
+                        placeholder="Filter address..."
+                        value={columnFilters.address || ''}
+                        onChange={e => handleColumnFilterChange('address', e.target.value)}
+                        className={`${styles.columnFilterInput} ${columnFilters.address ? styles.activeFilter : ''}`}
+                    />
+                );
+            case 'effective':
+                return (
+                    <input
+                        type="text"
+                        placeholder="Date..."
+                        value={columnFilters.effective || ''}
+                        onChange={e => handleColumnFilterChange('effective', e.target.value)}
+                        className={`${styles.columnFilterInput} ${columnFilters.effective ? styles.activeFilter : ''}`}
+                    />
+                );
+            case 'expiration':
+                return (
+                    <input
+                        type="text"
+                        placeholder="Date..."
+                        value={columnFilters.expiration || ''}
+                        onChange={e => handleColumnFilterChange('expiration', e.target.value)}
+                        className={`${styles.columnFilterInput} ${columnFilters.expiration ? styles.activeFilter : ''}`}
+                    />
+                );
+            case 'dec':
+                return (
+                    <select
+                        value={columnFilters.dec || ''}
+                        onChange={e => handleColumnFilterChange('dec', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.dec ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All DEC</option>
+                        <option value="uploaded">DEC (Uploaded)</option>
+                        <option value="missing">Missing (None)</option>
+                    </select>
+                );
+            case 'rce':
+                return (
+                    <select
+                        value={columnFilters.rce || ''}
+                        onChange={e => handleColumnFilterChange('rce', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.rce ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All RCE</option>
+                        <option value="has_rce">Uploaded (Any)</option>
+                        <option value="missing">Missing (None)</option>
+                        <option value="Bamboo">Bamboo</option>
+                        <option value="AM">AM (American Modern)</option>
+                        <option value="Aegis">Aegis</option>
+                        <option value="SageSure">SageSure</option>
+                        <option value="PSIC">PSIC</option>
+                        <option value="Other">Other Carrier</option>
+                    </select>
+                );
+            case 'dic':
+                return (
+                    <select
+                        value={columnFilters.dic || ''}
+                        onChange={e => handleColumnFilterChange('dic', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.dic ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All DIC</option>
+                        <option value="has_dic">Uploaded (Any)</option>
+                        <option value="missing">Missing (None)</option>
+                        <option value="Bamboo">Bamboo</option>
+                        <option value="AM">AM (American Modern)</option>
+                        <option value="Aegis">Aegis</option>
+                        <option value="SageSure">SageSure</option>
+                        <option value="PSIC">PSIC</option>
+                        <option value="Other">Other Carrier</option>
+                    </select>
+                );
+            case 'quote':
+                return (
+                    <select
+                        value={columnFilters.quote || ''}
+                        onChange={e => handleColumnFilterChange('quote', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.quote ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Quote</option>
+                        <option value="uploaded">Quote (Uploaded)</option>
+                        <option value="missing">Missing (None)</option>
+                    </select>
+                );
+            case 'bamboo':
+                return (
+                    <select
+                        value={columnFilters.bamboo || ''}
+                        onChange={e => handleColumnFilterChange('bamboo', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.bamboo ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
         <div className={styles.tableContainer}>
             {/* ── Controls Card ── */}
@@ -630,6 +908,32 @@ export function CFPSummaryTable({
                                 </>
                             )}
                         </button>
+
+                        <button
+                            type="button"
+                            className={`${styles.filterPill} ${showColumnFilters ? styles.active : ''}`}
+                            onClick={() => setShowColumnFilters(prev => !prev)}
+                            title="Toggle column-specific filters row"
+                        >
+                            <Filter size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                            Column Filters
+                            {activeFilterCount > 0 && (
+                                <span className={styles.filterBadgeCount}>{activeFilterCount}</span>
+                            )}
+                        </button>
+
+                        {activeFilterCount > 0 && (
+                            <button
+                                type="button"
+                                className={styles.filterPill}
+                                onClick={handleClearColumnFilters}
+                                title="Clear all column filters"
+                                style={{ color: '#dc2626', borderColor: 'rgba(220, 38, 38, 0.3)' }}
+                            >
+                                <RotateCcw size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                                Clear Filters ({activeFilterCount})
+                            </button>
+                        )}
 
                         <button
                             type="button"
@@ -767,6 +1071,20 @@ export function CFPSummaryTable({
                                                     style={{ opacity: 0.4, flexShrink: 0 }}
                                                 />
                                                 <span>{colDef.label}</span>
+                                                {columnFilters[colKey as keyof ColumnFilters] && (
+                                                    <span
+                                                        style={{
+                                                            width: 6,
+                                                            height: 6,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: 'var(--color-primary, #2243B6)',
+                                                            display: 'inline-block',
+                                                            marginLeft: 4,
+                                                            flexShrink: 0,
+                                                        }}
+                                                        title="Filter active on this column"
+                                                    />
+                                                )}
                                             </div>
 
                                             {/* Drag to resize column width handle */}
@@ -784,6 +1102,27 @@ export function CFPSummaryTable({
                                     );
                                 })}
                             </tr>
+
+                            {/* Column Filter Row */}
+                            {showColumnFilters && (
+                                <tr className={styles.filterRow}>
+                                    {columnOrder.map((colKey) => {
+                                        const colDef = DEFAULT_COLUMNS.find(c => c.key === colKey)!;
+                                        const width = columnWidths[colKey] || colDef.width;
+                                        return (
+                                            <th
+                                                key={`filter-${colKey}`}
+                                                style={{
+                                                    width: `${width}px`,
+                                                    textAlign: colDef.align || 'left',
+                                                }}
+                                            >
+                                                {renderFilterCell(colKey)}
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            )}
                         </thead>
 
                         <tbody>

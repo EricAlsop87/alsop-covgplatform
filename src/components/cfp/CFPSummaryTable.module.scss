@@ -562,3 +562,91 @@
         border-color: var(--color-primary);
     }
 }
+
+/* ── Column Filter Row ── */
+.filterRow {
+    background: var(--bg-surface-subtle, #f8fafc);
+    border-bottom: 2px solid var(--border-default);
+
+    th {
+        padding: 0.35rem 0.4rem !important;
+        background: var(--bg-surface-subtle, #f8fafc) !important;
+        vertical-align: middle;
+        font-weight: normal;
+        border-right: 1px solid var(--border-default);
+        box-sizing: border-box;
+
+        &:last-child {
+            border-right: none;
+        }
+    }
+}
+
+.columnFilterSelect {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-high);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm, 4px);
+    outline: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover, &:focus {
+        border-color: var(--color-primary);
+    }
+
+    &.activeFilter {
+        border-color: var(--color-primary);
+        background: rgba(34, 67, 182, 0.08);
+        color: var(--color-primary);
+        font-weight: 700;
+    }
+}
+
+.columnFilterInput {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-high);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm, 4px);
+    outline: none;
+    transition: all 0.15s ease;
+
+    &:focus {
+        border-color: var(--color-primary);
+    }
+
+    &::placeholder {
+        color: var(--text-muted);
+        font-size: 0.71875rem;
+    }
+
+    &.activeFilter {
+        border-color: var(--color-primary);
+        background: rgba(34, 67, 182, 0.08);
+        font-weight: 600;
+    }
+}
+
+.filterBadgeCount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    background: var(--color-primary, #2243B6);
+    color: #fff;
+    margin-left: 0.25rem;
+}
