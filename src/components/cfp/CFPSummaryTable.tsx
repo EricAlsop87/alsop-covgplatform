@@ -22,6 +22,7 @@ import {
     FileQuestion,
     Plus,
     Copy,
+    Ban,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
@@ -77,7 +78,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'rce', label: 'RCE', width: 100, minWidth: 75, align: 'center' },
     { key: 'dic', label: 'DIC', width: 100, minWidth: 75, align: 'center' },
     { key: 'quote', label: 'Quote / E&S', width: 95, minWidth: 70, align: 'center' },
-    { key: 'bamboo', label: 'Bamboo Coverage', width: 130, minWidth: 90, align: 'center' },
+    { key: 'bamboo', label: 'Full Coverage', width: 120, minWidth: 90, align: 'center' },
 ];
 
 const DEFAULT_COLUMN_KEYS = DEFAULT_COLUMNS.map(c => c.key);
@@ -101,7 +102,7 @@ interface CFPSummaryTableProps {
     totalFamilies: number;
 }
 
-type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo';
+type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'no_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo';
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -544,6 +545,64 @@ export function CFPSummaryTable({
         }
     };
 
+    // Toggle No Available DIC via PATCH API with optimistic update
+    const [togglingNoDicPolicyId, setTogglingNoDicPolicyId] = useState<string | null>(null);
+    const handleToggleNoDic = async (policyId: string, currentVal: boolean) => {
+        const newVal = !currentVal;
+        setTogglingNoDicPolicyId(policyId);
+
+        // Optimistic update
+        setFamilies(prev =>
+            prev.map(f => ({
+                ...f,
+                terms: f.terms.map(t =>
+                    t.policy_id === policyId ? { ...t, no_dic_available: newVal } : t
+                ),
+            }))
+        );
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await fetch('/api/cfp-summary', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    policy_id: policyId,
+                    no_dic_available: newVal,
+                }),
+            });
+
+            if (!res.ok) {
+                // Revert on failure
+                setFamilies(prev =>
+                    prev.map(f => ({
+                        ...f,
+                        terms: f.terms.map(t =>
+                            t.policy_id === policyId ? { ...t, no_dic_available: currentVal } : t
+                        ),
+                    }))
+                );
+            }
+        } catch {
+            // Revert on failure
+            setFamilies(prev =>
+                prev.map(f => ({
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === policyId ? { ...t, no_dic_available: currentVal } : t
+                    ),
+                }))
+            );
+        } finally {
+            setTogglingNoDicPolicyId(null);
+        }
+    };
+
     // Filter terms based on docFilter pill AND column-specific filters
     const filteredTerms = useMemo(() => {
         let result = allTerms;
@@ -557,7 +616,9 @@ export function CFPSummaryTable({
                     case 'missing_rce':
                         return !t.has_rce;
                     case 'missing_dic':
-                        return !t.has_dic;
+                        return !t.has_dic && !t.dic_carrier && !t.no_dic_available;
+                    case 'no_dic':
+                        return t.no_dic_available;
                     case 'missing_es':
                         return !t.has_es;
                     case 'has_bamboo':
@@ -664,25 +725,27 @@ export function CFPSummaryTable({
 
         if (columnFilters.dic) {
             if (columnFilters.dic === 'has_dic') {
-                result = result.filter(t => t.has_dic || !!t.dic_carrier);
+                result = result.filter(t => (t.has_dic || !!t.dic_carrier) && !t.no_dic_available);
             } else if (columnFilters.dic === 'missing') {
-                result = result.filter(t => !t.has_dic && !t.dic_carrier);
+                result = result.filter(t => !t.has_dic && !t.dic_carrier && !t.no_dic_available);
+            } else if (columnFilters.dic === 'no_dic') {
+                result = result.filter(t => t.no_dic_available);
             } else if (columnFilters.dic === 'Bamboo') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'bamboo');
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'bamboo' && !t.no_dic_available);
             } else if (columnFilters.dic === 'AM') {
                 result = result.filter(t => {
                     const c = t.dic_carrier?.toLowerCase();
-                    return c === 'am' || c === 'american modern';
+                    return (c === 'am' || c === 'american modern') && !t.no_dic_available;
                 });
             } else if (columnFilters.dic === 'Aegis') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'aegis');
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'aegis' && !t.no_dic_available);
             } else if (columnFilters.dic === 'SageSure') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'sagesure');
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'sagesure' && !t.no_dic_available);
             } else if (columnFilters.dic === 'PSIC') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'psic');
+                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'psic' && !t.no_dic_available);
             } else if (columnFilters.dic === 'Other') {
                 result = result.filter(t => {
-                    if (!t.dic_carrier) return false;
+                    if (!t.dic_carrier || t.no_dic_available) return false;
                     const c = t.dic_carrier.toLowerCase();
                     return !['bamboo', 'am', 'american modern', 'aegis', 'sagesure', 'psic'].includes(c);
                 });
@@ -714,12 +777,14 @@ export function CFPSummaryTable({
         let decAvailable = 0;
         let rceAvailable = 0;
         let dicAvailable = 0;
+        let dicNoAvailable = 0;
         let quoteAvailable = 0;
 
         for (const t of allTerms) {
             if (t.has_dec) decAvailable++;
             if (t.has_rce || t.rce_carrier) rceAvailable++;
             if (t.has_dic || t.dic_carrier) dicAvailable++;
+            if (t.no_dic_available) dicNoAvailable++;
             if (t.has_es) quoteAvailable++;
         }
 
@@ -730,7 +795,8 @@ export function CFPSummaryTable({
             rceAvailable,
             rceMissing: Math.max(0, total - rceAvailable),
             dicAvailable,
-            dicMissing: Math.max(0, total - dicAvailable),
+            dicNoAvailable,
+            dicMissing: Math.max(0, total - dicAvailable - dicNoAvailable),
             quoteAvailable,
             quoteMissing: Math.max(0, total - quoteAvailable),
         };
@@ -1076,21 +1142,67 @@ export function CFPSummaryTable({
                 );
 
             case 'dic':
-                return renderCarrierBadge(
-                    term.dic_carrier,
-                    'DIC',
-                    term.policy_id,
-                    () => {
-                        handlePreviewDoc({
-                            title: `DIC Document — ${term.dic_carrier || 'Uploaded'} (${term.policy_number})`,
-                            subtitle: term.named_insured || undefined,
-                            docType: 'dic',
-                            storagePath: term.dic_storage_path,
-                            bucket: 'cfp-platform-documents',
-                            fileName: term.dic_file_name || `${term.policy_number}_DIC.pdf`,
-                            policyId: term.policy_id,
-                        });
-                    }
+                if (term.has_dic || term.dic_carrier) {
+                    return renderCarrierBadge(
+                        term.dic_carrier,
+                        'DIC',
+                        term.policy_id,
+                        () => {
+                            handlePreviewDoc({
+                                title: `DIC Document — ${term.dic_carrier || 'Uploaded'} (${term.policy_number})`,
+                                subtitle: term.named_insured || undefined,
+                                docType: 'dic',
+                                storagePath: term.dic_storage_path,
+                                bucket: 'cfp-platform-documents',
+                                fileName: term.dic_file_name || `${term.policy_number}_DIC.pdf`,
+                                policyId: term.policy_id,
+                            });
+                        }
+                    );
+                }
+
+                if (term.no_dic_available) {
+                    return (
+                        <div className={styles.dicActionCell}>
+                            <button
+                                type="button"
+                                disabled={togglingNoDicPolicyId === term.policy_id}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleNoDic(term.policy_id, true);
+                                }}
+                                className={`${styles.carrierBadge} ${styles.noDic}`}
+                                title="Marked: No available DIC in all carriers (Click to reset)"
+                            >
+                                <Ban size={11} /> No Available DIC
+                            </button>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className={styles.dicActionCell}>
+                        <Link
+                            href={`/upload-document?policy_id=${term.policy_id}&doc_type=dic`}
+                            className={`${styles.docBadge} ${styles.no}`}
+                            title="Missing DIC — click to upload"
+                            target="_blank"
+                        >
+                            <Plus size={11} /> None
+                        </Link>
+                        <button
+                            type="button"
+                            disabled={togglingNoDicPolicyId === term.policy_id}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleNoDic(term.policy_id, false);
+                            }}
+                            className={styles.markNoDicBtn}
+                            title="Click to mark: No available DIC in all carriers"
+                        >
+                            No DIC
+                        </button>
+                    </div>
                 );
 
             case 'quote':
@@ -1141,7 +1253,7 @@ export function CFPSummaryTable({
                                 ? styles.active
                                 : styles.inactive
                         }`}
-                        title="Click to toggle Bamboo full coverage"
+                        title="Click to toggle full coverage"
                     >
                         {term.has_bamboo_coverage ? (
                             <>
@@ -1240,6 +1352,7 @@ export function CFPSummaryTable({
                         <option value="">All DIC</option>
                         <option value="has_dic">Uploaded (Any)</option>
                         <option value="missing">Missing (None)</option>
+                        <option value="no_dic">No Available DIC</option>
                         <option value="Bamboo">Bamboo</option>
                         <option value="AM">AM (American Modern)</option>
                         <option value="Aegis">Aegis</option>
@@ -1267,7 +1380,7 @@ export function CFPSummaryTable({
                         onChange={e => handleColumnFilterChange('bamboo', e.target.value)}
                         className={`${styles.columnFilterSelect} ${columnFilters.bamboo ? styles.activeFilter : ''}`}
                     >
-                        <option value="">All</option>
+                        <option value="">All Full Covg</option>
                         <option value="yes">Yes</option>
                         <option value="no">No</option>
                     </select>
@@ -1534,6 +1647,16 @@ export function CFPSummaryTable({
                                 <span className={styles.metricAvail} title="DIC documents on file">
                                     <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} available
                                 </span>
+                                {periodStats.dicNoAvailable > 0 && (
+                                    <span 
+                                        className={styles.metricNotice} 
+                                        title="Click to filter by No Available DIC"
+                                        onClick={() => { setDocFilter('no_dic'); setCurrentPage(1); }}
+                                        style={{ fontSize: '0.6875rem', color: '#64748b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                    >
+                                        <Ban size={10} /> {periodStats.dicNoAvailable.toLocaleString()} no DIC
+                                    </span>
+                                )}
                                 <span 
                                     className={styles.metricMissing} 
                                     title="Click to filter by Missing DIC"
@@ -1611,6 +1734,13 @@ export function CFPSummaryTable({
                     </button>
                     <button
                         type="button"
+                        className={`${styles.filterPill} ${docFilter === 'no_dic' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('no_dic'); setCurrentPage(1); }}
+                    >
+                        No Available DIC
+                    </button>
+                    <button
+                        type="button"
                         className={`${styles.filterPill} ${docFilter === 'missing_es' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('missing_es'); setCurrentPage(1); }}
                     >
@@ -1621,7 +1751,7 @@ export function CFPSummaryTable({
                         className={`${styles.filterPill} ${docFilter === 'has_bamboo' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('has_bamboo'); setCurrentPage(1); }}
                     >
-                        Bamboo Full Coverage: Yes
+                        Full Coverage: Yes
                     </button>
 
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

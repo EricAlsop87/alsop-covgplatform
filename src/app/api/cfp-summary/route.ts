@@ -41,6 +41,7 @@ export interface CFPTermRow {
     has_es: boolean;
     es_storage_path?: string | null;
     es_file_name?: string | null;
+    no_dic_available: boolean;
     is_pending_dec: boolean;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
@@ -304,12 +305,12 @@ export async function GET(req: NextRequest) {
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc'])
         ),
-        chunkedInQuery<{ policy_id: string; new_value: string }>(
+        chunkedInQuery<{ policy_id: string; field_name: string; new_value: string }>(
             'manual_overrides',
-            'policy_id, new_value',
+            'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.eq('field_name', 'has_bamboo_coverage')
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available'])
         ),
     ]);
 
@@ -359,9 +360,12 @@ export async function GET(req: NextRequest) {
     }
 
     const bambooCoverageSet = new Set<string>();
+    const noDicAvailableSet = new Set<string>();
     for (const ov of bambooOverrides) {
-        if (ov.new_value === 'true' || ov.new_value === '1') {
+        if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
             bambooCoverageSet.add(ov.policy_id);
+        } else if (ov.field_name === 'no_dic_available' && (ov.new_value === 'true' || ov.new_value === '1')) {
+            noDicAvailableSet.add(ov.policy_id);
         }
     }
 
@@ -413,6 +417,7 @@ export async function GET(req: NextRequest) {
             has_es: docSet.has('es_doc') || !!t.es_exists,
             es_storage_path: policyEsDoc[policyId]?.storage_path || null,
             es_file_name: policyEsDoc[policyId]?.file_name || null,
+            no_dic_available: noDicAvailableSet.has(policyId),
             is_pending_dec: isPendingDec,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
@@ -472,37 +477,51 @@ export async function GET(req: NextRequest) {
     });
 }
 
-// ── PATCH /api/cfp-summary — toggle bamboo coverage ───────────────────────
+// ── PATCH /api/cfp-summary — toggle manual overrides (full coverage, no dic) ──
 export async function PATCH(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service'] });
     if (isAuthError(auth)) return auth;
 
     const body = await req.json();
-    const { policy_id, has_bamboo_coverage } = body;
+    const { policy_id, has_bamboo_coverage, no_dic_available } = body;
 
-    if (!policy_id || typeof has_bamboo_coverage !== 'boolean') {
-        return NextResponse.json({ success: false, error: 'policy_id and has_bamboo_coverage required' }, { status: 400 });
+    if (!policy_id) {
+        return NextResponse.json({ success: false, error: 'policy_id required' }, { status: 400 });
+    }
+
+    const updates: { field_name: string; new_value: string }[] = [];
+    if (typeof has_bamboo_coverage === 'boolean') {
+        updates.push({ field_name: 'has_bamboo_coverage', new_value: String(has_bamboo_coverage) });
+    }
+    if (typeof no_dic_available === 'boolean') {
+        updates.push({ field_name: 'no_dic_available', new_value: String(no_dic_available) });
+    }
+
+    if (updates.length === 0) {
+        return NextResponse.json({ success: false, error: 'has_bamboo_coverage or no_dic_available required' }, { status: 400 });
     }
 
     const admin = getSupabaseAdmin();
 
     // Persist via manual_overrides
-    const { error } = await admin
-        .from('manual_overrides')
-        .upsert(
-            {
-                policy_id,
-                field_name: 'has_bamboo_coverage',
-                new_value: String(has_bamboo_coverage),
-            },
-            { onConflict: 'policy_id, field_name' }
-        );
+    for (const u of updates) {
+        const { error } = await admin
+            .from('manual_overrides')
+            .upsert(
+                {
+                    policy_id,
+                    field_name: u.field_name,
+                    new_value: u.new_value,
+                },
+                { onConflict: 'policy_id, field_name' }
+            );
 
-    if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        if (error) {
+            return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        }
     }
 
-    return NextResponse.json({ success: true, has_bamboo_coverage });
+    return NextResponse.json({ success: true, has_bamboo_coverage, no_dic_available });
 }
 
 // ── Helper: compute stats ─────────────────────────────────────────────────

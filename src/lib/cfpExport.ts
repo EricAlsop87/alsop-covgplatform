@@ -25,7 +25,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         { header: 'RCE', key: 'has_rce', width: 14 },
         { header: 'DIC', key: 'has_dic', width: 14 },
         { header: 'Quote / E&S', key: 'has_es', width: 14 },
-        { header: 'Bamboo Full Coverage', key: 'has_bamboo', width: 22 },
+        { header: 'Full Coverage', key: 'has_bamboo', width: 18 },
         { header: 'Payment Status', key: 'payment_status', width: 16 },
         { header: 'Payment Plan', key: 'payment_plan', width: 15 },
     ];
@@ -64,7 +64,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             payment_plan: term.payment_plan || '',
             has_dec: term.has_dec ? 'Uploaded' : 'Missing',
             has_rce: term.rce_carrier || (term.has_rce ? 'Uploaded' : 'Missing'),
-            has_dic: term.dic_carrier || (term.has_dic ? 'Verified' : 'Missing'),
+            has_dic: term.dic_carrier || (term.has_dic ? 'Verified' : (term.no_dic_available ? 'No Available DIC' : 'Missing')),
             has_es: term.has_es ? 'Uploaded' : 'Missing',
             has_bamboo: term.has_bamboo_coverage ? 'Yes' : 'No',
         });
@@ -85,7 +85,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
 
-        // Color coding for DEC, RCE, DIC, Quote
+        // Color coding for DEC, RCE, DIC, Quote, Full Coverage
         if (!term.has_dec) {
             row.getCell('has_dec').font = { color: { argb: 'FFDC2626' }, bold: true };
         } else {
@@ -98,7 +98,9 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             row.getCell('has_rce').font = { color: { argb: 'FF16A34A' }, bold: true };
         }
 
-        if (!term.has_dic) {
+        if (term.no_dic_available) {
+            row.getCell('has_dic').font = { color: { argb: 'FF64748B' }, bold: true };
+        } else if (!term.has_dic && !term.dic_carrier) {
             row.getCell('has_dic').font = { color: { argb: 'FFDC2626' }, bold: true };
         } else {
             row.getCell('has_dic').font = { color: { argb: 'FF16A34A' }, bold: true };
@@ -108,6 +110,12 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             row.getCell('has_es').font = { color: { argb: 'FFDC2626' }, bold: true };
         } else {
             row.getCell('has_es').font = { color: { argb: 'FF16A34A' }, bold: true };
+        }
+
+        if (term.has_bamboo_coverage) {
+            row.getCell('has_bamboo').font = { color: { argb: 'FF16A34A' }, bold: true };
+        } else {
+            row.getCell('has_bamboo').font = { color: { argb: 'FF64748B' } };
         }
     }
 

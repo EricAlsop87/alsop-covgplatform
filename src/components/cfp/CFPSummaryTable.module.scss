@@ -618,6 +618,54 @@
         color: #475569;
         border: 1px solid rgba(100, 116, 139, 0.2);
     }
+
+    &.noDic {
+        background: rgba(148, 163, 184, 0.12);
+        color: #475569;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+    }
+}
+
+.dicActionCell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.markNoDicBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.18rem 0.45rem;
+    border-radius: 4px;
+    background: var(--bg-surface-subtle, #f8fafc);
+    border: 1px dashed var(--border-default, #cbd5e1);
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+
+    &:hover {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #b91c1c;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 }
 
 /* ── Bamboo Toggle ── */
