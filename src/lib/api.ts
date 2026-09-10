@@ -2560,6 +2560,9 @@ export interface PlatformDocumentInfo {
     carrier_name?: string | null;
     source?: string | null;
     created_by?: string | null;
+    policy_number?: string | null;
+    policy_address?: string | null;
+    policy_insured?: string | null;
 }
 
 /**
@@ -2742,6 +2745,105 @@ export async function fetchDocumentsNeedingReview(): Promise<PlatformDocumentInf
             error: err instanceof Error ? err.message : String(err),
         });
         return [];
+    }
+}
+
+/**
+ * Fetch platform documents that have been flagged as mismatched with their attached policy.
+ */
+export async function fetchMismatchedDocuments(): Promise<PlatformDocumentInfo[]> {
+    try {
+        const { data, error } = await supabase
+            .from('platform_documents')
+            .select(`
+                id, doc_type, file_name, file_size, storage_path,
+                parse_status, processing_step, match_status, match_confidence,
+                error_message, extracted_owner_name, extracted_address,
+                writeback_status, policy_id, client_id, created_at, updated_at,
+                account_id,
+                accounts:account_id (
+                    id, first_name, last_name, email
+                ),
+                doc_data_rce (
+                    source, created_by
+                ),
+                doc_data_dic (
+                    carrier_name
+                ),
+                policies:policy_id (
+                    id, policy_number, property_address_raw,
+                    clients:client_id (
+                        id, named_insured
+                    )
+                )
+            `)
+            .or('match_status.eq.mismatch,error_message.ilike.%Mismatch%')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            logger.error('API', 'Error fetching mismatched documents', { message: error.message });
+            return [];
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const docs = (data || []).map((row: any) => {
+            const acc = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
+            let uploaded_by: string | null = null;
+            if (acc) {
+                const fn = acc.first_name || '';
+                const ln = acc.last_name || '';
+                uploaded_by = `${fn} ${ln}`.trim() || acc.email || null;
+            }
+            const rce = Array.isArray(row.doc_data_rce) ? row.doc_data_rce[0] : row.doc_data_rce;
+            const dic = Array.isArray(row.doc_data_dic) ? row.doc_data_dic[0] : row.doc_data_dic;
+            const carrier_name = dic?.carrier_name || (rce?.created_by?.toLowerCase().includes('bamboo') ? 'Bamboo' : null);
+
+            const pol = Array.isArray(row.policies) ? row.policies[0] : row.policies;
+            const client = pol?.clients ? (Array.isArray(pol.clients) ? pol.clients[0] : pol.clients) : null;
+
+            return {
+                ...row,
+                uploaded_by,
+                carrier_name,
+                source: rce?.source || null,
+                created_by: rce?.created_by || null,
+                policy_number: pol?.policy_number || null,
+                policy_address: pol?.property_address_raw || null,
+                policy_insured: client?.named_insured || null,
+            };
+        });
+
+        return docs as PlatformDocumentInfo[];
+    } catch (err) {
+        logger.error('API', 'Unexpected error fetching mismatched documents', {
+            error: err instanceof Error ? err.message : String(err),
+        });
+        return [];
+    }
+}
+
+/**
+ * Confirm/override a mismatched document to remain attached to its policy.
+ */
+export async function confirmMismatchDocument(documentId: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('platform_documents')
+            .update({
+                match_status: 'manual',
+                error_message: null,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', documentId);
+
+        if (error) {
+            logger.error('API', 'Failed to confirm mismatch document', { error: error.message });
+            return false;
+        }
+        return true;
+    } catch (err) {
+        logger.error('API', 'Unexpected error confirming mismatch document', { error: String(err) });
+        return false;
     }
 }
 

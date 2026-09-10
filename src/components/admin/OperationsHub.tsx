@@ -7,14 +7,14 @@ import {
     Shield, Clock, AlertTriangle, ExternalLink, Layers
 } from "lucide-react";
 import Link from "next/link";
-import { fetchDocumentsNeedingReview, deleteDocument, PlatformDocumentInfo } from "@/lib/api";
+import { fetchDocumentsNeedingReview, fetchMismatchedDocuments, confirmMismatchDocument, deleteDocument, PlatformDocumentInfo } from "@/lib/api";
 import { supabase } from "@/lib/supabaseClient";
 import { detectDocumentCarrier } from "@/lib/carrierBadges";
 import SubmissionsDebug from "./SubmissionsDebug";
 import DuplicateReview from "./DuplicateReview";
 
 /* ── Tab definition ──────────────────────────────────────────────── */
-type TabKey = 'review' | 'identity' | 'pipeline';
+type TabKey = 'review' | 'mismatches' | 'identity' | 'pipeline';
 
 interface TabDef {
     key: TabKey;
@@ -25,6 +25,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
     { key: 'review', label: 'Document Review', icon: FileSearch, description: 'Unmatched documents awaiting assignment' },
+    { key: 'mismatches', label: 'Mismatched Documents', icon: AlertTriangle, description: 'Documents uploaded under conflicting policies' },
     { key: 'identity', label: 'Identity Resolution', icon: Users, description: 'Duplicate client detection & merge' },
     { key: 'pipeline', label: 'Submissions Pipeline', icon: Layers, description: 'Ingestion job log & debug' },
 ];
@@ -433,14 +434,315 @@ function DocumentReviewTab() {
     );
 }
 
+/* ── Mismatched Documents Tab ───────────────────────────────────── */
+function MismatchedDocumentsTab() {
+    const [docs, setDocs] = useState<PlatformDocumentInfo[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+    const loadDocs = useCallback(async () => {
+        setLoading(true);
+        const data = await fetchMismatchedDocuments();
+        setDocs(data);
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { loadDocs(); }, [loadDocs]);
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Delete this document? This cannot be undone.')) return;
+        setDeletingId(id);
+        const ok = await deleteDocument(id, 'platform');
+        if (ok) setDocs(prev => prev.filter(d => d.id !== id));
+        setDeletingId(null);
+    };
+
+    const handleConfirm = async (id: string) => {
+        if (!confirm('Confirm match anyway? This will override the mismatch warning and keep the document linked to this policy.')) return;
+        setConfirmingId(id);
+        const ok = await confirmMismatchDocument(id);
+        if (ok) {
+            setDocs(prev => prev.filter(d => d.id !== id));
+        } else {
+            alert('Failed to confirm document. Please try again.');
+        }
+        setConfirmingId(null);
+    };
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', gap: '0.75rem', color: 'var(--text-muted)' }}>
+                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontSize: '0.85rem' }}>Checking for mismatched documents…</span>
+                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            </div>
+        );
+    }
+
+    if (docs.length === 0) {
+        return (
+            <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '4rem 2rem', gap: '0.75rem',
+            }}>
+                <div style={{
+                    width: '3.5rem', height: '3.5rem', borderRadius: '50%',
+                    background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <CheckCircle size={22} style={{ color: 'var(--status-success)' }} />
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-high)' }}>No Mismatches Found</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', maxWidth: '420px', lineHeight: 1.5 }}>
+                    All attached documents correspond to their policyholder and property addresses. If an agent mistakenly uploads a document to the wrong policy, it will appear here for review.
+                </div>
+                <button
+                    onClick={loadDocs}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.4rem 0.85rem', borderRadius: '0.375rem',
+                        border: '1px solid var(--border-default)', background: 'transparent',
+                        color: 'var(--text-mid)', fontSize: '0.78rem', cursor: 'pointer',
+                        marginTop: '0.5rem',
+                    }}
+                >
+                    <RefreshCw size={13} />
+                    Refresh Check
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            {/* Header / explanation banner */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.875rem 1.25rem', marginBottom: '1.25rem',
+                borderRadius: '0.625rem', background: 'rgba(245, 158, 11, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                    <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-high)' }}>
+                        <strong>{docs.length} document{docs.length > 1 ? 's' : ''}</strong> uploaded under policies with conflicting addresses or insured names. Review details and reassign to the proper policy.
+                    </div>
+                </div>
+                <button
+                    onClick={loadDocs}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.35rem 0.75rem', borderRadius: '0.375rem',
+                        border: '1px solid rgba(245, 158, 11, 0.3)', background: 'var(--bg-surface)',
+                        color: '#f59e0b', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                    }}
+                >
+                    <RefreshCw size={12} />
+                    Refresh
+                </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                {docs.map(doc => {
+                    const docConfig = DOC_TYPE_CONFIG[doc.doc_type] || DOC_TYPE_CONFIG.other;
+                    const carrier = detectDocumentCarrier({
+                        file_name: doc.file_name,
+                        doc_type: doc.doc_type,
+                        carrier_name: doc.carrier_name,
+                        source: doc.source,
+                        created_by: doc.created_by,
+                    });
+
+                    return (
+                        <div key={doc.id} style={{
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '0.75rem',
+                            padding: '1.25rem',
+                            position: 'relative',
+                            overflow: 'hidden',
+                        }}>
+                            <div style={{
+                                position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
+                                background: 'linear-gradient(90deg, #f59e0b, #f59e0b80)',
+                            }} />
+
+                            {/* Header */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                        padding: '0.2rem 0.55rem', borderRadius: '0.375rem',
+                                        background: `${docConfig.color}15`, color: docConfig.color,
+                                        fontSize: '0.72rem', fontWeight: 700,
+                                        border: `1px solid ${docConfig.color}30`,
+                                    }}>
+                                        <span>{docConfig.icon}</span>
+                                        {docConfig.label}
+                                    </span>
+                                    {carrier && (
+                                        <span style={{
+                                            padding: '0.2rem 0.55rem', borderRadius: '0.375rem',
+                                            background: carrier.bgColor, color: carrier.textColor,
+                                            fontSize: '0.72rem', fontWeight: 700,
+                                            border: `1px solid ${carrier.borderColor}`,
+                                        }}>
+                                            {carrier.label}
+                                        </span>
+                                    )}
+                                    <span style={{
+                                        padding: '0.2rem 0.55rem', borderRadius: '0.375rem',
+                                        background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b',
+                                        fontSize: '0.72rem', fontWeight: 700,
+                                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                                    }}>
+                                        ⚠️ Mismatch Detected
+                                    </span>
+                                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                                        {doc.file_name}
+                                    </span>
+                                </div>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                    {formatTimeAgo(doc.created_at)}
+                                </span>
+                            </div>
+
+                            {/* Comparison Columns */}
+                            <div style={{
+                                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                                gap: '1rem', marginBottom: '1rem',
+                            }}>
+                                {/* Box 1: Currently Attached Under */}
+                                <div style={{
+                                    background: 'var(--bg-primary)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: '0.5rem',
+                                    padding: '0.875rem',
+                                }}>
+                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <Shield size={12} />
+                                        Currently Attached To Policy
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-high)', marginBottom: '0.25rem' }}>
+                                        {doc.policy_id ? (
+                                            <Link href={`/policy/${doc.policy_id}`} target="_blank" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                {doc.policy_number || 'Policy Page'}
+                                                <ExternalLink size={11} />
+                                            </Link>
+                                        ) : 'Unlinked'}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-mid)', marginBottom: '0.2rem' }}>
+                                        <strong>Insured:</strong> {doc.policy_insured || 'Unknown'}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        <strong>Address:</strong> {doc.policy_address || '(No address recorded on policy)'}
+                                    </div>
+                                </div>
+
+                                {/* Box 2: Document Actually Contains */}
+                                <div style={{
+                                    background: 'rgba(59, 130, 246, 0.04)',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                    borderRadius: '0.5rem',
+                                    padding: '0.875rem',
+                                }}>
+                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <FileSearch size={12} />
+                                        Document Extracted Details
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-high)', marginBottom: '0.25rem' }}>
+                                        {doc.extracted_owner_name || 'Name not detected'}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-mid)', marginBottom: '0.2rem' }}>
+                                        <strong>Property Address:</strong> {doc.extracted_address || 'Address not detected'}
+                                    </div>
+                                    {doc.uploaded_by && (
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                            Uploaded by: {doc.uploaded_by}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Warning message */}
+                            {doc.error_message && (
+                                <div style={{
+                                    fontSize: '0.76rem', color: '#f59e0b',
+                                    background: 'rgba(245, 158, 11, 0.08)',
+                                    padding: '0.5rem 0.75rem', borderRadius: '0.375rem',
+                                    marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                }}>
+                                    <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                                    <span>{doc.error_message}</span>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Link
+                                        href={`/upload-document?reassign=${doc.id}`}
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                            padding: '0.45rem 0.95rem', borderRadius: '0.375rem',
+                                            background: 'var(--accent-primary)', color: 'var(--text-inverse)',
+                                            fontSize: '0.78rem', fontWeight: 600, textDecoration: 'none',
+                                            transition: 'opacity 0.15s',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                                    >
+                                        Review & Reassign
+                                        <ArrowRight size={13} />
+                                    </Link>
+                                    <button
+                                        onClick={() => handleConfirm(doc.id)}
+                                        disabled={confirmingId === doc.id}
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                            padding: '0.45rem 0.85rem', borderRadius: '0.375rem',
+                                            border: '1px solid var(--border-default)', background: 'transparent',
+                                            color: 'var(--text-mid)', fontSize: '0.78rem', fontWeight: 500,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {confirmingId === doc.id ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle size={13} />}
+                                        Confirm Match Anyway
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => handleDelete(doc.id)}
+                                    disabled={deletingId === doc.id}
+                                    title="Delete document"
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        width: '2rem', height: '2rem', borderRadius: '0.375rem',
+                                        border: '1px solid var(--border-default)', background: 'transparent',
+                                        color: 'var(--status-error)', cursor: 'pointer',
+                                    }}
+                                >
+                                    {deletingId === doc.id ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={14} />}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 /* ── Main Operations Hub ───────────────────────────────────────── */
 export default function OperationsHub() {
     const [activeTab, setActiveTab] = useState<TabKey>('review');
     const [reviewCount, setReviewCount] = useState<number | null>(null);
+    const [mismatchCount, setMismatchCount] = useState<number | null>(null);
 
-    // Fetch review count for badge
+    // Fetch counts for badges
     useEffect(() => {
         fetchDocumentsNeedingReview().then(docs => setReviewCount(docs.length));
+        fetchMismatchedDocuments().then(docs => setMismatchCount(docs.length));
     }, []);
 
     return (
@@ -475,7 +777,8 @@ export default function OperationsHub() {
                 {TABS.map(tab => {
                     const isActive = activeTab === tab.key;
                     const Icon = tab.icon;
-                    const badgeCount = tab.key === 'review' ? reviewCount : null;
+                    const badgeCount = tab.key === 'review' ? reviewCount : tab.key === 'mismatches' ? mismatchCount : null;
+                    const badgeBg = tab.key === 'mismatches' ? '#f59e0b' : 'var(--status-error)';
 
                     return (
                         <button
@@ -504,7 +807,7 @@ export default function OperationsHub() {
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                     minWidth: '1.25rem', height: '1.25rem',
                                     padding: '0 0.35rem', borderRadius: '999px',
-                                    background: 'var(--status-error)', color: 'var(--text-inverse)',
+                                    background: badgeBg, color: '#fff',
                                     fontSize: '0.62rem', fontWeight: 800,
                                     lineHeight: 1,
                                 }}>
@@ -518,6 +821,7 @@ export default function OperationsHub() {
 
             {/* Tab Content */}
             {activeTab === 'review' && <DocumentReviewTab />}
+            {activeTab === 'mismatches' && <MismatchedDocumentsTab />}
             {activeTab === 'identity' && (
                 <div>
                     <DuplicateReview />

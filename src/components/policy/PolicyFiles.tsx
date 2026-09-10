@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { Upload, FileText, Loader2, Download, Eye, AlertCircle, CheckCircle, XCircle, ChevronDown, CheckCircle2, Clock, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
+import { Upload, FileText, Loader2, Download, Eye, AlertCircle, AlertTriangle, ArrowRight, CheckCircle, XCircle, ChevronDown, CheckCircle2, Clock, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import {
     fetchDecPageFilesByPolicyId,
     getDecPageFileDownloadUrl,
@@ -762,6 +763,22 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                                         <span>{REVIEW_STATUS_CONFIG[decPageReview.review_status]?.label || 'Unknown'}</span>
                                                                     </span>
                                                                 )}
+                                                                {/* Policy mismatch badge */}
+                                                                {file.match_status === 'needs_review' && file.error_message?.toLowerCase().includes('mismatch') && (
+                                                                    <span
+                                                                        className={styles.statusBadge}
+                                                                        style={{
+                                                                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                                                                            color: '#f59e0b',
+                                                                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                                                                            fontWeight: 700,
+                                                                        }}
+                                                                        title={file.error_message || undefined}
+                                                                    >
+                                                                        <AlertTriangle size={12} />
+                                                                        <span>Mismatch Detected</span>
+                                                                    </span>
+                                                                )}
                                                                 <span>{formatFileSize(file.file_size)}</span>
                                                                 <span>{formatDate(file.uploaded_at)}</span>
                                                                 {file.uploaded_by && (
@@ -778,6 +795,30 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                         </div>
                                                     </div>
                                                     <div className={styles.fileActions}>
+                                                        {file.match_status === 'needs_review' && file.error_message?.toLowerCase().includes('mismatch') && (
+                                                            <Link
+                                                                href={`/upload-document?reassign=${file.id}`}
+                                                                className={styles.actionBtn}
+                                                                style={{
+                                                                    color: '#f59e0b',
+                                                                    borderColor: 'rgba(245, 158, 11, 0.4)',
+                                                                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                                                                    textDecoration: 'none',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.25rem',
+                                                                    padding: '0 0.6rem',
+                                                                    height: '32px',
+                                                                    borderRadius: 'var(--radius-sm, 6px)',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 600,
+                                                                }}
+                                                                title="Review and reassign document to matching policy"
+                                                            >
+                                                                <span>Reassign</span>
+                                                                <ArrowRight size={13} />
+                                                            </Link>
+                                                        )}
                                                         {/* Inline approve for pending dec pages */}
                                                         {decPageReview && (decPageReview.review_status === 'pending' || decPageReview.review_status === 'superseded') && (
                                                             <button

@@ -178,22 +178,93 @@ class DocumentProcessor(ABC):
             is_pre_linked = pre_linked.get("match_status") == "manual" and pre_linked.get("policy_id")
 
             if is_pre_linked:
-                # Skip matching — already linked from policy page
-                logger.info("%s step=match_policy SKIPPED (pre-linked to %s)", self._log_prefix, pre_linked["policy_id"])
-                match: MatchResult = {
-                    "status": "matched",
-                    "policy_id": pre_linked["policy_id"],
-                    "client_id": pre_linked.get("client_id"),
-                    "policy_term_id": pre_linked.get("policy_term_id"),
-                    "confidence": 1.0,
-                    "review_reason": None,
-                    "action_items": [],
-                    "match_log": [{"step": "pre_linked", "result": "Uploaded directly to policy page"}],
-                }
-                self.update_document({
-                    "match_confidence": 1.0,
-                    "match_log": match["match_log"],
-                })
+                # Validate pre-linked policy against extracted document details (Policy Mismatch Guard)
+                pol_res = self.sb.table("policies").select(
+                    "id, policy_number, property_address_raw, property_address_norm, clients(id, named_insured)"
+                ).eq("id", pre_linked["policy_id"]).limit(1).execute()
+
+                pol_row = pol_res.data[0] if pol_res.data else {}
+                pol_addr = pol_row.get("property_address_raw") or ""
+                pol_client = pol_row.get("clients") or {}
+                pol_insured = pol_client.get("named_insured") or ""
+
+                has_extracted_data = bool(address_raw or owner_name)
+                is_mismatch = False
+                mismatch_reason = None
+
+                if has_extracted_data and (pol_addr or pol_insured):
+                    import re
+
+                    def clean_tokens(s):
+                        return set(re.findall(r'[A-Z0-9]{3,}', s.upper())) if s else set()
+
+                    doc_addr_tokens = clean_tokens(address_raw)
+                    pol_addr_tokens = clean_tokens(pol_addr)
+
+                    doc_name_tokens = clean_tokens(owner_name)
+                    pol_name_tokens = clean_tokens(pol_insured)
+
+                    doc_st_num = re.findall(r'^\d+', address_raw.strip()) if address_raw else []
+                    pol_st_num = re.findall(r'^\d+', pol_addr.strip()) if pol_addr else []
+                    street_num_match = (doc_st_num and pol_st_num and doc_st_num[0] == pol_st_num[0])
+
+                    addr_match = street_num_match or (len(doc_addr_tokens.intersection(pol_addr_tokens)) >= 2)
+                    name_match = bool(doc_name_tokens.intersection(pol_name_tokens))
+
+                    if pol_addr and not addr_match and not name_match:
+                        is_mismatch = True
+                        mismatch_reason = f"Document address '{address_raw}' and name '{owner_name}' do not match policy #{pol_row.get('policy_number')} ({pol_insured}, {pol_addr})"
+                    elif not pol_addr and pol_insured and not name_match:
+                        is_mismatch = True
+                        mismatch_reason = f"Document name '{owner_name}' does not match policy insured '{pol_insured}'"
+
+                if is_mismatch:
+                    logger.warning("%s Policy Mismatch Guard triggered: %s", self._log_prefix, mismatch_reason)
+                    match: MatchResult = {
+                        "status": "needs_review",
+                        "policy_id": pre_linked["policy_id"],
+                        "client_id": pol_client.get("id"),
+                        "policy_term_id": pre_linked.get("policy_term_id"),
+                        "confidence": 0.0,
+                        "review_reason": mismatch_reason,
+                        "action_items": [
+                            f"Uploaded under {pol_insured or 'policy'} (#{pol_row.get('policy_number')}), but document is for {owner_name or 'different insured'}.",
+                            f"Document address: {address_raw or 'Unknown'}",
+                            "Click 'Review & Reassign' to assign to the correct policy.",
+                        ],
+                        "match_log": [{
+                            "step": "mismatch_guard",
+                            "result": mismatch_reason,
+                            "is_mismatch": True,
+                            "target_policy": pol_row.get("policy_number"),
+                            "target_insured": pol_insured,
+                            "target_address": pol_addr,
+                            "doc_insured": owner_name,
+                            "doc_address": address_raw,
+                        }],
+                    }
+                    self.update_document({
+                        "match_status": "needs_review",
+                        "match_confidence": 0.0,
+                        "match_log": match["match_log"],
+                        "error_message": f"Policy Mismatch: {mismatch_reason}",
+                    })
+                else:
+                    logger.info("%s step=match_policy SKIPPED (pre-linked to %s, verified)", self._log_prefix, pre_linked["policy_id"])
+                    match: MatchResult = {
+                        "status": "matched",
+                        "policy_id": pre_linked["policy_id"],
+                        "client_id": pol_client.get("id") or pre_linked.get("client_id"),
+                        "policy_term_id": pre_linked.get("policy_term_id"),
+                        "confidence": 1.0,
+                        "review_reason": None,
+                        "action_items": [],
+                        "match_log": [{"step": "pre_linked", "result": "Uploaded directly to policy page (verified)"}],
+                    }
+                    self.update_document({
+                        "match_confidence": 1.0,
+                        "match_log": match["match_log"],
+                    })
             else:
                 self.update_step("matching_policy")
                 logger.info("%s step=match_policy owner=%s addr=%s doc_type=%s", self._log_prefix, owner_name, address_raw, self.doc_type)
@@ -289,17 +360,21 @@ class DocumentProcessor(ABC):
                     },
                 )
             elif match["status"] == "needs_review":
+                is_mismatch_event = bool(match.get("review_reason") and "Mismatch" in match.get("review_reason"))
                 insert_activity_event(
-                    event_type="document.needs_review",
-                    title=f"{doc_label} Needs Review",
+                    event_type="document.mismatch" if is_mismatch_event else "document.needs_review",
+                    title=f"{doc_label} Mismatch Detected" if is_mismatch_event else f"{doc_label} Needs Review",
                     detail=match.get("review_reason") or "Policy match requires confirmation.",
                     policy_id=match.get("policy_id"),
+                    client_id=match.get("client_id"),
                     actor_user_id=self.account_id,
                     meta={
                         "document_id": self.document_id,
                         "doc_type": self.doc_type,
                         "owner_name": owner_name,
                         "address": address_raw,
+                        "is_mismatch": is_mismatch_event,
+                        "review_reason": match.get("review_reason"),
                         "action_items": match.get("action_items", []),
                     },
                 )
