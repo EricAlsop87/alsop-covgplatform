@@ -14,10 +14,12 @@ import {
     Loader2,
     Calendar,
     RotateCcw,
+    Download,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
+import { exportCFPToExcel } from '@/lib/cfpExport';
 
 interface CFPSummaryTableProps {
     families: CFPFamily[];
@@ -204,6 +206,31 @@ export function CFPSummaryTable({
         return filteredFamilies.slice(start, start + PAGE_SIZE);
     }, [filteredFamilies, currentPage]);
 
+    const [isExporting, setIsExporting] = useState(false);
+
+    // Export currently filtered families to Excel (.xlsx)
+    const handleExportExcel = async () => {
+        if (filteredFamilies.length === 0 || isExporting) return;
+        setIsExporting(true);
+        try {
+            const parts: string[] = [];
+            if (year) parts.push(`Year_${year}`);
+            if (month) {
+                const mLabel = MONTH_NAMES.find(m => m.value === month)?.label || `Month_${month}`;
+                parts.push(mLabel);
+            }
+            if (docFilter !== 'all') parts.push(docFilter);
+            if (search) parts.push(`Search_${search.slice(0, 10)}`);
+            const desc = parts.length > 0 ? parts.join('_') : 'All';
+
+            await exportCFPToExcel(filteredFamilies, desc);
+        } catch (err) {
+            console.error('Failed to export to Excel:', err);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className={styles.tableContainer}>
             {/* ── Controls Card ── */}
@@ -265,8 +292,27 @@ export function CFPSummaryTable({
                         </div>
                     </div>
 
-                    {/* Right side controls: Expand/Collapse & refresh */}
+                    {/* Right side controls: Export, Expand/Collapse & refresh */}
                     <div className={styles.filterGroup}>
+                        <button
+                            type="button"
+                            className={styles.exportBtn}
+                            onClick={handleExportExcel}
+                            disabled={isExporting || filteredFamilies.length === 0}
+                            title="Export currently filtered policies to Excel (.xlsx)"
+                        >
+                            {isExporting ? (
+                                <>
+                                    <Loader2 size={13} className="animate-spin" />
+                                    <span>Exporting...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Download size={13} />
+                                    <span>Export to Excel</span>
+                                </>
+                            )}
+                        </button>
                         <button
                             type="button"
                             className={styles.filterPill}
