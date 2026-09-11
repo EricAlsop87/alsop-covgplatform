@@ -36,13 +36,24 @@ export function ChatMessageList({
     onToggleReaction,
     channelName,
 }: ChatMessageListProps) {
-    const bottomRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const prevCountRef = useRef<number>(0);
+    const prevChannelRef = useRef<string>(channelName);
     const [previewImage, setPreviewImage] = useState<{ url: string; fileName: string } | null>(null);
 
-    // Automatically scroll to the latest message at bottom
+    // Only scroll the internal container (never the page window) when switching channels or when new messages arrive
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        const isChannelChanged = prevChannelRef.current !== channelName;
+        const hasNewMessages = messages.length > prevCountRef.current;
+
+        if (isChannelChanged || hasNewMessages) {
+            if (containerRef.current) {
+                containerRef.current.scrollTop = containerRef.current.scrollHeight;
+            }
+            prevCountRef.current = messages.length;
+            prevChannelRef.current = channelName;
+        }
+    }, [messages, channelName]);
 
     // Close preview on Escape key
     useEffect(() => {
@@ -82,7 +93,7 @@ export function ChatMessageList({
     const formattedTitle = channelName.startsWith('#') ? channelName : (isChannel ? `#${channelName}` : channelName);
 
     return (
-        <div className={styles.messageListContainer}>
+        <div ref={containerRef} className={styles.messageListContainer}>
             {/* Start / Welcome Banner inside the scroll stream */}
             <div className={styles.welcomeBanner}>
                 <h4>{isChannel ? `Welcome to ${formattedTitle}!` : `Direct conversation with ${formattedTitle}`}</h4>
@@ -263,7 +274,6 @@ export function ChatMessageList({
                     </div>
                 );
             })}
-            <div ref={bottomRef} style={{ height: 1 }} />
 
             {/* Lightbox Modal for Image Fullscreen Viewing & Downloading */}
             {previewImage && (
