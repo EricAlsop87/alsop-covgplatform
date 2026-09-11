@@ -50,6 +50,9 @@ export interface CFPTermRow {
     comment_count_quote: number;
     note_count: number;
     latest_note_preview?: string | null;
+    // Servicing Email
+    in_servicing_email: boolean;
+    servicing_status?: string | null;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
     term_index: number;
@@ -317,7 +320,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item'])
         ),
         chunkedInQuery<{
             id: string;
@@ -381,11 +384,19 @@ export async function GET(req: NextRequest) {
 
     const bambooCoverageSet = new Set<string>();
     const noDicAvailableSet = new Set<string>();
+    const servicingStatusMap: Record<string, string> = {};
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
             bambooCoverageSet.add(ov.policy_id);
         } else if (ov.field_name === 'no_dic_available' && (ov.new_value === 'true' || ov.new_value === '1')) {
             noDicAvailableSet.add(ov.policy_id);
+        } else if (ov.field_name === 'servicing_email_item' && ov.new_value) {
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                servicingStatusMap[ov.policy_id] = parsed.status || 'ready';
+            } catch {
+                servicingStatusMap[ov.policy_id] = 'ready';
+            }
         }
     }
 
@@ -485,6 +496,8 @@ export async function GET(req: NextRequest) {
             comment_count_quote: policyCommentQuote[policyId] || 0,
             note_count: policyNoteCount[policyId] || 0,
             latest_note_preview: policyLatestNotePreview[policyId] || null,
+            in_servicing_email: !!servicingStatusMap[policyId],
+            servicing_status: servicingStatusMap[policyId] || null,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };

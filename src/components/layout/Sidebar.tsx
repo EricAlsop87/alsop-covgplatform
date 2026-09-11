@@ -44,7 +44,14 @@ export function Sidebar({ userRole }: SidebarProps) {
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'CFP Summary', href: '/cfp-summary', icon: FileSpreadsheet },
         { label: 'Flags', href: '/flags', icon: Flag },
-        { label: 'Email Center', href: '/email', icon: Mail },
+        {
+            label: 'Email Center',
+            href: '/email',
+            icon: Mail,
+            subItems: [
+                { label: 'Servicing Email', href: '/email/servicing' },
+            ],
+        },
         { label: 'Campaigns', href: '/campaigns', icon: Calendar },
         { label: 'Upload Documents', href: '/upload-document', icon: FileUp },
     ];
@@ -127,19 +134,40 @@ export function Sidebar({ userRole }: SidebarProps) {
 
                 <nav className={styles.nav}>
                     {(!collapsed || isMobile) && <div className={styles.sectionTitle}>{isClient ? 'Menu' : 'Main Menu'}</div>}
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                    {navItems.map((item: any) => {
+                        const isExactActive = pathname === item.href;
+                        const isSubActive = item.subItems?.some((s: any) => pathname === s.href);
+                        const isMainActive = isExactActive || (!item.subItems && item.href !== '/' && pathname.startsWith(item.href));
+
                         return (
-                            <Link
-                                key={item.label}
-                                href={item.href}
-                                className={clsx(styles.navItem, isActive && styles.active)}
-                                title={collapsed && !isMobile ? item.label : undefined}
-                                onClick={handleNavClick}
-                            >
-                                <item.icon />
-                                {(!collapsed || isMobile) && <span>{item.label}</span>}
-                            </Link>
+                            <React.Fragment key={item.label}>
+                                <Link
+                                    href={item.href}
+                                    className={clsx(styles.navItem, isMainActive && styles.active)}
+                                    title={collapsed && !isMobile ? item.label : undefined}
+                                    onClick={handleNavClick}
+                                >
+                                    <item.icon />
+                                    {(!collapsed || isMobile) && <span>{item.label}</span>}
+                                </Link>
+                                {(!collapsed || isMobile) && item.subItems && (
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        {item.subItems.map((sub: any) => {
+                                            const isSubLinkActive = pathname === sub.href;
+                                            return (
+                                                <Link
+                                                    key={sub.label}
+                                                    href={sub.href}
+                                                    className={clsx(styles.subNavItem, isSubLinkActive && styles.active)}
+                                                    onClick={handleNavClick}
+                                                >
+                                                    <span>{sub.label}</span>
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </React.Fragment>
                         );
                     })}
 

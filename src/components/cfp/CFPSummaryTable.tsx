@@ -25,6 +25,7 @@ import {
     Ban,
     MessageSquare,
     MessageSquarePlus,
+    Send,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
@@ -32,6 +33,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
 import { DocCommentPopover } from './DocCommentPopover';
 import type { DocNoteTag } from '@/lib/notes';
+import { addToServicingEmail } from '@/lib/servicingEmail';
 import {
     getPlatformDocDownloadUrl,
     getDecPageFileDownloadUrl,
@@ -48,6 +50,7 @@ export interface ColumnFilters {
     dic?: string;
     quote?: string;
     bamboo?: string;
+    servicing?: string;
     notes?: string;
 }
 
@@ -63,6 +66,7 @@ export type CFPColumnKey =
     | 'dic'
     | 'quote'
     | 'bamboo'
+    | 'servicing'
     | 'notes';
 
 interface ColumnDef {
@@ -85,6 +89,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'dic', label: 'DIC', width: 100, minWidth: 75, align: 'center' },
     { key: 'quote', label: 'Quote / E&S', width: 95, minWidth: 70, align: 'center' },
     { key: 'bamboo', label: 'Full Coverage', width: 120, minWidth: 90, align: 'center' },
+    { key: 'servicing', label: 'Servicing Team', width: 115, minWidth: 85, align: 'center' },
     { key: 'notes', label: 'Notes', width: 95, minWidth: 70, align: 'center' },
 ];
 
@@ -610,6 +615,55 @@ export function CFPSummaryTable({
         }
     };
 
+    // Send to Servicing Email queue handler with optimistic update
+    const [sendingToServicing, setSendingToServicing] = useState<string | null>(null);
+    const handleSendToServicing = async (term: CFPTermRow) => {
+        setSendingToServicing(term.policy_id);
+
+        // Optimistic update
+        setFamilies(prev =>
+            prev.map(f => ({
+                ...f,
+                terms: f.terms.map(t =>
+                    t.policy_id === term.policy_id
+                        ? { ...t, in_servicing_email: true, servicing_status: 'ready' }
+                        : t
+                ),
+            }))
+        );
+
+        try {
+            const ok = await addToServicingEmail(term.policy_id);
+            if (!ok) {
+                // Revert on failure
+                setFamilies(prev =>
+                    prev.map(f => ({
+                        ...f,
+                        terms: f.terms.map(t =>
+                            t.policy_id === term.policy_id
+                                ? { ...t, in_servicing_email: false, servicing_status: null }
+                                : t
+                        ),
+                    }))
+                );
+            }
+        } catch {
+            // Revert on failure
+            setFamilies(prev =>
+                prev.map(f => ({
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === term.policy_id
+                            ? { ...t, in_servicing_email: false, servicing_status: null }
+                            : t
+                    ),
+                }))
+            );
+        } finally {
+            setSendingToServicing(null);
+        }
+    };
+
     // Filter terms based on docFilter pill AND column-specific filters
     const filteredTerms = useMemo(() => {
         let result = allTerms;
@@ -780,6 +834,14 @@ export function CFPSummaryTable({
                 result = result.filter(t => t.has_bamboo_coverage);
             } else if (columnFilters.bamboo === 'no') {
                 result = result.filter(t => !t.has_bamboo_coverage);
+            }
+        }
+
+        if (columnFilters.servicing) {
+            if (columnFilters.servicing === 'in_se') {
+                result = result.filter(t => t.in_servicing_email);
+            } else if (columnFilters.servicing === 'not_in_se') {
+                result = result.filter(t => !t.in_servicing_email);
             }
         }
 
@@ -1365,6 +1427,31 @@ export function CFPSummaryTable({
                     </button>
                 );
 
+            case 'servicing':
+                if (term.in_servicing_email) {
+                    return (
+                        <span className={styles.inSeBadge} title="Queued for Servicing Email">
+                            <Check size={10} /> In SE
+                        </span>
+                    );
+                }
+                return (
+                    <button
+                        type="button"
+                        className={styles.sendSeBtn}
+                        onClick={() => handleSendToServicing(term)}
+                        disabled={sendingToServicing === term.policy_id}
+                        title="Send policy to Servicing Email queue"
+                    >
+                        {sendingToServicing === term.policy_id ? (
+                            <Loader2 size={10} className="animate-spin" />
+                        ) : (
+                            <Send size={10} />
+                        )}
+                        <span>Send to SE</span>
+                    </button>
+                );
+
             case 'notes':
                 return (
                     <div className={styles.notesColCell}>
@@ -1465,10 +1552,10 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters.rce ? styles.activeFilter : ''}`}
                     >
                         <option value="">All RCE</option>
-                        <option value="has_rce">Uploaded (Any)</option>
-                        <option value="missing">Missing (None)</option>
+                        <option value="has_rce">Has RCE</option>
+                        <option value="missing">Missing RCE</option>
                         <option value="Bamboo">Bamboo</option>
-                        <option value="AM">AM (American Modern)</option>
+                        <option value="AM">American Modern</option>
                         <option value="Aegis">Aegis</option>
                         <option value="SageSure">SageSure</option>
                         <option value="PSIC">PSIC</option>
@@ -1483,11 +1570,11 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters.dic ? styles.activeFilter : ''}`}
                     >
                         <option value="">All DIC</option>
-                        <option value="has_dic">Uploaded (Any)</option>
-                        <option value="missing">Missing (None)</option>
+                        <option value="has_dic">Has DIC</option>
+                        <option value="missing">Missing DIC</option>
                         <option value="no_dic">No Available DIC</option>
                         <option value="Bamboo">Bamboo</option>
-                        <option value="AM">AM (American Modern)</option>
+                        <option value="AM">American Modern</option>
                         <option value="Aegis">Aegis</option>
                         <option value="SageSure">SageSure</option>
                         <option value="PSIC">PSIC</option>
@@ -1516,6 +1603,18 @@ export function CFPSummaryTable({
                         <option value="">All Full Covg</option>
                         <option value="yes">Yes</option>
                         <option value="no">No</option>
+                    </select>
+                );
+            case 'servicing':
+                return (
+                    <select
+                        value={columnFilters.servicing || ''}
+                        onChange={e => handleColumnFilterChange('servicing', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.servicing ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Servicing</option>
+                        <option value="in_se">In SE</option>
+                        <option value="not_in_se">Not in SE</option>
                     </select>
                 );
             case 'notes':
