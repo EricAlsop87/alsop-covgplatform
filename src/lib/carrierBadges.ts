@@ -154,20 +154,6 @@ export function getCarrierBadge(
         };
     }
 
-    // 5. SageSure
-    if (
-        lower.includes('sagesure') ||
-        lower.includes('sage sure')
-    ) {
-        return {
-            label: 'SageSure',
-            carrierKey: 'sagesure',
-            tooltip: `SageSure Insurance (${docType.toUpperCase()})`,
-            ...CARRIER_STYLES.sagesure,
-            hasDoc: true,
-        };
-    }
-
     // 360Value default (commonly Bamboo in this system)
     if (lower === 'rce_360value' || lower === '360value') {
         return {
@@ -273,21 +259,7 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 4. SageSure
-    if (
-        lower.includes('sagesure') ||
-        lower.includes('sage sure')
-    ) {
-        return {
-            label: 'SageSure',
-            carrierKey: 'sagesure',
-            tooltip: 'SageSure Insurance',
-            ...CARRIER_STYLES.sagesure,
-            hasDoc: true,
-        };
-    }
-
-    // 5. Bamboo
+    // 4. Bamboo
     if (
         lower.includes('bamboo') ||
         lower.includes('guidewire@bamboo') ||

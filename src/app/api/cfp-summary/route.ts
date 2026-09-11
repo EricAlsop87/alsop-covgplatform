@@ -154,18 +154,7 @@ export function detectCarrierQuoteInfo(
         };
     }
 
-    // 4. SageSure (Exact SageSure policy/quote prefixes: CASNH, CASNL, CAICH, CAASL, CAICL, CASNP, CASLH, CASLP)
-    const matchSage = (fileName || '').match(/(CASNH|CASNL|CAICH|CAASL|CAICL|CASNP|CASLH|CASLP|CASC)\d{5,}/i);
-    if (combined.includes('sagesure') || combined.includes('sage sure') || matchSage) {
-        const isDic = combined.includes('dic') || docType === 'dic_dec_page';
-        return {
-            carrier_key: 'sagesure',
-            coverage_type: isDic ? 'DIC' : 'FULL',
-            quote_number: matchSage ? matchSage[0] : null,
-        };
-    }
-
-    // 5. PSIC (Pacific Specialty)
+    // 4. PSIC (Pacific Specialty)
     const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
     if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || combined.includes('psic') || matchPsic) {
         const isDic = combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
@@ -211,16 +200,7 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'Aegis';
     }
 
-    // 3. SageSure (Strict exact prefixes only: CASNH, CASNL, CAICH, CAASL, CAICL, etc.)
-    if (
-        combined.includes('sagesure') ||
-        combined.includes('sage sure') ||
-        /(?:^|[^A-Za-z0-9])(?:CASNH|CASNL|CAICH|CAASL|CAICL|CASNP|CASLH|CASLP|CASC)[0-9]{5,}/i.test(fileName || '')
-    ) {
-        return 'SageSure';
-    }
-
-    // 4. PSIC (Pacific Specialty)
+    // 3. PSIC (Pacific Specialty)
     if (
         combined.includes('pacific specialty') ||
         combined.includes('pacificspecialty') ||

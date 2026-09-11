@@ -3159,8 +3159,14 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
 
                 // Batch lookup: platform_documents for metadata & staleness check
                 const docMetaIds = new Set<string>();
+                const processedDocIds = new Set<string>();
                 for (const evt of docEvents) {
-                    if (evt.meta?.document_id) docMetaIds.add(evt.meta.document_id);
+                    if (evt.meta?.document_id) {
+                        docMetaIds.add(evt.meta.document_id);
+                        if (!evt.event_type?.startsWith('doc.uploaded.')) {
+                            processedDocIds.add(evt.meta.document_id);
+                        }
+                    }
                 }
                 const platDocMap = new Map<string, { id: string; doc_type: string; match_status: string; policy_id: string | null; file_name: string }>();
                 if (docMetaIds.size > 0) {
@@ -3184,6 +3190,13 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                         continue;
                     }
 
+                    const isUploadEvent = (evt.event_type || '').startsWith('doc.uploaded.');
+
+                    // Deduplicate: If document has been processed/needs_review/failed, skip the raw initial upload event
+                    if (isUploadEvent && meta.document_id && processedDocIds.has(meta.document_id)) {
+                        continue;
+                    }
+
                     const platDoc = meta.document_id ? platDocMap.get(meta.document_id) : undefined;
 
                     // If this was a "needs_review" event, but the document has already been matched/assigned, skip the obsolete prompt
@@ -3191,7 +3204,6 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                         continue;
                     }
 
-                    const isUploadEvent = (evt.event_type || '').startsWith('doc.uploaded.');
                     const docType = platDoc?.doc_type || meta.doc_type || (isUploadEvent ? evt.event_type.replace('doc.uploaded.', '') : undefined);
 
                     // Resolve insured_name: client table → meta.owner_name → null
