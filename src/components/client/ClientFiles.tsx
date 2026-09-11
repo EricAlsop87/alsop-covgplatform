@@ -26,8 +26,10 @@ function formatFileSize(bytes: number | null): string {
 }
 
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -289,6 +291,11 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                               )}
                               <span>{formatFileSize(file.file_size)}</span>
                               <span>{formatDate(file.created_at)}</span>
+                              {file.uploaded_by && (
+                                <span className={styles.uploadedByText}>
+                                  Uploaded by: <strong className={styles.uploadedByName}>{file.uploaded_by}</strong>
+                                </span>
+                              )}
                             </div>
                             {file.error_message && file.parse_status !== 'parsed' && (
                               <div className={styles.errorMessage}>

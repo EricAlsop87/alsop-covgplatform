@@ -2631,7 +2631,15 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
  */
 export async function fetchPlatformDocumentsByClientId(clientId: string): Promise<PlatformDocumentInfo[]> {
     try {
-        const { data, error } = await supabase
+        // First get all policy IDs for this client to capture policy-assigned documents
+        const { data: clientPolicies } = await supabase
+            .from('policies')
+            .select('id')
+            .eq('client_id', clientId);
+        
+        const policyIds = (clientPolicies || []).map(p => p.id).filter(Boolean);
+
+        let query = supabase
             .from('platform_documents')
             .select(`
                 id, doc_type, file_name, file_size, storage_path,
@@ -2648,17 +2656,29 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
                 doc_data_dic (
                     carrier_name
                 )
-            `)
-            .eq('client_id', clientId)
-            .order('created_at', { ascending: false });
+            `);
+
+        if (policyIds.length > 0) {
+            query = query.or(`client_id.eq.${clientId},policy_id.in.(${policyIds.join(',')})`);
+        } else {
+            query = query.eq('client_id', clientId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) {
             logger.error('API', 'Error fetching client platform documents', { message: error.message, clientId });
             return [];
         }
 
+        const seenIds = new Set<string>();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const docs = (data || []).map((row: any) => {
+        const docs: any[] = [];
+
+        (data || []).forEach((row: any) => {
+            if (seenIds.has(row.id)) return;
+            seenIds.add(row.id);
+
             const acc = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
             let uploaded_by: string | null = null;
             if (acc) {
@@ -2669,13 +2689,13 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
             const rce = Array.isArray(row.doc_data_rce) ? row.doc_data_rce[0] : row.doc_data_rce;
             const dic = Array.isArray(row.doc_data_dic) ? row.doc_data_dic[0] : row.doc_data_dic;
             const carrier_name = dic?.carrier_name || (rce?.created_by?.toLowerCase().includes('bamboo') ? 'Bamboo' : null);
-            return {
+            docs.push({
                 ...row,
                 uploaded_by,
                 carrier_name,
                 source: rce?.source || null,
                 created_by: rce?.created_by || null,
-            };
+            });
         });
 
         return docs as PlatformDocumentInfo[];

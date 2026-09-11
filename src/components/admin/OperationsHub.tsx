@@ -110,7 +110,7 @@ function ReviewCard({ doc, onDelete, isDeleting, onConfirm, isConfirming }: {
                             {doc.file_name || 'Unknown file'}
                         </div>
                         <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                            {formatFileSize(doc.file_size)} · {formatTimeAgo(doc.created_at)}
+                            {formatFileSize(doc.file_size)} · {formatTimeAgo(doc.created_at)} {doc.uploaded_by && `· by ${doc.uploaded_by}`}
                         </div>
                     </div>
                 </div>
