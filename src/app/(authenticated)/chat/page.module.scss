@@ -1,8 +1,12 @@
 .chatPageWrapper {
     display: flex;
-    height: calc(100vh - 64px);
+    height: calc(100vh - 170px);
+    min-height: 560px;
     background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .mainChatArea {

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './ChatMessageList.module.scss';
-import { ChatMessage } from '@/lib/teamChat';
-import { FileText, ExternalLink, Eye } from 'lucide-react';
+import { ChatMessage, ChatAttachment } from '@/lib/teamChat';
+import { FileText, ExternalLink, Eye, Download, Maximize2, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChatMessageListProps {
@@ -15,6 +15,21 @@ interface ChatMessageListProps {
 
 const QUICK_EMOJIS = ['👍', '❤️', '👀', '🔥', '🎉'];
 
+function formatBytes(bytes?: number): string {
+    if (!bytes || bytes === 0) return '';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function checkIsImage(att: ChatAttachment): boolean {
+    if (att.isImage) return true;
+    if (att.fileType?.startsWith('image/')) return true;
+    if (att.url?.startsWith('data:image/')) return true;
+    return /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(att.fileName || '');
+}
+
 export function ChatMessageList({
     messages,
     currentUserId,
@@ -22,11 +37,46 @@ export function ChatMessageList({
     channelName,
 }: ChatMessageListProps) {
     const bottomRef = useRef<HTMLDivElement>(null);
+    const [previewImage, setPreviewImage] = useState<{ url: string; fileName: string } | null>(null);
 
     // Automatically scroll to the latest message at bottom
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // Close preview on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setPreviewImage(null);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const handleDownload = async (e: React.MouseEvent, url: string, fileName: string) => {
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName || 'download';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } catch {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName || 'download';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
 
     const isChannel = channelName.startsWith('#') || channelName === 'general' || channelName.includes('renewals') || channelName.includes('operations');
     const formattedTitle = channelName.startsWith('#') ? channelName : (isChannel ? `#${channelName}` : channelName);
@@ -93,21 +143,68 @@ export function ChatMessageList({
                             {/* Text Message */}
                             {msg.text && <div className={styles.msgBubble}>{msg.text}</div>}
 
-                            {/* Attachments */}
+                            {/* Attachments & Images */}
                             {msg.attachments && msg.attachments.length > 0 && (
                                 <div className={styles.attachmentsGrid}>
-                                    {msg.attachments.map(att => (
-                                        att.isImage ? (
-                                            <a key={att.id} href={att.url} target="_blank" rel="noreferrer">
-                                                <img src={att.url} alt={att.fileName} className={styles.imagePreview} />
-                                            </a>
+                                    {msg.attachments.map(att => {
+                                        const isImg = checkIsImage(att);
+                                        return isImg ? (
+                                            <div key={att.id} className={styles.imageCard}>
+                                                <img
+                                                    src={att.url}
+                                                    alt={att.fileName}
+                                                    className={styles.imagePreview}
+                                                    onClick={() => setPreviewImage({ url: att.url, fileName: att.fileName })}
+                                                />
+                                                <div className={styles.imageActionsOverlay}>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.imageActionBtn}
+                                                        onClick={() => setPreviewImage({ url: att.url, fileName: att.fileName })}
+                                                        title="View Full Size"
+                                                    >
+                                                        <Maximize2 size={12} />
+                                                        <span>View</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.imageActionBtn}
+                                                        onClick={(e) => handleDownload(e, att.url, att.fileName)}
+                                                        title="Download Image"
+                                                    >
+                                                        <Download size={12} />
+                                                        <span>Download</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         ) : (
-                                            <a key={att.id} href={att.url} target="_blank" rel="noreferrer" className={styles.filePill}>
-                                                <FileText size={14} style={{ color: '#2243B6' }} />
-                                                <span>{att.fileName}</span>
-                                            </a>
-                                        )
-                                    ))}
+                                            <div key={att.id} className={styles.filePillCard}>
+                                                <a
+                                                    href={att.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className={styles.filePillLink}
+                                                    title="Open File"
+                                                >
+                                                    <FileText size={16} style={{ color: '#2243B6', flexShrink: 0 }} />
+                                                    <div className={styles.fileMeta}>
+                                                        <span className={styles.fileNameText}>{att.fileName}</span>
+                                                        {att.fileSize ? (
+                                                            <span className={styles.fileSizeText}>{formatBytes(att.fileSize)}</span>
+                                                        ) : null}
+                                                    </div>
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    className={styles.downloadIconBtn}
+                                                    onClick={(e) => handleDownload(e, att.url, att.fileName)}
+                                                    title={`Download ${att.fileName}`}
+                                                >
+                                                    <Download size={14} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
@@ -167,6 +264,39 @@ export function ChatMessageList({
                 );
             })}
             <div ref={bottomRef} style={{ height: 1 }} />
+
+            {/* Lightbox Modal for Image Fullscreen Viewing & Downloading */}
+            {previewImage && (
+                <div className={styles.lightboxOverlay} onClick={() => setPreviewImage(null)}>
+                    <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.lightboxHeader}>
+                            <span className={styles.lightboxTitle}>{previewImage.fileName || 'Image Preview'}</span>
+                            <div className={styles.lightboxActions}>
+                                <button
+                                    type="button"
+                                    className={styles.lightboxBtn}
+                                    onClick={(e) => handleDownload(e, previewImage.url, previewImage.fileName)}
+                                    title="Download Image"
+                                >
+                                    <Download size={15} />
+                                    <span>Download</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.lightboxCloseBtn}
+                                    onClick={() => setPreviewImage(null)}
+                                    title="Close Preview"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className={styles.lightboxBody}>
+                            <img src={previewImage.url} alt={previewImage.fileName} className={styles.lightboxImg} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
