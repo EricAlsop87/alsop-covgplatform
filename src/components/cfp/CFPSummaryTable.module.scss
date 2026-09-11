@@ -668,6 +668,108 @@
     }
 }
 
+/* ── Comment Indicator & Notes Styles ── */
+.cellWithComment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    position: relative;
+}
+
+.commentDotBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    background: rgba(34, 67, 182, 0.1);
+    color: var(--color-primary, #2243B6);
+    border: 1px solid rgba(34, 67, 182, 0.25);
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    line-height: 1;
+
+    &:hover {
+        background: var(--color-primary, #2243B6);
+        color: #ffffff;
+        border-color: var(--color-primary, #2243B6);
+    }
+}
+
+.commentAddBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    padding: 0.15rem;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.12s ease;
+
+    &:hover {
+        background: rgba(34, 67, 182, 0.1);
+        color: var(--color-primary, #2243B6);
+        opacity: 1 !important;
+    }
+}
+
+.termRow:hover .commentAddBtn {
+    opacity: 0.45;
+}
+
+.notesColCell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.noteIndicatorBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    cursor: pointer;
+    transition: all 0.12s ease;
+
+    &:hover {
+        background: #e2e8f0;
+        border-color: #94a3b8;
+    }
+}
+
+.noteAddBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: none;
+    border: 1px dashed #cbd5e1;
+    color: #94a3b8;
+    border-radius: 6px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.18rem 0.45rem;
+    cursor: pointer;
+    transition: all 0.12s ease;
+
+    &:hover {
+        background: #f8fafc;
+        border-color: var(--color-primary, #2243B6);
+        color: var(--color-primary, #2243B6);
+    }
+}
+
 /* ── Bamboo Toggle ── */
 .bambooToggle {
     display: inline-flex;

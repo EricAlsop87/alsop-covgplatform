@@ -26,6 +26,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         { header: 'DIC', key: 'has_dic', width: 14 },
         { header: 'Quote / E&S', key: 'has_es', width: 14 },
         { header: 'Full Coverage', key: 'has_bamboo', width: 18 },
+        { header: 'Notes', key: 'notes_preview', width: 32 },
         { header: 'Payment Status', key: 'payment_status', width: 16 },
         { header: 'Payment Plan', key: 'payment_plan', width: 15 },
     ];
@@ -67,6 +68,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             has_dic: term.dic_carrier || (term.has_dic ? 'Verified' : (term.no_dic_available ? 'No Available DIC' : 'Missing')),
             has_es: term.has_es ? 'Uploaded' : 'Missing',
             has_bamboo: term.has_bamboo_coverage ? 'Yes' : 'No',
+            notes_preview: term.latest_note_preview || (term.note_count > 0 ? `${term.note_count} note(s)` : ''),
         });
 
         row.height = 20;

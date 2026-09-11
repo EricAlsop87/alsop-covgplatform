@@ -43,6 +43,13 @@ export interface CFPTermRow {
     es_file_name?: string | null;
     no_dic_available: boolean;
     is_pending_dec: boolean;
+    // Comments & notes
+    comment_count_dec: number;
+    comment_count_rce: number;
+    comment_count_dic: number;
+    comment_count_quote: number;
+    note_count: number;
+    latest_note_preview?: string | null;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
     term_index: number;
@@ -280,7 +287,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 4. Fetch dec_pages, platform_documents, and overrides in PARALLEL ──
-    const [decPages, docs, bambooOverrides] = await Promise.all([
+    const [decPages, docs, bambooOverrides, notesData] = await Promise.all([
         chunkedInQuery<{
             id: string;
             policy_id: string;
@@ -311,6 +318,19 @@ export async function GET(req: NextRequest) {
             'policy_id',
             policyIds,
             q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available'])
+        ),
+        chunkedInQuery<{
+            id: string;
+            policy_id: string;
+            body: string;
+            meta: { tags?: string[]; is_resolved?: boolean; [key: string]: unknown };
+            created_at: string;
+        }>(
+            'notes',
+            'id, policy_id, body, meta, created_at',
+            'policy_id',
+            policyIds,
+            q => q.eq('is_archived', false)
         ),
     ]);
 
@@ -369,6 +389,46 @@ export async function GET(req: NextRequest) {
         }
     }
 
+    // Build comment counts and latest note preview per policy
+    const policyCommentDec: Record<string, number> = {};
+    const policyCommentRce: Record<string, number> = {};
+    const policyCommentDic: Record<string, number> = {};
+    const policyCommentQuote: Record<string, number> = {};
+    const policyNoteCount: Record<string, number> = {};
+    const policyLatestNotePreview: Record<string, string> = {};
+
+    const sortedNotes = [...(notesData || [])].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    for (const note of sortedNotes) {
+        const pid = note.policy_id;
+        if (!pid) continue;
+
+        const tags = (note.meta?.tags as string[]) || [];
+        const isDocTag = tags.some(t => ['DEC', 'RCE', 'DIC', 'Quote'].includes(t));
+
+        if (tags.includes('DEC')) {
+            policyCommentDec[pid] = (policyCommentDec[pid] || 0) + 1;
+        }
+        if (tags.includes('RCE')) {
+            policyCommentRce[pid] = (policyCommentRce[pid] || 0) + 1;
+        }
+        if (tags.includes('DIC')) {
+            policyCommentDic[pid] = (policyCommentDic[pid] || 0) + 1;
+        }
+        if (tags.includes('Quote')) {
+            policyCommentQuote[pid] = (policyCommentQuote[pid] || 0) + 1;
+        }
+
+        if (!isDocTag) {
+            policyNoteCount[pid] = (policyNoteCount[pid] || 0) + 1;
+            if (!policyLatestNotePreview[pid] && note.body) {
+                policyLatestNotePreview[pid] = note.body.slice(0, 60);
+            }
+        }
+    }
+
     // ── 6. Build flat rows ────────────────────────────────────────────────
     const rows: CFPTermRow[] = (terms as any[]).map((t: any) => {
         const policy = t.policies;
@@ -419,6 +479,12 @@ export async function GET(req: NextRequest) {
             es_file_name: policyEsDoc[policyId]?.file_name || null,
             no_dic_available: noDicAvailableSet.has(policyId),
             is_pending_dec: isPendingDec,
+            comment_count_dec: policyCommentDec[policyId] || 0,
+            comment_count_rce: policyCommentRce[policyId] || 0,
+            comment_count_dic: policyCommentDic[policyId] || 0,
+            comment_count_quote: policyCommentQuote[policyId] || 0,
+            note_count: policyNoteCount[policyId] || 0,
+            latest_note_preview: policyLatestNotePreview[policyId] || null,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };

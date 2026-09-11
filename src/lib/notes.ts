@@ -6,6 +6,8 @@ import { logger } from './logger';
 // ---------------------------------------------------------------------------
 
 export const NOTE_TAGS = ['Underwriting', 'Billing', 'General', 'Renewal', 'Claim'];
+export const DOC_NOTE_TAGS = ['DEC', 'RCE', 'DIC', 'Quote'] as const;
+export type DocNoteTag = (typeof DOC_NOTE_TAGS)[number];
 
 export interface NoteRow {
     id: string;
@@ -18,7 +20,13 @@ export interface NoteRow {
     body: string;
     is_pinned: boolean;
     is_archived: boolean;
-    meta: Record<string, unknown>;
+    meta: {
+        tags?: string[];
+        is_resolved?: boolean;
+        resolved_by?: string;
+        resolved_at?: string;
+        [key: string]: unknown;
+    };
 }
 
 export interface ActivityEventRow {
@@ -150,6 +158,28 @@ export async function fetchClientOnlyNotes(clientId: string, includeArchived = f
     }
 }
 
+/**
+ * Fetch notes for a policy filtered by specific document tag (DEC, RCE, DIC, Quote) or general policy notes.
+ */
+export async function fetchDocNotes(
+    policyId: string,
+    docTag?: DocNoteTag | null,
+    includeArchived = false
+): Promise<NoteRow[]> {
+    const allNotes = await fetchNotes({ policyId, includeArchived, limit: 100 });
+    if (!docTag) {
+        // General policy notes (notes without any DOC_NOTE_TAGS)
+        return allNotes.filter(n => {
+            const tags = (n.meta?.tags as string[]) || [];
+            return !tags.some(t => (DOC_NOTE_TAGS as readonly string[]).includes(t));
+        });
+    }
+    return allNotes.filter(n => {
+        const tags = (n.meta?.tags as string[]) || [];
+        return tags.includes(docTag);
+    });
+}
+
 export async function createNote(fields: {
     client_id: string;
     policy_id?: string | null;
@@ -193,16 +223,30 @@ export async function createNote(fields: {
 
 export async function updateNote(
     noteId: string,
-    updates: { body?: string; is_pinned?: boolean; is_archived?: boolean; tags?: string[] }
+    updates: { body?: string; is_pinned?: boolean; is_archived?: boolean; is_resolved?: boolean; tags?: string[] }
 ): Promise<boolean> {
     const payload: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() };
     delete payload.tags; // handled separately below
+    delete payload.is_resolved; // handled separately below
 
-    if (updates.tags) {
+    if (updates.tags !== undefined || updates.is_resolved !== undefined) {
         // Fetch existing meta to avoid overwriting other keys
         const { data: existing } = await supabase.from('notes').select('meta').eq('id', noteId).single();
         const existingMeta = (existing?.meta as Record<string, unknown>) || {};
-        payload.meta = { ...existingMeta, tags: updates.tags };
+        const newMeta = { ...existingMeta };
+        if (updates.tags !== undefined) newMeta.tags = updates.tags;
+        if (updates.is_resolved !== undefined) {
+            newMeta.is_resolved = updates.is_resolved;
+            const userId = await getCurrentUserId();
+            if (updates.is_resolved) {
+                newMeta.resolved_by = userId;
+                newMeta.resolved_at = new Date().toISOString();
+            } else {
+                delete newMeta.resolved_by;
+                delete newMeta.resolved_at;
+            }
+        }
+        payload.meta = newMeta;
     }
     const { error, data } = await supabase
         .from('notes')
@@ -245,8 +289,21 @@ export async function updateNote(
             meta: { note_id: noteId },
         }).catch(() => { });
     }
+    if (updates.is_resolved !== undefined) {
+        insertActivityEvent({
+            event_type: updates.is_resolved ? 'note.resolved' : 'note.reopened',
+            title: updates.is_resolved ? 'Comment resolved' : 'Comment reopened',
+            client_id: noteData.client_id,
+            policy_id: noteData.policy_id,
+            meta: { note_id: noteId },
+        }).catch(() => { });
+    }
 
     return true;
+}
+
+export async function toggleNoteResolved(noteId: string, isResolved: boolean): Promise<boolean> {
+    return updateNote(noteId, { is_resolved: isResolved });
 }
 
 // ---------------------------------------------------------------------------

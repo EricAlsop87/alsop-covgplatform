@@ -23,11 +23,15 @@ import {
     Plus,
     Copy,
     Ban,
+    MessageSquare,
+    MessageSquarePlus,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
+import { DocCommentPopover } from './DocCommentPopover';
+import type { DocNoteTag } from '@/lib/notes';
 import {
     getPlatformDocDownloadUrl,
     getDecPageFileDownloadUrl,
@@ -44,6 +48,7 @@ export interface ColumnFilters {
     dic?: string;
     quote?: string;
     bamboo?: string;
+    notes?: string;
 }
 
 export type CFPColumnKey =
@@ -57,7 +62,8 @@ export type CFPColumnKey =
     | 'rce'
     | 'dic'
     | 'quote'
-    | 'bamboo';
+    | 'bamboo'
+    | 'notes';
 
 interface ColumnDef {
     key: CFPColumnKey;
@@ -79,6 +85,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'dic', label: 'DIC', width: 100, minWidth: 75, align: 'center' },
     { key: 'quote', label: 'Quote / E&S', width: 95, minWidth: 70, align: 'center' },
     { key: 'bamboo', label: 'Full Coverage', width: 120, minWidth: 90, align: 'center' },
+    { key: 'notes', label: 'Notes', width: 95, minWidth: 70, align: 'center' },
 ];
 
 const DEFAULT_COLUMN_KEYS = DEFAULT_COLUMNS.map(c => c.key);
@@ -102,7 +109,7 @@ interface CFPSummaryTableProps {
     totalFamilies: number;
 }
 
-type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'no_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo';
+type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'no_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo' | 'has_comments';
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -625,6 +632,14 @@ export function CFPSummaryTable({
                         return t.has_bamboo_coverage;
                     case 'missing_bamboo':
                         return !t.has_bamboo_coverage;
+                    case 'has_comments':
+                        return (
+                            (t.comment_count_dec || 0) +
+                            (t.comment_count_rce || 0) +
+                            (t.comment_count_dic || 0) +
+                            (t.comment_count_quote || 0) +
+                            (t.note_count || 0)
+                        ) > 0;
                     default:
                         return true;
                 }
@@ -765,6 +780,14 @@ export function CFPSummaryTable({
                 result = result.filter(t => t.has_bamboo_coverage);
             } else if (columnFilters.bamboo === 'no') {
                 result = result.filter(t => !t.has_bamboo_coverage);
+            }
+        }
+
+        if (columnFilters.notes) {
+            if (columnFilters.notes === 'has_notes') {
+                result = result.filter(t => (t.note_count || 0) > 0);
+            } else if (columnFilters.notes === 'no_notes') {
+                result = result.filter(t => (t.note_count || 0) === 0);
             }
         }
 
@@ -949,6 +972,54 @@ export function CFPSummaryTable({
         };
     }, [updateScrollState, totalTableWidth, columnOrder, columnWidths]);
 
+    // Helper to render comment indicator button / popover trigger
+    const renderCommentIndicator = (
+        docType: DocNoteTag,
+        commentCount: number,
+        term: CFPTermRow
+    ) => {
+        if (commentCount > 0) {
+            return (
+                <DocCommentPopover
+                    policyId={term.policy_id}
+                    clientId={term.client_id}
+                    docType={docType}
+                    policyNumber={term.policy_number}
+                    trigger={
+                        <button
+                            type="button"
+                            className={styles.commentDotBtn}
+                            title={`${commentCount} ${docType} remark${commentCount > 1 ? 's' : ''} (Click to view)`}
+                        >
+                            <MessageSquare size={10} />
+                            <span>{commentCount}</span>
+                        </button>
+                    }
+                    onCommentChange={onRefresh}
+                />
+            );
+        }
+
+        return (
+            <DocCommentPopover
+                policyId={term.policy_id}
+                clientId={term.client_id}
+                docType={docType}
+                policyNumber={term.policy_number}
+                trigger={
+                    <button
+                        type="button"
+                        className={styles.commentAddBtn}
+                        title={`Add ${docType} remark`}
+                    >
+                        <MessageSquare size={10} />
+                    </button>
+                }
+                onCommentChange={onRefresh}
+            />
+        );
+    };
+
     // Render individual cell content by column key
     const renderCell = (colKey: CFPColumnKey, term: CFPTermRow) => {
         switch (colKey) {
@@ -1091,8 +1162,8 @@ export function CFPSummaryTable({
                     </span>
                 );
 
-            case 'dec':
-                return term.has_dec ? (
+            case 'dec': {
+                const decNode = term.has_dec ? (
                     <button
                         type="button"
                         className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
@@ -1122,9 +1193,16 @@ export function CFPSummaryTable({
                         <Plus size={12} /> None
                     </Link>
                 );
+                return (
+                    <div className={styles.cellWithComment}>
+                        {decNode}
+                        {renderCommentIndicator('DEC', term.comment_count_dec || 0, term)}
+                    </div>
+                );
+            }
 
-            case 'rce':
-                return renderCarrierBadge(
+            case 'rce': {
+                const rceNode = renderCarrierBadge(
                     term.rce_carrier,
                     'RCE',
                     term.policy_id,
@@ -1140,10 +1218,18 @@ export function CFPSummaryTable({
                         });
                     }
                 );
+                return (
+                    <div className={styles.cellWithComment}>
+                        {rceNode}
+                        {renderCommentIndicator('RCE', term.comment_count_rce || 0, term)}
+                    </div>
+                );
+            }
 
-            case 'dic':
+            case 'dic': {
+                let dicNode: React.ReactNode;
                 if (term.has_dic || term.dic_carrier) {
-                    return renderCarrierBadge(
+                    dicNode = renderCarrierBadge(
                         term.dic_carrier,
                         'DIC',
                         term.policy_id,
@@ -1159,10 +1245,8 @@ export function CFPSummaryTable({
                             });
                         }
                     );
-                }
-
-                if (term.no_dic_available) {
-                    return (
+                } else if (term.no_dic_available) {
+                    dicNode = (
                         <div className={styles.dicActionCell}>
                             <button
                                 type="button"
@@ -1178,35 +1262,42 @@ export function CFPSummaryTable({
                             </button>
                         </div>
                     );
+                } else {
+                    dicNode = (
+                        <div className={styles.dicActionCell}>
+                            <Link
+                                href={`/upload-document?policy_id=${term.policy_id}&doc_type=dic`}
+                                className={`${styles.docBadge} ${styles.no}`}
+                                title="Missing DIC — click to upload"
+                                target="_blank"
+                            >
+                                <Plus size={11} /> None
+                            </Link>
+                            <button
+                                type="button"
+                                disabled={togglingNoDicPolicyId === term.policy_id}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleNoDic(term.policy_id, false);
+                                }}
+                                className={styles.markNoDicBtn}
+                                title="Click to mark: No available DIC in all carriers"
+                            >
+                                No DIC
+                            </button>
+                        </div>
+                    );
                 }
-
                 return (
-                    <div className={styles.dicActionCell}>
-                        <Link
-                            href={`/upload-document?policy_id=${term.policy_id}&doc_type=dic`}
-                            className={`${styles.docBadge} ${styles.no}`}
-                            title="Missing DIC — click to upload"
-                            target="_blank"
-                        >
-                            <Plus size={11} /> None
-                        </Link>
-                        <button
-                            type="button"
-                            disabled={togglingNoDicPolicyId === term.policy_id}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleNoDic(term.policy_id, false);
-                            }}
-                            className={styles.markNoDicBtn}
-                            title="Click to mark: No available DIC in all carriers"
-                        >
-                            No DIC
-                        </button>
+                    <div className={styles.cellWithComment}>
+                        {dicNode}
+                        {renderCommentIndicator('DIC', term.comment_count_dic || 0, term)}
                     </div>
                 );
+            }
 
-            case 'quote':
-                return term.has_es ? (
+            case 'quote': {
+                const quoteNode = term.has_es ? (
                     <button
                         type="button"
                         className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
@@ -1236,6 +1327,13 @@ export function CFPSummaryTable({
                         <Plus size={12} /> None
                     </Link>
                 );
+                return (
+                    <div className={styles.cellWithComment}>
+                        {quoteNode}
+                        {renderCommentIndicator('Quote', term.comment_count_quote || 0, term)}
+                    </div>
+                );
+            }
 
             case 'bamboo':
                 return (
@@ -1267,6 +1365,41 @@ export function CFPSummaryTable({
                     </button>
                 );
 
+            case 'notes':
+                return (
+                    <div className={styles.notesColCell}>
+                        <DocCommentPopover
+                            policyId={term.policy_id}
+                            clientId={term.client_id}
+                            docType={null}
+                            policyNumber={term.policy_number}
+                            trigger={
+                                (term.note_count || 0) > 0 ? (
+                                    <button
+                                        type="button"
+                                        className={styles.noteIndicatorBtn}
+                                        title={
+                                            term.latest_note_preview ||
+                                            `${term.note_count} note(s) (Click to view)`
+                                        }
+                                    >
+                                        <MessageSquarePlus size={12} />
+                                        <span>{term.note_count}</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className={styles.noteAddBtn}
+                                        title="Add policy note"
+                                    >
+                                        <Plus size={11} /> Note
+                                    </button>
+                                )
+                            }
+                            onCommentChange={onRefresh}
+                        />
+                    </div>
+                );
 
             default:
                 return null;
@@ -1383,6 +1516,18 @@ export function CFPSummaryTable({
                         <option value="">All Full Covg</option>
                         <option value="yes">Yes</option>
                         <option value="no">No</option>
+                    </select>
+                );
+            case 'notes':
+                return (
+                    <select
+                        value={columnFilters.notes || ''}
+                        onChange={e => handleColumnFilterChange('notes', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.notes ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Notes</option>
+                        <option value="has_notes">Has Notes</option>
+                        <option value="no_notes">No Notes</option>
                     </select>
                 );
             default:
@@ -1752,6 +1897,14 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('has_bamboo'); setCurrentPage(1); }}
                     >
                         Full Coverage: Yes
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${docFilter === 'has_comments' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_comments'); setCurrentPage(1); }}
+                    >
+                        <MessageSquare size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                        Has Comments / Remarks
                     </button>
 
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
