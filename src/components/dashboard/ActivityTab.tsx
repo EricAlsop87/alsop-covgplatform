@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     FileText, Upload, Loader2, CheckCircle, CheckCircle2, Clock, AlertTriangle,
     XCircle, RefreshCw, Sparkles, Shield, Timer, Merge, ExternalLink,
-    Layers, FileUp, Files, Filter, RotateCcw, ArrowRight, FileSearch
+    Layers, FileUp, Files, Filter, RotateCcw, ArrowRight, FileSearch, Search, X
 } from 'lucide-react';
 import { fetchActivityFeed, ActivityFeedItem } from '@/lib/api';
 import styles from './ActivityTab.module.css';
@@ -119,6 +119,7 @@ export function ActivityTab() {
     const [refreshing, setRefreshing] = useState(false);
     const [showAll, setShowAll] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState<ActivityFilterType>('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const loadActivities = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
@@ -138,7 +139,7 @@ export function ActivityTab() {
         loadActivities();
     }, []);
 
-    // Filter counts
+    // Filter counts (based on raw activities)
     const counts = useMemo(() => {
         return {
             all: activities.length,
@@ -158,16 +159,16 @@ export function ActivityTab() {
         };
     }, [activities]);
 
-    // Filtered activities list
+    // Filtered activities list with type filter and search query
     const filteredActivities = useMemo(() => {
-        if (selectedFilter === 'all') return activities;
-        if (selectedFilter === 'dec') return activities.filter(a => a.type === 'upload');
-        if (selectedFilter === 'rce') return activities.filter(a => a.type === 'document' && a.doc_type === 'rce');
-        if (selectedFilter === 'dic') return activities.filter(a => a.type === 'document' && a.doc_type === 'dic_dec_page');
-        if (selectedFilter === 'other_docs') return activities.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page');
-        if (selectedFilter === 'merge') return activities.filter(a => a.type === 'merge');
-        if (selectedFilter === 'issues') {
-            return activities.filter(a =>
+        let list = activities;
+        if (selectedFilter === 'dec') list = list.filter(a => a.type === 'upload');
+        else if (selectedFilter === 'rce') list = list.filter(a => a.type === 'document' && a.doc_type === 'rce');
+        else if (selectedFilter === 'dic') list = list.filter(a => a.type === 'document' && a.doc_type === 'dic_dec_page');
+        else if (selectedFilter === 'other_docs') list = list.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page');
+        else if (selectedFilter === 'merge') list = list.filter(a => a.type === 'merge');
+        else if (selectedFilter === 'issues') {
+            list = list.filter(a =>
                 a.status === 'failed' ||
                 (a.event_type || '').includes('failed') ||
                 (a.event_type || '').includes('needs_review') ||
@@ -176,8 +177,27 @@ export function ActivityTab() {
                 a.match_status === 'no_match'
             );
         }
-        return activities;
-    }, [activities, selectedFilter]);
+
+        const q = searchQuery.trim().toLowerCase();
+        if (q) {
+            list = list.filter(a => {
+                const polNum = (a.policy_number || a.meta?.policy_number || '').toLowerCase();
+                const insName = (a.insured_name || a.meta?.insured_name || a.meta?.named_insured || '').toLowerCase();
+                const fileName = (a.file_name || a.file_path || a.meta?.file_name || '').toLowerCase();
+                const title = (a.title || '').toLowerCase();
+                const detail = (a.detail || '').toLowerCase();
+                const addr = (a.meta?.address || a.meta?.property_address || '').toLowerCase();
+                return polNum.includes(q) ||
+                    insName.includes(q) ||
+                    fileName.includes(q) ||
+                    title.includes(q) ||
+                    detail.includes(q) ||
+                    addr.includes(q);
+            });
+        }
+
+        return list;
+    }, [activities, selectedFilter, searchQuery]);
 
     const visibleActivities = showAll ? filteredActivities : filteredActivities.slice(0, MAX_VISIBLE);
     const hasMore = filteredActivities.length > MAX_VISIBLE;
@@ -208,38 +228,60 @@ export function ActivityTab() {
                         {refreshing ? 'Refreshing…' : 'Refresh'}
                     </button>
                     <span className={styles.count}>
-                        {selectedFilter === 'all'
+                        {selectedFilter === 'all' && !searchQuery.trim()
                             ? `${activities.length} events`
                             : `${filteredActivities.length} of ${activities.length} events`}
                     </span>
                 </div>
             </div>
 
-            {/* Quick Filter Pill Bar */}
+            {/* Search Bar & Quick Filter Pill Bar */}
             {!loading && activities.length > 0 && (
-                <div className={styles.filterBar}>
-                    {filterOptions.map(opt => {
-                        const count = counts[opt.id];
-                        const isActive = selectedFilter === opt.id;
-                        return (
+                <div className={styles.controlsRow}>
+                    <div className={styles.searchWrapper}>
+                        <Search size={14} className={styles.searchIcon} />
+                        <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="Search by CFP #, insured name, or file..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
                             <button
-                                key={opt.id}
-                                onClick={() => {
-                                    setSelectedFilter(opt.id);
-                                    setShowAll(false);
-                                }}
-                                className={[
-                                    styles.filterPill,
-                                    isActive ? styles.filterPillActive : '',
-                                    opt.isIssues ? styles.filterPillIssues : '',
-                                ].filter(Boolean).join(' ')}
+                                className={styles.searchClearBtn}
+                                onClick={() => setSearchQuery('')}
+                                title="Clear search"
+                                type="button"
                             >
-                                {opt.icon}
-                                <span>{opt.label}</span>
-                                <span className={styles.filterBadge}>{count}</span>
+                                <X size={13} />
                             </button>
-                        );
-                    })}
+                        )}
+                    </div>
+                    <div className={styles.filterBar}>
+                        {filterOptions.map(opt => {
+                            const count = counts[opt.id];
+                            const isActive = selectedFilter === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => {
+                                        setSelectedFilter(opt.id);
+                                        setShowAll(false);
+                                    }}
+                                    className={[
+                                        styles.filterPill,
+                                        isActive ? styles.filterPillActive : '',
+                                        opt.isIssues ? styles.filterPillIssues : '',
+                                    ].filter(Boolean).join(' ')}
+                                >
+                                    {opt.icon}
+                                    <span>{opt.label}</span>
+                                    <span className={styles.filterBadge}>{count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
@@ -257,10 +299,17 @@ export function ActivityTab() {
             ) : filteredActivities.length === 0 ? (
                 <div className={styles.emptyFilterState}>
                     <Filter size={24} style={{ opacity: 0.5, color: 'var(--text-muted)' }} />
-                    <p>No activity found matching the "{filterOptions.find(o => o.id === selectedFilter)?.label}" filter.</p>
+                    <p>
+                        {searchQuery.trim()
+                            ? `No activity found matching "${searchQuery}"${selectedFilter !== 'all' ? ` in ${filterOptions.find(o => o.id === selectedFilter)?.label}` : ''}.`
+                            : `No activity found matching the "${filterOptions.find(o => o.id === selectedFilter)?.label}" filter.`}
+                    </p>
                     <button
                         className={styles.clearFilterBtn}
-                        onClick={() => setSelectedFilter('all')}
+                        onClick={() => {
+                            setSelectedFilter('all');
+                            setSearchQuery('');
+                        }}
                     >
                         <RotateCcw size={12} style={{ marginRight: 4 }} />
                         Show All Activities ({activities.length})
