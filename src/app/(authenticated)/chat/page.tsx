@@ -32,6 +32,7 @@ export default function TeamChatPage() {
     const [showCreateGroup, setShowCreateGroup] = useState<boolean>(false);
     const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
     const [mobileView, setMobileView] = useState<'sidebar' | 'chat'>('sidebar');
+    const [recentActivity, setRecentActivity] = useState<Record<string, string>>({});
 
     // Fetch channels and staff metadata
     const fetchChannels = useCallback(async () => {
@@ -42,6 +43,7 @@ export default function TeamChatPage() {
                 const data = await res.json();
                 setChannels(data.channels || []);
                 if (data.currentUserId) setCurrentUserId(data.currentUserId);
+                if (data.recentActivity) setRecentActivity(data.recentActivity);
             }
         } catch (err) {
             console.error('Error loading channels:', err);
@@ -82,7 +84,20 @@ export default function TeamChatPage() {
             const res = await fetch(`/api/chat/messages?channel_id=${channelId}`, { headers: authHeaders });
             if (res.ok) {
                 const data = await res.json();
-                setMessages(data.messages || []);
+                const msgs = data.messages || [];
+                setMessages(msgs);
+                if (msgs.length > 0) {
+                    const lastMsg = msgs[msgs.length - 1];
+                    if (lastMsg?.createdAt) {
+                        setRecentActivity(prev => {
+                            const cur = prev[channelId];
+                            if (!cur || new Date(lastMsg.createdAt).getTime() > new Date(cur).getTime()) {
+                                return { ...prev, [channelId]: lastMsg.createdAt };
+                            }
+                            return prev;
+                        });
+                    }
+                }
             }
         } catch (err) {
             console.error('Error loading messages:', err);
@@ -154,6 +169,10 @@ export default function TeamChatPage() {
                 const json = await res.json();
                 if (json.message) {
                     setMessages(prev => [...prev, json.message]);
+                    setRecentActivity(prev => ({
+                        ...prev,
+                        [activeChannelId]: json.message.createdAt || new Date().toISOString(),
+                    }));
                 }
             }
         } catch (err) {
@@ -240,6 +259,7 @@ export default function TeamChatPage() {
                     }}
                     presenceUsers={presenceUsers}
                     currentUserId={currentUserId}
+                    recentActivity={recentActivity}
                     onOpenCreateGroup={() => setShowCreateGroup(true)}
                     onStartDM={handleStartDM}
                 />

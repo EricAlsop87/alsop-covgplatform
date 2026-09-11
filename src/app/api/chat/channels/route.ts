@@ -34,6 +34,20 @@ export async function GET(req: NextRequest) {
             .in('role', ['admin', 'service', 'agent'])
             .eq('is_active', true);
 
+        // 3. Fetch recent message activity timestamps
+        const { data: recentMsgRows } = await admin
+            .from('manual_overrides')
+            .select('field_name, updated_at')
+            .like('field_name', 'team_chat_msg_%');
+
+        const recentActivity: Record<string, string> = {};
+        (recentMsgRows || []).forEach(row => {
+            const chId = row.field_name.replace('team_chat_msg_', '');
+            if (row.updated_at) {
+                recentActivity[chId] = row.updated_at;
+            }
+        });
+
         // Filter custom channels to those the user has access to (public or member)
         const accessibleCustom = customChannels.filter(c => {
             if (!c.memberIds || c.memberIds.length === 0) return true;
@@ -47,6 +61,7 @@ export async function GET(req: NextRequest) {
             channels: allChannels,
             staff: staff || [],
             currentUserId: userId,
+            recentActivity,
         });
     } catch (err: any) {
         console.error('Error fetching chat channels:', err);

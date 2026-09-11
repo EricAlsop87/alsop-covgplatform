@@ -11,6 +11,7 @@ interface ChatSidebarProps {
     onSelectChannel: (channelId: string) => void;
     presenceUsers: UserPresence[];
     currentUserId: string;
+    recentActivity?: Record<string, string>;
     onOpenCreateGroup: () => void;
     onStartDM: (targetUser: UserPresence) => void;
 }
@@ -21,6 +22,7 @@ export function ChatSidebar({
     onSelectChannel,
     presenceUsers,
     currentUserId,
+    recentActivity = {},
     onOpenCreateGroup,
     onStartDM,
 }: ChatSidebarProps) {
@@ -32,15 +34,46 @@ export function ChatSidebar({
     // Other staff members for 1-on-1 DMs
     const otherUsers = presenceUsers.filter(u => u.userId !== currentUserId);
 
+    // Compute DM activity timestamps and sort users with recent chats first
+    const usersWithActivity = otherUsers.map(u => {
+        const dmId = `dm_${[currentUserId || 'self', u.userId].sort().join('_')}`;
+        const activityIso = recentActivity[dmId];
+        const activityTime = activityIso ? new Date(activityIso).getTime() : 0;
+        return {
+            ...u,
+            dmId,
+            activityTime,
+        };
+    });
+
+    const sortedUsers = [...usersWithActivity].sort((a, b) => {
+        if (a.activityTime > 0 && b.activityTime > 0) {
+            return b.activityTime - a.activityTime; // Newest first
+        }
+        if (a.activityTime > 0) return -1; // Has recent chat -> rank first
+        if (b.activityTime > 0) return 1;
+        return a.userName.localeCompare(b.userName); // Alphabetical fallback
+    });
+
+    // Also sort group chats by recent activity
+    const sortedGroups = [...groupChats].sort((a, b) => {
+        const timeA = recentActivity[a.id] ? new Date(recentActivity[a.id]).getTime() : 0;
+        const timeB = recentActivity[b.id] ? new Date(recentActivity[b.id]).getTime() : 0;
+        if (timeA > 0 && timeB > 0) return timeB - timeA;
+        if (timeA > 0) return -1;
+        if (timeB > 0) return 1;
+        return 0;
+    });
+
     const filteredChannels = publicChannels.filter(c => 
         c.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const filteredGroups = groupChats.filter(g => 
+    const filteredGroups = sortedGroups.filter(g => 
         g.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const filteredUsers = otherUsers.filter(u => 
+    const filteredUsers = sortedUsers.filter(u => 
         u.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.userEmail.toLowerCase().includes(searchQuery.toLowerCase())
     );
