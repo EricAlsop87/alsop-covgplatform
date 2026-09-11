@@ -22,14 +22,21 @@ export function normalizePolicyNumber(rawPolicy: string | null | undefined): Pol
     // Remove all non-alphanumeric except spaces
     s = s.replace(/[^A-Z0-9\s]/g, '');
 
-    // Strategy: Optional "CFP ", exactly 10 digits, optional spaces, optional 2 digits of suffix.
-    const regex = /(?:CFP\s*)?(\d{10})(?:\s*(\d{2}))?\b/;
+    // Detect known prefix (COM, CFP, DIV, DWG) if present
+    const prefixMatch = s.match(/^(COM|CFP|DIV|DWG)\b/);
+    let prefix = prefixMatch ? prefixMatch[1] : null;
+
+    // Strategy: Optional prefix, exactly 10 digits, optional spaces, optional 2 digits of suffix.
+    const regex = /(?:(?:COM|CFP|DIV|DWG)\s*)?(\d{10})(?:\s*(\d{2}))?\b/;
     const match = s.match(regex);
 
     if (match) {
         const baseDigits = match[1];
         const suffix = match[2] ? match[2] : null;
-        return { basePolicy: `CFP ${baseDigits}`, suffix };
+        if (!prefix) {
+            prefix = baseDigits.startsWith('03') ? 'COM' : 'CFP';
+        }
+        return { basePolicy: `${prefix} ${baseDigits}`, suffix };
     }
 
     // Fallback for non-standard or legacy policy strings that don't match 10-digit requirement

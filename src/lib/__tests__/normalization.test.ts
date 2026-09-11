@@ -57,6 +57,16 @@ describe('normalizePolicyNumber', () => {
         expect(a.basePolicy).toBe(b.basePolicy);
         expect(a.suffix).not.toBe(b.suffix);
     });
+
+    it('correctly preserves COM commercial policy prefix and sequence suffix', () => {
+        const result = normalizePolicyNumber('COM 0301132038 02');
+        expect(result).toEqual({ basePolicy: 'COM 0301132038', suffix: '02' });
+    });
+
+    it('infers COM prefix for 03 commercial CFP digits without prefix', () => {
+        const result = normalizePolicyNumber('0301132038');
+        expect(result).toEqual({ basePolicy: 'COM 0301132038', suffix: null });
+    });
 });
 
 describe('cleanPolicyNumber', () => {
