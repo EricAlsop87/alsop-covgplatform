@@ -112,10 +112,11 @@
 
 .channelBtn {
     align-items: flex-start;
-    padding: 0.4rem 0.65rem;
+    padding: 0.5rem 0.65rem;
 
     .channelIcon {
         margin-top: 2px;
+        flex-shrink: 0;
     }
 }
 
@@ -130,11 +131,10 @@
     font-size: 0.6875rem;
     color: #64748b;
     font-weight: 400;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.25;
-    margin-top: 1px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.35;
+    margin-top: 2px;
 }
 
 .activeItem {
