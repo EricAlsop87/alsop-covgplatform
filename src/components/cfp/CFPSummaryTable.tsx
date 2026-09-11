@@ -850,10 +850,17 @@ export function CFPSummaryTable({
         for (const cKey of carrierFilterKeys) {
             const filterVal = columnFilters[cKey];
             if (filterVal) {
-                if (filterVal === 'dic') {
+                if (filterVal === 'any_quote') {
+                    result = result.filter(t => {
+                        const q = t.carrier_quotes?.[cKey];
+                        return q && q.coverage_type !== 'UNAVAILABLE';
+                    });
+                } else if (filterVal === 'dic') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'DIC');
                 } else if (filterVal === 'full') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'FULL');
+                } else if (filterVal === 'quote_only') {
+                    result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'QUOTE');
                 } else if (filterVal === 'unavailable') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'UNAVAILABLE');
                 } else if (filterVal === 'unquoted') {
@@ -912,10 +919,11 @@ export function CFPSummaryTable({
             const quotes = Object.values(t.carrier_quotes || {});
             const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
             const hasFull = quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
+            const hasQuote = quotes.some(q => q?.coverage_type === 'QUOTE');
             const hasUnavail = quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
             if (hasDic) dicAvailable++;
             if (hasFull) fullAvailable++;
-            if (hasDic || hasFull) quoteAvailable++;
+            if (hasDic || hasFull || hasQuote) quoteAvailable++;
             if (hasUnavail) unavailableCount++;
             if (t.returned_from_se) returnedFromSe++;
         }
@@ -1352,6 +1360,9 @@ export function CFPSummaryTable({
                     if (quote.coverage_type === 'FULL') {
                         badgeClass = styles.full;
                         label = 'FULL';
+                    } else if (quote.coverage_type === 'QUOTE') {
+                        badgeClass = styles.quote;
+                        label = 'QUOTE';
                     } else if (quote.coverage_type === 'UNAVAILABLE') {
                         badgeClass = styles.unavailable;
                         label = '✕ None';
@@ -1633,8 +1644,10 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters[cKey] ? styles.activeFilter : ''}`}
                     >
                         <option value="">All {cName}</option>
+                        <option value="any_quote">Any Quote (✔)</option>
                         <option value="dic">DIC (✔)</option>
                         <option value="full">FULL (✔)</option>
+                        <option value="quote_only">Quote Only (✔)</option>
                         <option value="unavailable">Unavailable (✕)</option>
                         <option value="unquoted">Unquoted (+)</option>
                     </select>

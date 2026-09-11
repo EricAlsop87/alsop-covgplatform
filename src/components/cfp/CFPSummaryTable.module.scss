@@ -710,6 +710,18 @@
         }
     }
 
+    &.quote {
+        background: #faf5ff;
+        color: #7e22ce;
+        border-color: #e9d5ff;
+
+        &:hover {
+            background: #f3e8ff;
+            border-color: #d8b4fe;
+            transform: translateY(-1px);
+        }
+    }
+
     &.unavailable {
         background: #fef2f2;
         color: #b91c1c;

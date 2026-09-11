@@ -249,7 +249,7 @@ export function CarrierQuoteModal({
                                     className={`${styles.coverageCard} ${styles.dic} ${coverageType === 'DIC' ? styles.active : ''}`}
                                     onClick={() => setCoverageType('DIC')}
                                 >
-                                    <span className={styles.cardTitle}>🔵 DIC Quote</span>
+                                    <span className={styles.cardTitle}>🔵 DIC</span>
                                     <span className={styles.cardSubtitle}>Companion to CFP</span>
                                 </div>
 
@@ -257,16 +257,24 @@ export function CarrierQuoteModal({
                                     className={`${styles.coverageCard} ${styles.full} ${coverageType === 'FULL' ? styles.active : ''}`}
                                     onClick={() => setCoverageType('FULL')}
                                 >
-                                    <span className={styles.cardTitle}>🟢 FULL Coverage</span>
+                                    <span className={styles.cardTitle}>🟢 FULL</span>
                                     <span className={styles.cardSubtitle}>Standalone / E&S</span>
+                                </div>
+
+                                <div
+                                    className={`${styles.coverageCard} ${styles.quote} ${coverageType === 'QUOTE' ? styles.active : ''}`}
+                                    onClick={() => setCoverageType('QUOTE')}
+                                >
+                                    <span className={styles.cardTitle}>🟣 Quote</span>
+                                    <span className={styles.cardSubtitle}>Standard / General</span>
                                 </div>
 
                                 <div
                                     className={`${styles.coverageCard} ${styles.unavailable} ${coverageType === 'UNAVAILABLE' ? styles.active : ''}`}
                                     onClick={() => setCoverageType('UNAVAILABLE')}
                                 >
-                                    <span className={styles.cardTitle}>🔴 Unable to Quote</span>
-                                    <span className={styles.cardSubtitle}>✕ No Option Available</span>
+                                    <span className={styles.cardTitle}>🔴 Unable</span>
+                                    <span className={styles.cardSubtitle}>✕ No Option</span>
                                 </div>
                             </div>
                         </div>

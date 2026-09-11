@@ -204,14 +204,14 @@
 /* ── Coverage Type Radio Grid ── */
 .coverageGrid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
 }
 
 .coverageCard {
     border: 1.5px solid var(--border-default, #cbd5e1);
     border-radius: 8px;
-    padding: 0.625rem 0.5rem;
+    padding: 0.625rem 0.35rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -241,6 +241,14 @@
             background: #f0fdf4;
             border-color: #22c55e;
             color: #15803d;
+        }
+    }
+
+    &.quote {
+        &.active {
+            background: #faf5ff;
+            border-color: #a855f7;
+            color: #7e22ce;
         }
     }
 

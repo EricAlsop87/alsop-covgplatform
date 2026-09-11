@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
-export type CoverageQuoteType = 'DIC' | 'FULL' | 'UNAVAILABLE';
+export type CoverageQuoteType = 'DIC' | 'FULL' | 'QUOTE' | 'UNAVAILABLE';
 
 export interface CarrierQuoteData {
     carrier_key: CarrierKey;

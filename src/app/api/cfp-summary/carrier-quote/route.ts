@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseClient';
 export const dynamic = 'force-dynamic';
 
 export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
-export type CoverageQuoteType = 'DIC' | 'FULL' | 'UNAVAILABLE';
+export type CoverageQuoteType = 'DIC' | 'FULL' | 'QUOTE' | 'UNAVAILABLE';
 
 const VALID_CARRIERS: CarrierKey[] = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'];
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid carrier_key' }, { status: 400 });
         }
 
-        if (!coverage_type || !['DIC', 'FULL', 'UNAVAILABLE'].includes(coverage_type)) {
+        if (!coverage_type || !['DIC', 'FULL', 'QUOTE', 'UNAVAILABLE'].includes(coverage_type)) {
             return NextResponse.json({ error: 'Invalid coverage_type' }, { status: 400 });
         }
 
