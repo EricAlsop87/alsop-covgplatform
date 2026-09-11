@@ -25,6 +25,7 @@ import {
     FileUp,
     Calendar,
     Clock,
+    MessageSquare,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -43,6 +44,7 @@ export function Sidebar({ userRole }: SidebarProps) {
     const agentNavItems = [
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'CFP Summary', href: '/cfp-summary', icon: FileSpreadsheet },
+        { label: 'Team Chat', href: '/chat', icon: MessageSquare },
         { label: 'Flags', href: '/flags', icon: Flag },
         {
             label: 'Email Center',
