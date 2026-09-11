@@ -6,6 +6,21 @@ import { normalizePolicyNumber } from '@/lib/normalization';
 export const dynamic = 'force-dynamic';
 
 // ── Types ──────────────────────────────────────────────────────────────────
+export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
+export type CoverageQuoteType = 'DIC' | 'FULL' | 'UNAVAILABLE';
+
+export interface CarrierQuoteData {
+    carrier_key: CarrierKey;
+    coverage_type: CoverageQuoteType;
+    quote_number?: string | null;
+    premium?: number | null;
+    notes?: string | null;
+    storage_path?: string | null;
+    file_name?: string | null;
+    verified_by?: string | null;
+    verified_at?: string | null;
+}
+
 export interface CFPTermRow {
     // Policy
     policy_id: string;
@@ -43,6 +58,8 @@ export interface CFPTermRow {
     es_file_name?: string | null;
     no_dic_available: boolean;
     is_pending_dec: boolean;
+    // 5 Carrier Quotes (Bamboo, Aegis, AM, SageSure, PSIC)
+    carrier_quotes: Record<CarrierKey, CarrierQuoteData | null>;
     // Comments & notes
     comment_count_dec: number;
     comment_count_rce: number;
@@ -58,9 +75,19 @@ export interface CFPTermRow {
     return_notes?: string | null;
     returned_by?: string | null;
     returned_at?: string | null;
+    // Title Pro verification
+    title_pro?: TitleProData | null;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
     term_index: number;
+}
+
+export interface TitleProData {
+    title_name: string;
+    match_status: 'matched' | 'partial' | 'mismatch';
+    notes?: string | null;
+    verified_by?: string | null;
+    verified_at?: string | null;
 }
 
 export interface CFPFamily {
@@ -69,6 +96,86 @@ export interface CFPFamily {
 }
 
 // ── Carrier Detection Helper ──────────────────────────────────────────────
+export function detectCarrierQuoteInfo(
+    fileName?: string | null,
+    rawText?: string | null,
+    docType?: string | null
+): { carrier_key: CarrierKey; coverage_type: CoverageQuoteType; quote_number: string | null } | null {
+    const fn = (fileName || '').toLowerCase();
+    const txt = (rawText || '').toLowerCase().slice(0, 3000);
+    const combined = `${fn} ${txt}`;
+
+    // 1. Bamboo (Q100... or Bamboo)
+    const matchBamboo = (fileName || '').match(/(Q100\d{6,})/i);
+    if (combined.includes('bamboo') || combined.includes('360value') || combined.includes('360 value') || matchBamboo) {
+        const isDic = combined.includes('does not cover the peril of fire') || combined.includes('dic') || docType === 'dic_dec_page';
+        return {
+            carrier_key: 'bamboo',
+            coverage_type: isDic ? 'DIC' : 'FULL',
+            quote_number: matchBamboo ? matchBamboo[1] : null,
+        };
+    }
+
+    // 2. Aegis (Q55... or Aegis or Obsidian)
+    const matchAegis = (fileName || '').match(/(Q55\d{4,})/i);
+    if (combined.includes('aegis') || combined.includes('obsidian') || matchAegis) {
+        const isDic = combined.includes('california dic quote') || combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
+        return {
+            carrier_key: 'aegis',
+            coverage_type: isDic ? 'DIC' : 'FULL',
+            quote_number: matchAegis ? matchAegis[1] : null,
+        };
+    }
+
+    // 3. American Modern (AM / 005...)
+    const matchAm = (fileName || '').match(/(005[\-\d]{7,})/);
+    if (
+        combined.includes('american modern') ||
+        combined.includes('americanmodern') ||
+        combined.includes('homeowners flex') ||
+        combined.includes('rce am') ||
+        combined.includes('rcm am') ||
+        combined.includes('rce_am') ||
+        combined.includes('quote am') ||
+        combined.includes('dic am') ||
+        combined.includes('dic_am') ||
+        /[\s_\-]AM[\s_\.\(\)\-]/i.test(fileName || '') ||
+        /[\s_]AM$/i.test(fileName || '') ||
+        matchAm
+    ) {
+        const isDic = combined.includes('dic') || combined.includes('difference in conditions') || docType === 'dic_dec_page';
+        return {
+            carrier_key: 'am',
+            coverage_type: isDic ? 'DIC' : 'FULL',
+            quote_number: matchAm ? matchAm[1] : null,
+        };
+    }
+
+    // 4. SageSure (CASNH... or SageSure)
+    const matchSage = (fileName || '').match(/(CA[A-Za-z]{3}\d{5,})/i);
+    if (combined.includes('sagesure') || combined.includes('sage sure') || matchSage) {
+        const isDic = combined.includes('dic') || docType === 'dic_dec_page';
+        return {
+            carrier_key: 'sagesure',
+            coverage_type: isDic ? 'DIC' : 'FULL',
+            quote_number: matchSage ? matchSage[1] : null,
+        };
+    }
+
+    // 5. PSIC (Pacific Specialty)
+    const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
+    if (combined.includes('psic') || combined.includes('pacific specialty') || combined.includes('pacificspecialty') || matchPsic) {
+        const isDic = combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
+        return {
+            carrier_key: 'psic',
+            coverage_type: isDic ? 'DIC' : 'FULL',
+            quote_number: matchPsic ? matchPsic[1] : null,
+        };
+    }
+
+    return null;
+}
+
 function detectDocCarrier(fileName?: string | null, rawText?: string | null, docType?: string | null): string | null {
     const fn = (fileName || '').toLowerCase();
     const txt = (rawText || '').toLowerCase().slice(0, 3000);
@@ -325,7 +432,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic'])
         ),
         chunkedInQuery<{
             id: string;
@@ -361,22 +468,19 @@ export async function GET(req: NextRequest) {
 
     for (const doc of docs) {
         if (!policyDocTypes[doc.policy_id]) {
-            policyDocTypes[doc.policy_id] = new Set();
+            policyDocTypes[doc.policy_id] = new Set<string>();
         }
         policyDocTypes[doc.policy_id].add(doc.doc_type);
 
-        const detected = detectDocCarrier(doc.file_name, null, doc.doc_type);
         if (doc.doc_type === 'rce') {
-            if (detected && !policyRceCarrier[doc.policy_id]) {
-                policyRceCarrier[doc.policy_id] = detected;
-            }
+            const c = detectDocCarrier(doc.file_name, null, 'rce');
+            if (c) policyRceCarrier[doc.policy_id] = c;
             if (doc.storage_path && !policyRceDoc[doc.policy_id]) {
                 policyRceDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
             }
         } else if (doc.doc_type === 'dic_dec_page') {
-            if (detected && !policyDicCarrier[doc.policy_id]) {
-                policyDicCarrier[doc.policy_id] = detected;
-            }
+            const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
+            if (c) policyDicCarrier[doc.policy_id] = c;
             if (doc.storage_path && !policyDicDoc[doc.policy_id]) {
                 policyDicDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
             }
@@ -391,6 +495,9 @@ export async function GET(req: NextRequest) {
     const noDicAvailableSet = new Set<string>();
     const servicingStatusMap: Record<string, string> = {};
     const servicingReturnMap: Record<string, { reason: string; custom_notes?: string; returned_by?: string; returned_at?: string }> = {};
+    const titleProMap: Record<string, TitleProData> = {};
+    const manualCarrierQuotes: Record<string, Partial<Record<CarrierKey, CarrierQuoteData>>> = {};
+
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
             bambooCoverageSet.add(ov.policy_id);
@@ -409,6 +516,41 @@ export async function GET(req: NextRequest) {
                 servicingReturnMap[ov.policy_id] = parsed;
             } catch {
                 servicingReturnMap[ov.policy_id] = { reason: 'Returned' };
+            }
+        } else if (ov.field_name === 'title_pro' && ov.new_value) {
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                titleProMap[ov.policy_id] = parsed;
+            } catch {}
+        } else if (ov.field_name.startsWith('carrier_quote_') && ov.new_value) {
+            const carrierKey = ov.field_name.replace('carrier_quote_', '') as CarrierKey;
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                if (!manualCarrierQuotes[ov.policy_id]) {
+                    manualCarrierQuotes[ov.policy_id] = {};
+                }
+                manualCarrierQuotes[ov.policy_id][carrierKey] = parsed;
+            } catch {}
+        }
+    }
+
+    // Auto-detect carrier quotes from platform_documents per policy
+    const autoCarrierQuotes: Record<string, Partial<Record<CarrierKey, CarrierQuoteData>>> = {};
+    for (const doc of docs) {
+        const detected = detectCarrierQuoteInfo(doc.file_name, null, doc.doc_type);
+        if (detected) {
+            const pid = doc.policy_id;
+            if (!autoCarrierQuotes[pid]) autoCarrierQuotes[pid] = {};
+            const existing = autoCarrierQuotes[pid][detected.carrier_key];
+            // Prioritize dic_dec_page or es_doc over rce, or docs with extracted quote_number
+            if (!existing || (detected.quote_number && !existing.quote_number) || doc.doc_type === 'dic_dec_page' || doc.doc_type === 'es_doc') {
+                autoCarrierQuotes[pid][detected.carrier_key] = {
+                    carrier_key: detected.carrier_key,
+                    coverage_type: detected.coverage_type,
+                    quote_number: detected.quote_number,
+                    storage_path: doc.storage_path,
+                    file_name: doc.file_name,
+                };
             }
         }
     }
@@ -516,6 +658,14 @@ export async function GET(req: NextRequest) {
             return_notes: servicingReturnMap[policyId]?.custom_notes || null,
             returned_by: servicingReturnMap[policyId]?.returned_by || null,
             returned_at: servicingReturnMap[policyId]?.returned_at || null,
+            carrier_quotes: {
+                bamboo: manualCarrierQuotes[policyId]?.bamboo || autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
+                aegis: manualCarrierQuotes[policyId]?.aegis || autoCarrierQuotes[policyId]?.aegis || null,
+                am: manualCarrierQuotes[policyId]?.am || autoCarrierQuotes[policyId]?.am || null,
+                sagesure: manualCarrierQuotes[policyId]?.sagesure || autoCarrierQuotes[policyId]?.sagesure || null,
+                psic: manualCarrierQuotes[policyId]?.psic || autoCarrierQuotes[policyId]?.psic || null,
+            },
+            title_pro: titleProMap[policyId] || null,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };

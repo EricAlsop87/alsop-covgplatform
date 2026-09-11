@@ -668,6 +668,158 @@
     }
 }
 
+/* ── 5 Carrier Quote Badges (Bamboo, Aegis, AM, SageSure, PSIC) ── */
+.carrierQuoteBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    user-select: none;
+
+    &.dic {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-color: #bfdbfe;
+
+        &:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            transform: translateY(-1px);
+        }
+    }
+
+    &.full {
+        background: #f0fdf4;
+        color: #15803d;
+        border-color: #bbf7d0;
+
+        &:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+            transform: translateY(-1px);
+        }
+    }
+
+    &.unavailable {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-color: #fecaca;
+
+        &:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            transform: translateY(-1px);
+        }
+    }
+
+    &.unquoted {
+        background: var(--bg-surface-subtle, #f8fafc);
+        border: 1px dashed var(--border-default, #cbd5e1);
+        color: var(--text-muted, #64748b);
+        font-weight: 600;
+
+        &:hover {
+            background: #eff6ff;
+            color: var(--color-primary, #2243B6);
+            border-color: var(--color-primary, #2243B6);
+            border-style: solid;
+            transform: translateY(-1px);
+        }
+    }
+}
+
+.quoteSuffix {
+    font-size: 0.6875rem;
+    font-family: monospace;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.noteBadgeDot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #b45309;
+}
+
+/* ── Title Pro Verification Badge ── */
+.titleProBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+
+    &.matched {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+        border-color: rgba(34, 197, 94, 0.3);
+
+        &:hover {
+            background: rgba(34, 197, 94, 0.22);
+            border-color: #22c55e;
+            transform: translateY(-1px);
+        }
+    }
+
+    &.partial {
+        background: rgba(245, 158, 11, 0.12);
+        color: #b45309;
+        border-color: rgba(245, 158, 11, 0.3);
+
+        &:hover {
+            background: rgba(245, 158, 11, 0.22);
+            border-color: #f59e0b;
+            transform: translateY(-1px);
+        }
+    }
+
+    &.mismatch {
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+        border-color: rgba(239, 68, 68, 0.3);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.22);
+            border-color: #ef4444;
+            transform: translateY(-1px);
+        }
+    }
+
+    &.unverified {
+        background: var(--bg-surface-subtle, #f8fafc);
+        border: 1px dashed var(--border-default, #cbd5e1);
+        color: var(--text-muted, #64748b);
+        font-weight: 600;
+
+        &:hover {
+            background: #eff6ff;
+            color: var(--color-primary, #2243B6);
+            border-color: var(--color-primary, #2243B6);
+            border-style: solid;
+            transform: translateY(-1px);
+        }
+    }
+}
+
 /* ── Comment Indicator & Notes Styles ── */
 .cellWithComment {
     display: inline-flex;

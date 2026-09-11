@@ -29,11 +29,21 @@ import {
     AlertTriangle,
     Undo2,
 } from 'lucide-react';
-import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
+import type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
 import { DocCommentPopover } from './DocCommentPopover';
+import { TitleProModal } from './TitleProModal';
+import { CarrierQuoteModal } from './CarrierQuoteModal';
+
+const CARRIER_NAMES: Record<CarrierKey, string> = {
+    bamboo: 'Bamboo',
+    aegis: 'Aegis',
+    am: 'American Modern',
+    sagesure: 'SageSure',
+    psic: 'Pacific Specialty',
+};
 import type { DocNoteTag } from '@/lib/notes';
 import { addToServicingEmail } from '@/lib/servicingEmail';
 import {
@@ -49,9 +59,12 @@ export interface ColumnFilters {
     address?: string;
     dec?: string;
     rce?: string;
-    dic?: string;
-    quote?: string;
     bamboo?: string;
+    aegis?: string;
+    am?: string;
+    sagesure?: string;
+    psic?: string;
+    title_pro?: string;
     servicing?: string;
     notes?: string;
 }
@@ -60,14 +73,16 @@ export type CFPColumnKey =
     | 'policy'
     | 'insured'
     | 'address'
-    | 'effective'
     | 'expiration'
     | 'premium'
     | 'dec'
     | 'rce'
-    | 'dic'
-    | 'quote'
     | 'bamboo'
+    | 'aegis'
+    | 'am'
+    | 'sagesure'
+    | 'psic'
+    | 'title_pro'
     | 'servicing'
     | 'notes';
 
@@ -80,17 +95,19 @@ interface ColumnDef {
 }
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-    { key: 'policy', label: 'CFP Number', width: 180, minWidth: 130, align: 'left' },
+    { key: 'policy', label: 'CFP Number', width: 175, minWidth: 125, align: 'left' },
     { key: 'insured', label: 'Named Insured', width: 155, minWidth: 100, align: 'left' },
-    { key: 'address', label: 'Property Address', width: 210, minWidth: 120, align: 'left' },
-    { key: 'effective', label: 'Effective', width: 95, minWidth: 80, align: 'left' },
-    { key: 'expiration', label: 'Expiration', width: 95, minWidth: 80, align: 'left' },
+    { key: 'address', label: 'Property Address', width: 205, minWidth: 120, align: 'left' },
+    { key: 'expiration', label: 'Expiration', width: 100, minWidth: 85, align: 'left' },
     { key: 'premium', label: 'Premium', width: 95, minWidth: 70, align: 'left' },
     { key: 'dec', label: 'DEC Page', width: 85, minWidth: 70, align: 'center' },
-    { key: 'rce', label: 'RCE', width: 100, minWidth: 75, align: 'center' },
-    { key: 'dic', label: 'DIC', width: 100, minWidth: 75, align: 'center' },
-    { key: 'quote', label: 'Quote / E&S', width: 95, minWidth: 70, align: 'center' },
-    { key: 'bamboo', label: 'Full Coverage', width: 120, minWidth: 90, align: 'center' },
+    { key: 'rce', label: 'RCE', width: 95, minWidth: 75, align: 'center' },
+    { key: 'bamboo', label: 'Bamboo', width: 105, minWidth: 80, align: 'center' },
+    { key: 'aegis', label: 'Aegis', width: 105, minWidth: 80, align: 'center' },
+    { key: 'am', label: 'AM', width: 105, minWidth: 80, align: 'center' },
+    { key: 'sagesure', label: 'SageSure', width: 105, minWidth: 80, align: 'center' },
+    { key: 'psic', label: 'PSIC', width: 105, minWidth: 80, align: 'center' },
+    { key: 'title_pro', label: 'Title Pro', width: 95, minWidth: 75, align: 'center' },
     { key: 'servicing', label: 'Servicing Team', width: 115, minWidth: 85, align: 'center' },
     { key: 'notes', label: 'Notes', width: 95, minWidth: 70, align: 'center' },
 ];
@@ -116,7 +133,7 @@ interface CFPSummaryTableProps {
     totalFamilies: number;
 }
 
-type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'no_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo' | 'has_comments' | 'returned_from_se';
+type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'has_dic_quote' | 'has_full_quote' | 'has_any_quote' | 'has_unavailable' | 'has_comments' | 'returned_from_se';
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -357,15 +374,61 @@ export function CFPSummaryTable({
                         const filtered = parsed.filter((k: string): k is CFPColumnKey =>
                             DEFAULT_COLUMN_KEYS.includes(k as CFPColumnKey)
                         );
-                        if (filtered.length === DEFAULT_COLUMN_KEYS.length) {
-                            return filtered;
-                        }
+                        const missing = DEFAULT_COLUMN_KEYS.filter(k => !filtered.includes(k));
+                        return [...filtered, ...missing];
                     }
                 }
             } catch {}
         }
         return DEFAULT_COLUMN_KEYS;
     });
+
+    // ── Carrier Quote Modal State ─────────────────────────────────────────
+    const [activeCarrierModal, setActiveCarrierModal] = useState<{
+        term: CFPTermRow;
+        carrierKey: CarrierKey;
+    } | null>(null);
+
+    const handleSaveCarrierQuoteSuccess = (
+        policyId: string,
+        carrierKey: CarrierKey,
+        updatedData: CarrierQuoteData | null
+    ) => {
+        setFamilies(prev =>
+            prev.map(f => ({
+                ...f,
+                terms: f.terms.map(t => {
+                    if (t.policy_id !== policyId) return t;
+                    const updatedQuotes = {
+                        ...(t.carrier_quotes || {}),
+                        [carrierKey]: updatedData,
+                    };
+                    return {
+                        ...t,
+                        carrier_quotes: updatedQuotes as any,
+                        has_bamboo_coverage:
+                            carrierKey === 'bamboo'
+                                ? updatedData?.coverage_type === 'FULL'
+                                : t.has_bamboo_coverage,
+                    };
+                }),
+            }))
+        );
+    };
+
+    // ── Title Pro Verification Modal State ────────────────────────────────
+    const [activeTitleModalTerm, setActiveTitleModalTerm] = useState<CFPTermRow | null>(null);
+
+    const handleSaveTitleProSuccess = (policyId: string, updatedData: TitleProData | null) => {
+        setFamilies(prev =>
+            prev.map(f => ({
+                ...f,
+                terms: f.terms.map(t =>
+                    t.policy_id === policyId ? { ...t, title_pro: updatedData } : t
+                ),
+            }))
+        );
+    };
 
     const [columnWidths, setColumnWidths] = useState<Record<CFPColumnKey, number>>(() => {
         if (typeof window !== 'undefined') {
@@ -678,16 +741,22 @@ export function CFPSummaryTable({
                         return !t.has_dec;
                     case 'missing_rce':
                         return !t.has_rce;
-                    case 'missing_dic':
-                        return !t.has_dic && !t.dic_carrier && !t.no_dic_available;
-                    case 'no_dic':
-                        return t.no_dic_available;
-                    case 'missing_es':
-                        return !t.has_es;
-                    case 'has_bamboo':
-                        return t.has_bamboo_coverage;
-                    case 'missing_bamboo':
-                        return !t.has_bamboo_coverage;
+                    case 'has_dic_quote': {
+                        const quotes = Object.values(t.carrier_quotes || {});
+                        return quotes.some(q => q?.coverage_type === 'DIC');
+                    }
+                    case 'has_full_quote': {
+                        const quotes = Object.values(t.carrier_quotes || {});
+                        return quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
+                    }
+                    case 'has_any_quote': {
+                        const quotes = Object.values(t.carrier_quotes || {});
+                        return quotes.some(q => q && q.coverage_type !== 'UNAVAILABLE');
+                    }
+                    case 'has_unavailable': {
+                        const quotes = Object.values(t.carrier_quotes || {});
+                        return quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
+                    }
                     case 'returned_from_se':
                         return !!t.returned_from_se;
                     case 'has_comments':
@@ -774,70 +843,34 @@ export function CFPSummaryTable({
                 result = result.filter(t => t.has_rce || !!t.rce_carrier);
             } else if (columnFilters.rce === 'missing') {
                 result = result.filter(t => !t.has_rce && !t.rce_carrier);
-            } else if (columnFilters.rce === 'Bamboo') {
-                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'bamboo');
-            } else if (columnFilters.rce === 'AM') {
-                result = result.filter(t => {
-                    const c = t.rce_carrier?.toLowerCase();
-                    return c === 'am' || c === 'american modern';
-                });
-            } else if (columnFilters.rce === 'Aegis') {
-                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'aegis');
-            } else if (columnFilters.rce === 'SageSure') {
-                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'sagesure');
-            } else if (columnFilters.rce === 'PSIC') {
-                result = result.filter(t => t.rce_carrier?.toLowerCase() === 'psic');
-            } else if (columnFilters.rce === 'Other') {
-                result = result.filter(t => {
-                    if (!t.rce_carrier) return false;
-                    const c = t.rce_carrier.toLowerCase();
-                    return !['bamboo', 'am', 'american modern', 'aegis', 'sagesure', 'psic'].includes(c);
-                });
             }
         }
 
-        if (columnFilters.dic) {
-            if (columnFilters.dic === 'has_dic') {
-                result = result.filter(t => (t.has_dic || !!t.dic_carrier) && !t.no_dic_available);
-            } else if (columnFilters.dic === 'missing') {
-                result = result.filter(t => !t.has_dic && !t.dic_carrier && !t.no_dic_available);
-            } else if (columnFilters.dic === 'no_dic') {
-                result = result.filter(t => t.no_dic_available);
-            } else if (columnFilters.dic === 'Bamboo') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'bamboo' && !t.no_dic_available);
-            } else if (columnFilters.dic === 'AM') {
-                result = result.filter(t => {
-                    const c = t.dic_carrier?.toLowerCase();
-                    return (c === 'am' || c === 'american modern') && !t.no_dic_available;
-                });
-            } else if (columnFilters.dic === 'Aegis') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'aegis' && !t.no_dic_available);
-            } else if (columnFilters.dic === 'SageSure') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'sagesure' && !t.no_dic_available);
-            } else if (columnFilters.dic === 'PSIC') {
-                result = result.filter(t => t.dic_carrier?.toLowerCase() === 'psic' && !t.no_dic_available);
-            } else if (columnFilters.dic === 'Other') {
-                result = result.filter(t => {
-                    if (!t.dic_carrier || t.no_dic_available) return false;
-                    const c = t.dic_carrier.toLowerCase();
-                    return !['bamboo', 'am', 'american modern', 'aegis', 'sagesure', 'psic'].includes(c);
-                });
+        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'];
+        for (const cKey of carrierFilterKeys) {
+            const filterVal = columnFilters[cKey];
+            if (filterVal) {
+                if (filterVal === 'dic') {
+                    result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'DIC');
+                } else if (filterVal === 'full') {
+                    result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'FULL');
+                } else if (filterVal === 'unavailable') {
+                    result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'UNAVAILABLE');
+                } else if (filterVal === 'unquoted') {
+                    result = result.filter(t => !t.carrier_quotes?.[cKey]);
+                }
             }
         }
 
-        if (columnFilters.quote) {
-            if (columnFilters.quote === 'uploaded') {
-                result = result.filter(t => t.has_es);
-            } else if (columnFilters.quote === 'missing') {
-                result = result.filter(t => !t.has_es);
-            }
-        }
-
-        if (columnFilters.bamboo) {
-            if (columnFilters.bamboo === 'yes') {
-                result = result.filter(t => t.has_bamboo_coverage);
-            } else if (columnFilters.bamboo === 'no') {
-                result = result.filter(t => !t.has_bamboo_coverage);
+        if (columnFilters.title_pro) {
+            if (columnFilters.title_pro === 'matched') {
+                result = result.filter(t => t.title_pro?.match_status === 'matched');
+            } else if (columnFilters.title_pro === 'partial') {
+                result = result.filter(t => t.title_pro?.match_status === 'partial');
+            } else if (columnFilters.title_pro === 'mismatch') {
+                result = result.filter(t => t.title_pro?.match_status === 'mismatch');
+            } else if (columnFilters.title_pro === 'unverified') {
+                result = result.filter(t => !t.title_pro);
             }
         }
 
@@ -868,16 +901,22 @@ export function CFPSummaryTable({
         let decAvailable = 0;
         let rceAvailable = 0;
         let dicAvailable = 0;
-        let dicNoAvailable = 0;
+        let fullAvailable = 0;
         let quoteAvailable = 0;
+        let unavailableCount = 0;
         let returnedFromSe = 0;
 
         for (const t of allTerms) {
             if (t.has_dec) decAvailable++;
             if (t.has_rce || t.rce_carrier) rceAvailable++;
-            if (t.has_dic || t.dic_carrier) dicAvailable++;
-            if (t.no_dic_available) dicNoAvailable++;
-            if (t.has_es) quoteAvailable++;
+            const quotes = Object.values(t.carrier_quotes || {});
+            const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
+            const hasFull = quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
+            const hasUnavail = quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
+            if (hasDic) dicAvailable++;
+            if (hasFull) fullAvailable++;
+            if (hasDic || hasFull) quoteAvailable++;
+            if (hasUnavail) unavailableCount++;
             if (t.returned_from_se) returnedFromSe++;
         }
 
@@ -888,10 +927,10 @@ export function CFPSummaryTable({
             rceAvailable,
             rceMissing: Math.max(0, total - rceAvailable),
             dicAvailable,
-            dicNoAvailable,
-            dicMissing: Math.max(0, total - dicAvailable - dicNoAvailable),
+            fullAvailable,
             quoteAvailable,
             quoteMissing: Math.max(0, total - quoteAvailable),
+            unavailableCount,
             returnedFromSe,
         };
     }, [allTerms]);
@@ -921,10 +960,14 @@ export function CFPSummaryTable({
             if (columnFilters.policy) parts.push(`Policy_${columnFilters.policy}`);
             if (columnFilters.insured) parts.push(`Insured_${columnFilters.insured}`);
             if (columnFilters.address) parts.push(`Address_${columnFilters.address}`);
-            if (columnFilters.rce) parts.push(`RCE_${columnFilters.rce}`);
-            if (columnFilters.dic) parts.push(`DIC_${columnFilters.dic}`);
             if (columnFilters.dec) parts.push(`DEC_${columnFilters.dec}`);
+            if (columnFilters.rce) parts.push(`RCE_${columnFilters.rce}`);
             if (columnFilters.bamboo) parts.push(`Bamboo_${columnFilters.bamboo}`);
+            if (columnFilters.aegis) parts.push(`Aegis_${columnFilters.aegis}`);
+            if (columnFilters.am) parts.push(`AM_${columnFilters.am}`);
+            if (columnFilters.sagesure) parts.push(`SageSure_${columnFilters.sagesure}`);
+            if (columnFilters.psic) parts.push(`PSIC_${columnFilters.psic}`);
+            if (columnFilters.title_pro) parts.push(`Title_${columnFilters.title_pro}`);
             const desc = parts.length > 0 ? parts.join('_') : 'All';
 
             await exportCFPToExcel(filteredTerms, desc);
@@ -1207,19 +1250,16 @@ export function CFPSummaryTable({
                     </div>
                 );
 
-            case 'effective':
+            case 'expiration': {
+                const expDate = term.expiration_date || '—';
+                const effDate = term.effective_date || '—';
+                const dateTooltip = `Expiration: ${expDate}\nEffective: ${effDate}`;
                 return (
-                    <span className={styles.cellText} title={term.effective_date || '—'}>
-                        {term.effective_date || '—'}
-                    </span>
-                );
-
-            case 'expiration':
-                return (
-                    <strong className={styles.cellText} title={term.expiration_date || '—'}>
-                        {term.expiration_date || '—'}
+                    <strong className={styles.cellText} title={dateTooltip}>
+                        {expDate}
                     </strong>
                 );
+            }
 
             case 'premium':
                 return (
@@ -1297,144 +1337,126 @@ export function CFPSummaryTable({
                 );
             }
 
-            case 'dic': {
-                let dicNode: React.ReactNode;
-                if (term.has_dic || term.dic_carrier) {
-                    dicNode = renderCarrierBadge(
-                        term.dic_carrier,
-                        'DIC',
-                        term.policy_id,
-                        () => {
-                            handlePreviewDoc({
-                                title: `DIC Document — ${term.dic_carrier || 'Uploaded'} (${term.policy_number})`,
-                                subtitle: term.named_insured || undefined,
-                                docType: 'dic',
-                                storagePath: term.dic_storage_path,
-                                bucket: 'cfp-platform-documents',
-                                fileName: term.dic_file_name || `${term.policy_number}_DIC.pdf`,
-                                policyId: term.policy_id,
-                            });
-                        }
-                    );
-                } else if (term.no_dic_available) {
-                    dicNode = (
-                        <div className={styles.dicActionCell}>
-                            <button
-                                type="button"
-                                disabled={togglingNoDicPolicyId === term.policy_id}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleNoDic(term.policy_id, true);
-                                }}
-                                className={`${styles.carrierBadge} ${styles.noDic}`}
-                                title="Marked: No available DIC in all carriers (Click to reset)"
-                            >
-                                <Ban size={11} /> No Available DIC
-                            </button>
-                        </div>
-                    );
-                } else {
-                    dicNode = (
-                        <div className={styles.dicActionCell}>
-                            <Link
-                                href={`/upload-document?policy_id=${term.policy_id}&doc_type=dic`}
-                                className={`${styles.docBadge} ${styles.no}`}
-                                title="Missing DIC — click to upload"
-                                target="_blank"
-                            >
-                                <Plus size={11} /> None
-                            </Link>
-                            <button
-                                type="button"
-                                disabled={togglingNoDicPolicyId === term.policy_id}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleNoDic(term.policy_id, false);
-                                }}
-                                className={styles.markNoDicBtn}
-                                title="Click to mark: No available DIC in all carriers"
-                            >
-                                No DIC
-                            </button>
-                        </div>
+            case 'bamboo':
+            case 'aegis':
+            case 'am':
+            case 'sagesure':
+            case 'psic': {
+                const carrierKey = colKey as CarrierKey;
+                const quote = term.carrier_quotes?.[carrierKey];
+                const cName = CARRIER_NAMES[carrierKey] || carrierKey.toUpperCase();
+
+                if (quote) {
+                    let badgeClass = styles.dic;
+                    let label = 'DIC';
+                    if (quote.coverage_type === 'FULL') {
+                        badgeClass = styles.full;
+                        label = 'FULL';
+                    } else if (quote.coverage_type === 'UNAVAILABLE') {
+                        badgeClass = styles.unavailable;
+                        label = '✕ None';
+                    }
+
+                    // Extract 3-char suffix of quote number for ultra-clean view
+                    let suffix = '';
+                    if (quote.quote_number && quote.coverage_type !== 'UNAVAILABLE') {
+                        const cleanNum = quote.quote_number.replace(/[^a-zA-Z0-9]/g, '');
+                        suffix = cleanNum.length > 4 ? `• ${cleanNum.slice(-3)}` : `• ${cleanNum}`;
+                    }
+
+                    const titleParts = [
+                        `${cName}: ${quote.coverage_type}`,
+                    ];
+                    if (quote.quote_number) titleParts.push(`Quote #: ${quote.quote_number}`);
+                    if (quote.premium) titleParts.push(`Premium: $${quote.premium.toLocaleString()}`);
+                    if (quote.notes) titleParts.push(`Reason/Notes: ${quote.notes}`);
+                    if (quote.file_name) titleParts.push(`Document: ${quote.file_name}`);
+                    titleParts.push('(Click to view / edit / copy)');
+
+                    return (
+                        <button
+                            type="button"
+                            className={`${styles.carrierQuoteBadge} ${badgeClass}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveCarrierModal({ term, carrierKey });
+                            }}
+                            title={titleParts.join('\n')}
+                        >
+                            <span>{label}</span>
+                            {suffix && <span className={styles.quoteSuffix}>{suffix}</span>}
+                            {quote.notes && quote.coverage_type === 'UNAVAILABLE' && (
+                                <span className={styles.noteBadgeDot} title={quote.notes}>💬</span>
+                            )}
+                            {quote.storage_path && <FileText size={10} style={{ opacity: 0.8 }} />}
+                        </button>
                     );
                 }
-                return (
-                    <div className={styles.cellWithComment}>
-                        {dicNode}
-                        {renderCommentIndicator('DIC', term.comment_count_dic || 0, term)}
-                    </div>
-                );
-            }
 
-            case 'quote': {
-                const quoteNode = term.has_es ? (
+                return (
                     <button
                         type="button"
-                        className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
+                        className={`${styles.carrierQuoteBadge} ${styles.unquoted}`}
                         onClick={(e) => {
                             e.stopPropagation();
-                            handlePreviewDoc({
-                                title: `Quote / E&S Document — ${term.policy_number}`,
-                                subtitle: term.named_insured || undefined,
-                                docType: 'quote',
-                                storagePath: term.es_storage_path,
-                                bucket: 'cfp-platform-documents',
-                                fileName: term.es_file_name || `${term.policy_number}_Quote.pdf`,
-                                policyId: term.policy_id,
-                            });
+                            setActiveCarrierModal({ term, carrierKey });
                         }}
-                        title="Click to preview Quote / E&S document"
+                        title={`Click to enter quote for ${cName}`}
                     >
-                        <Check size={13} /> Quote
+                        <Plus size={10} /> <span>Quote</span>
                     </button>
-                ) : (
-                    <Link
-                        href={`/upload-document?policy_id=${term.policy_id}&doc_type=quote`}
-                        className={`${styles.docBadge} ${styles.no}`}
-                        title="Missing Quote/E&S — click to upload"
-                        target="_blank"
-                    >
-                        <Plus size={12} /> None
-                    </Link>
-                );
-                return (
-                    <div className={styles.cellWithComment}>
-                        {quoteNode}
-                        {renderCommentIndicator('Quote', term.comment_count_quote || 0, term)}
-                    </div>
                 );
             }
 
-            case 'bamboo':
+            case 'title_pro': {
+                const tp = term.title_pro;
+                if (tp) {
+                    let badgeClass = styles.matched;
+                    let icon = <Check size={12} />;
+                    let label = 'Title';
+                    let titleText = `Title Pro: "${tp.title_name || 'Matched'}"\nStatus: Matched\nVerified by: ${tp.verified_by || 'Staff'}`;
+
+                    if (tp.match_status === 'partial') {
+                        badgeClass = styles.partial;
+                        icon = <AlertTriangle size={12} />;
+                        label = 'Title';
+                        titleText = `Title Pro: "${tp.title_name || 'Trust / LLC'}"\nStatus: Trust / LLC (Partial)\nNotes: ${tp.notes || 'None'}\nVerified by: ${tp.verified_by || 'Staff'}`;
+                    } else if (tp.match_status === 'mismatch') {
+                        badgeClass = styles.mismatch;
+                        icon = <X size={12} />;
+                        label = 'Title';
+                        titleText = `Title Pro: "${tp.title_name}" (Mismatch)\nNamed Insured: "${term.named_insured}"\nNotes: ${tp.notes || 'None'}\nVerified by: ${tp.verified_by || 'Staff'}`;
+                    }
+
+                    return (
+                        <button
+                            type="button"
+                            className={`${styles.titleProBadge} ${badgeClass}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTitleModalTerm(term);
+                            }}
+                            title={`${titleText}\n(Click to view / edit)`}
+                        >
+                            {icon} <span>{label}</span>
+                        </button>
+                    );
+                }
+
                 return (
                     <button
                         type="button"
-                        disabled={togglingPolicyId === term.policy_id}
-                        onClick={() =>
-                            handleToggleBamboo(
-                                term.policy_id,
-                                term.has_bamboo_coverage
-                            )
-                        }
-                        className={`${styles.bambooToggle} ${
-                            term.has_bamboo_coverage
-                                ? styles.active
-                                : styles.inactive
-                        }`}
-                        title="Click to toggle full coverage"
+                        className={`${styles.titleProBadge} ${styles.unverified}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveTitleModalTerm(term);
+                        }}
+                        title="Click to check / verify Title Pro name"
                     >
-                        {term.has_bamboo_coverage ? (
-                            <>
-                                <Check size={12} /> Yes
-                            </>
-                        ) : (
-                            <>
-                                <X size={12} /> No
-                            </>
-                        )}
+                        <Plus size={11} /> <span>Title</span>
                     </button>
                 );
+            }
 
             case 'servicing':
                 if (term.in_servicing_email) {
@@ -1597,47 +1619,39 @@ export function CFPSummaryTable({
                         <option value="Other">Other Carrier</option>
                     </select>
                 );
-            case 'dic':
-                return (
-                    <select
-                        value={columnFilters.dic || ''}
-                        onChange={e => handleColumnFilterChange('dic', e.target.value)}
-                        className={`${styles.columnFilterSelect} ${columnFilters.dic ? styles.activeFilter : ''}`}
-                    >
-                        <option value="">All DIC</option>
-                        <option value="has_dic">Has DIC</option>
-                        <option value="missing">Missing DIC</option>
-                        <option value="no_dic">No Available DIC</option>
-                        <option value="Bamboo">Bamboo</option>
-                        <option value="AM">American Modern</option>
-                        <option value="Aegis">Aegis</option>
-                        <option value="SageSure">SageSure</option>
-                        <option value="PSIC">PSIC</option>
-                        <option value="Other">Other Carrier</option>
-                    </select>
-                );
-            case 'quote':
-                return (
-                    <select
-                        value={columnFilters.quote || ''}
-                        onChange={e => handleColumnFilterChange('quote', e.target.value)}
-                        className={`${styles.columnFilterSelect} ${columnFilters.quote ? styles.activeFilter : ''}`}
-                    >
-                        <option value="">All Quote</option>
-                        <option value="uploaded">Quote (Uploaded)</option>
-                        <option value="missing">Missing (None)</option>
-                    </select>
-                );
             case 'bamboo':
+            case 'aegis':
+            case 'am':
+            case 'sagesure':
+            case 'psic': {
+                const cKey = colKey as CarrierKey;
+                const cName = CARRIER_NAMES[cKey] || cKey.toUpperCase();
                 return (
                     <select
-                        value={columnFilters.bamboo || ''}
-                        onChange={e => handleColumnFilterChange('bamboo', e.target.value)}
-                        className={`${styles.columnFilterSelect} ${columnFilters.bamboo ? styles.activeFilter : ''}`}
+                        value={columnFilters[cKey] || ''}
+                        onChange={e => handleColumnFilterChange(cKey, e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters[cKey] ? styles.activeFilter : ''}`}
                     >
-                        <option value="">All Full Covg</option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
+                        <option value="">All {cName}</option>
+                        <option value="dic">DIC (✔)</option>
+                        <option value="full">FULL (✔)</option>
+                        <option value="unavailable">Unavailable (✕)</option>
+                        <option value="unquoted">Unquoted (+)</option>
+                    </select>
+                );
+            }
+            case 'title_pro':
+                return (
+                    <select
+                        value={columnFilters.title_pro || ''}
+                        onChange={e => handleColumnFilterChange('title_pro', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.title_pro ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Title</option>
+                        <option value="matched">Matched (✔)</option>
+                        <option value="partial">Trust / LLC (~)</option>
+                        <option value="mismatch">Mismatch (✕)</option>
+                        <option value="unverified">Unverified (+)</option>
                     </select>
                 );
             case 'servicing':
@@ -1917,33 +1931,26 @@ export function CFPSummaryTable({
                             </div>
                         </div>
 
-                        {/* 4. DIC */}
+                        {/* 4. DIC Quotes */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDic}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>DIC Policy / Doc</span>
+                                <span className={styles.miniCardLabel}>DIC Quotes</span>
                                 <ShieldOff size={13} className={styles.miniCardIcon} />
                             </div>
                             <div className={styles.miniCardMetrics}>
-                                <span className={styles.metricAvail} title="DIC documents on file">
-                                    <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} available
+                                <span className={styles.metricAvail} title="Policies with at least one DIC quote">
+                                    <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} quoted
                                 </span>
-                                {periodStats.dicNoAvailable > 0 && (
+                                {periodStats.unavailableCount > 0 && (
                                     <span 
                                         className={styles.metricNotice} 
-                                        title="Click to filter by No Available DIC"
-                                        onClick={() => { setDocFilter('no_dic'); setCurrentPage(1); }}
-                                        style={{ fontSize: '0.6875rem', color: '#64748b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                        title="Click to filter by Unavailable carrier quotes"
+                                        onClick={() => { setDocFilter('has_unavailable'); setCurrentPage(1); }}
+                                        style={{ fontSize: '0.6875rem', color: '#dc2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
                                     >
-                                        <Ban size={10} /> {periodStats.dicNoAvailable.toLocaleString()} no DIC
+                                        <X size={10} /> {periodStats.unavailableCount.toLocaleString()} unavail
                                     </span>
                                 )}
-                                <span 
-                                    className={styles.metricMissing} 
-                                    title="Click to filter by Missing DIC"
-                                    onClick={() => { setDocFilter('missing_dic'); setCurrentPage(1); }}
-                                >
-                                    <X size={11} /> {periodStats.dicMissing.toLocaleString()} missing
-                                </span>
                             </div>
                             <div className={styles.miniProgressBar}>
                                 <div 
@@ -1953,28 +1960,28 @@ export function CFPSummaryTable({
                             </div>
                         </div>
 
-                        {/* 5. Quote / E&S */}
+                        {/* 5. Full Coverage Quotes */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardQuote}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Quote / E&S</span>
+                                <span className={styles.miniCardLabel}>Full Covg Quotes</span>
                                 <FileQuestion size={13} className={styles.miniCardIcon} />
                             </div>
                             <div className={styles.miniCardMetrics}>
-                                <span className={styles.metricAvail} title="Quote/E&S documents on file">
-                                    <Check size={11} /> {periodStats.quoteAvailable.toLocaleString()} available
+                                <span className={styles.metricAvail} title="Policies with full coverage quote">
+                                    <Check size={11} /> {periodStats.fullAvailable.toLocaleString()} quoted
                                 </span>
                                 <span 
                                     className={styles.metricMissing} 
-                                    title="Click to filter by Missing Quote/E&S"
-                                    onClick={() => { setDocFilter('missing_es'); setCurrentPage(1); }}
+                                    title="Click to view all policies with any quote"
+                                    onClick={() => { setDocFilter('has_any_quote'); setCurrentPage(1); }}
                                 >
-                                    <X size={11} /> {periodStats.quoteMissing.toLocaleString()} missing
+                                    {periodStats.quoteAvailable.toLocaleString()} total quoted
                                 </span>
                             </div>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.total > 0 ? (periodStats.quoteAvailable / periodStats.total) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.total > 0 ? (periodStats.fullAvailable / periodStats.total) * 100 : 0}%` }} 
                                 />
                             </div>
                         </div>
@@ -2007,31 +2014,31 @@ export function CFPSummaryTable({
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'missing_dic' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('missing_dic'); setCurrentPage(1); }}
+                        className={`${styles.filterPill} ${docFilter === 'has_dic_quote' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_dic_quote'); setCurrentPage(1); }}
                     >
-                        Missing DIC
+                        Has DIC Quote
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'no_dic' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('no_dic'); setCurrentPage(1); }}
+                        className={`${styles.filterPill} ${docFilter === 'has_full_quote' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_full_quote'); setCurrentPage(1); }}
                     >
-                        No Available DIC
+                        Has Full Quote
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'missing_es' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('missing_es'); setCurrentPage(1); }}
+                        className={`${styles.filterPill} ${docFilter === 'has_any_quote' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_any_quote'); setCurrentPage(1); }}
                     >
-                        Missing Quote/E&S
+                        All Quoted
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'has_bamboo' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('has_bamboo'); setCurrentPage(1); }}
+                        className={`${styles.filterPill} ${docFilter === 'has_unavailable' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_unavailable'); setCurrentPage(1); }}
                     >
-                        Full Coverage: Yes
+                        Has Unavailable (✕)
                     </button>
                     <button
                         type="button"
@@ -2346,6 +2353,26 @@ export function CFPSummaryTable({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* ── Carrier Quote Modal ── */}
+            {activeCarrierModal && (
+                <CarrierQuoteModal
+                    term={activeCarrierModal.term}
+                    carrierKey={activeCarrierModal.carrierKey}
+                    onClose={() => setActiveCarrierModal(null)}
+                    onSaveSuccess={handleSaveCarrierQuoteSuccess}
+                    onPreviewDoc={handlePreviewDoc}
+                />
+            )}
+
+            {/* ── Title Pro Verification Modal ── */}
+            {activeTitleModalTerm && (
+                <TitleProModal
+                    term={activeTitleModalTerm}
+                    onClose={() => setActiveTitleModalTerm(null)}
+                    onSaveSuccess={handleSaveTitleProSuccess}
+                />
             )}
         </div>
     );

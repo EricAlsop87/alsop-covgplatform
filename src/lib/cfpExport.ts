@@ -23,9 +23,12 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         { header: 'Annual Premium', key: 'annual_premium', width: 16 },
         { header: 'DEC Page', key: 'has_dec', width: 14 },
         { header: 'RCE', key: 'has_rce', width: 14 },
-        { header: 'DIC', key: 'has_dic', width: 14 },
-        { header: 'Quote / E&S', key: 'has_es', width: 14 },
-        { header: 'Full Coverage', key: 'has_bamboo', width: 18 },
+        { header: 'Bamboo', key: 'bamboo', width: 24 },
+        { header: 'Aegis', key: 'aegis', width: 24 },
+        { header: 'AM', key: 'am', width: 24 },
+        { header: 'SageSure', key: 'sagesure', width: 24 },
+        { header: 'PSIC', key: 'psic', width: 24 },
+        { header: 'Title Pro', key: 'title_pro', width: 22 },
         { header: 'Notes', key: 'notes_preview', width: 32 },
         { header: 'Payment Status', key: 'payment_status', width: 16 },
         { header: 'Payment Plan', key: 'payment_plan', width: 15 },
@@ -49,8 +52,16 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
     worksheet.getColumn('property_address').alignment = { vertical: 'middle', horizontal: 'left' };
     worksheet.getColumn('carrier_name').alignment = { vertical: 'middle', horizontal: 'left' };
 
+    const formatQuote = (q: any) => {
+        if (!q) return 'Unquoted';
+        if (q.coverage_type === 'UNAVAILABLE') return `Unavailable${q.notes ? ` (${q.notes})` : ''}`;
+        return `${q.coverage_type}${q.quote_number ? ` (#${q.quote_number})` : ''}${q.premium ? ` - $${Number(q.premium).toLocaleString()}` : ''}`;
+    };
+
     // Add Data Rows
     for (const term of terms) {
+        const quotes = term.carrier_quotes || ({} as any);
+
         const row = worksheet.addRow({
             policy_number: term.policy_number,
             base_policy: term.base_policy,
@@ -65,9 +76,14 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             payment_plan: term.payment_plan || '',
             has_dec: term.has_dec ? 'Uploaded' : 'Missing',
             has_rce: term.rce_carrier || (term.has_rce ? 'Uploaded' : 'Missing'),
-            has_dic: term.dic_carrier || (term.has_dic ? 'Verified' : (term.no_dic_available ? 'No Available DIC' : 'Missing')),
-            has_es: term.has_es ? 'Uploaded' : 'Missing',
-            has_bamboo: term.has_bamboo_coverage ? 'Yes' : 'No',
+            bamboo: formatQuote(quotes.bamboo),
+            aegis: formatQuote(quotes.aegis),
+            am: formatQuote(quotes.am),
+            sagesure: formatQuote(quotes.sagesure),
+            psic: formatQuote(quotes.psic),
+            title_pro: term.title_pro
+                ? `${term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : 'Mismatch'} (${term.title_pro.title_name})`
+                : 'Unverified',
             notes_preview: term.latest_note_preview || (term.note_count > 0 ? `${term.note_count} note(s)` : ''),
         });
 
@@ -82,12 +98,12 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         }
 
         // Center align indicator columns
-        ['suffix', 'effective_date', 'expiration_date', 'has_dec', 'has_rce', 'has_dic', 'has_es', 'has_bamboo'].forEach(col => {
+        ['suffix', 'effective_date', 'expiration_date', 'has_dec', 'has_rce', 'bamboo', 'aegis', 'am', 'sagesure', 'psic', 'title_pro'].forEach(col => {
             const cell = row.getCell(col);
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
 
-        // Color coding for DEC, RCE, DIC, Quote, Full Coverage
+        // Color coding for DEC, RCE, Carriers, Title Pro
         if (!term.has_dec) {
             row.getCell('has_dec').font = { color: { argb: 'FFDC2626' }, bold: true };
         } else {
@@ -100,24 +116,30 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             row.getCell('has_rce').font = { color: { argb: 'FF16A34A' }, bold: true };
         }
 
-        if (term.no_dic_available) {
-            row.getCell('has_dic').font = { color: { argb: 'FF64748B' }, bold: true };
-        } else if (!term.has_dic && !term.dic_carrier) {
-            row.getCell('has_dic').font = { color: { argb: 'FFDC2626' }, bold: true };
-        } else {
-            row.getCell('has_dic').font = { color: { argb: 'FF16A34A' }, bold: true };
+        // Style Carrier Quote cells
+        const carrierColKeys = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'] as const;
+        for (const cKey of carrierColKeys) {
+            const q = quotes[cKey];
+            const cell = row.getCell(cKey);
+            if (!q) {
+                cell.font = { color: { argb: 'FF64748B' } };
+            } else if (q.coverage_type === 'FULL') {
+                cell.font = { color: { argb: 'FF16A34A' }, bold: true };
+            } else if (q.coverage_type === 'DIC') {
+                cell.font = { color: { argb: 'FF2563EB' }, bold: true };
+            } else if (q.coverage_type === 'UNAVAILABLE') {
+                cell.font = { color: { argb: 'FFDC2626' }, bold: true };
+            }
         }
 
-        if (!term.has_es) {
-            row.getCell('has_es').font = { color: { argb: 'FFDC2626' }, bold: true };
+        if (term.title_pro?.match_status === 'matched') {
+            row.getCell('title_pro').font = { color: { argb: 'FF16A34A' }, bold: true };
+        } else if (term.title_pro?.match_status === 'partial') {
+            row.getCell('title_pro').font = { color: { argb: 'FFD97706' }, bold: true };
+        } else if (term.title_pro?.match_status === 'mismatch') {
+            row.getCell('title_pro').font = { color: { argb: 'FFDC2626' }, bold: true };
         } else {
-            row.getCell('has_es').font = { color: { argb: 'FF16A34A' }, bold: true };
-        }
-
-        if (term.has_bamboo_coverage) {
-            row.getCell('has_bamboo').font = { color: { argb: 'FF16A34A' }, bold: true };
-        } else {
-            row.getCell('has_bamboo').font = { color: { argb: 'FF64748B' } };
+            row.getCell('title_pro').font = { color: { argb: 'FF64748B' } };
         }
     }
 
