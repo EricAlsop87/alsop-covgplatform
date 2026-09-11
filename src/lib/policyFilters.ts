@@ -4,8 +4,8 @@
  * to ensure consistent numbers across Dashboard, Flags, and DataTable.
  */
 
-/** Statuses that are NOT actionable by agents */
-export const INACTIVE_STATUSES = ['expired', 'cancelled', 'non_renewed'] as const;
+/** Statuses that are NOT actionable by agents in main active policy views */
+export const INACTIVE_STATUSES = ['expired', 'cancelled', 'non_renewed', 'pending_dec'] as const;
 
 /** Demo / seed client to always exclude from real data views */
 export const DEMO_CLIENT_ID = '00000000-0000-4000-a000-000000000001';
