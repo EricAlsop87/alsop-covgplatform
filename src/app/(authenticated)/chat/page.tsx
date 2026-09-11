@@ -7,7 +7,7 @@ import { ChatMessageList } from '@/components/chat/ChatMessageList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { CreateGroupModal } from '@/components/chat/CreateGroupModal';
 import { ChatChannel, ChatMessage, UserPresence, ChatAttachment, ChatPolicyRef } from '@/lib/teamChat';
-import { Hash, Users, MessageSquare } from 'lucide-react';
+import { Hash, Users, MessageSquare, ChevronLeft } from 'lucide-react';
 
 import { supabase } from '@/lib/supabaseClient';
 
@@ -31,6 +31,7 @@ export default function TeamChatPage() {
     const [currentUserId, setCurrentUserId] = useState<string>('');
     const [showCreateGroup, setShowCreateGroup] = useState<boolean>(false);
     const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
+    const [mobileView, setMobileView] = useState<'sidebar' | 'chat'>('sidebar');
 
     // Fetch channels and staff metadata
     const fetchChannels = useCallback(async () => {
@@ -192,6 +193,7 @@ export default function TeamChatPage() {
     const handleStartDM = (targetUser: UserPresence) => {
         const dmId = `dm_${[currentUserId, targetUser.userId].sort().join('_')}`;
         setActiveChannelId(dmId);
+        setMobileView('chat');
     };
 
     // Create Group Chat
@@ -217,6 +219,7 @@ export default function TeamChatPage() {
                 if (json.channel) {
                     setChannels(prev => [...prev, json.channel]);
                     setActiveChannelId(json.channel.id);
+                    setMobileView('chat');
                 }
             }
         } catch (err) {
@@ -227,20 +230,34 @@ export default function TeamChatPage() {
     return (
         <div className={styles.chatPageWrapper}>
             {/* Sidebar */}
-            <ChatSidebar
-                channels={channels}
-                activeChannelId={activeChannelId}
-                onSelectChannel={setActiveChannelId}
-                presenceUsers={presenceUsers}
-                currentUserId={currentUserId}
-                onOpenCreateGroup={() => setShowCreateGroup(true)}
-                onStartDM={handleStartDM}
-            />
+            <div className={`${styles.sidebarWrapper} ${mobileView === 'chat' ? styles.hideOnMobile : ''}`}>
+                <ChatSidebar
+                    channels={channels}
+                    activeChannelId={activeChannelId}
+                    onSelectChannel={(chId) => {
+                        setActiveChannelId(chId);
+                        setMobileView('chat');
+                    }}
+                    presenceUsers={presenceUsers}
+                    currentUserId={currentUserId}
+                    onOpenCreateGroup={() => setShowCreateGroup(true)}
+                    onStartDM={handleStartDM}
+                />
+            </div>
 
             {/* Main Chat Area */}
-            <div className={styles.mainChatArea}>
+            <div className={`${styles.mainChatArea} ${mobileView === 'sidebar' ? styles.hideOnMobile : ''}`}>
                 {/* Header */}
                 <div className={styles.chatHeader}>
+                    <button
+                        type="button"
+                        className={styles.mobileBackBtn}
+                        onClick={() => setMobileView('sidebar')}
+                        title="Back to channels"
+                    >
+                        <ChevronLeft size={18} />
+                        <span>Channels</span>
+                    </button>
                     <div className={styles.headerInfo}>
                         <div className={styles.headerTitle}>
                             {activeDMUser ? (
