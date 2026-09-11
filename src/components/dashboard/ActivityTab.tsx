@@ -75,16 +75,23 @@ function StatusIcon({ status, type, event_type }: { status: string; type?: strin
 }
 
 const DOC_TYPE_LABELS: Record<string, string> = {
+    dec_page: 'Declaration Page',
     rce: 'RCE Report',
     dic_dec_page: 'DIC Declaration',
     invoice: 'Invoice',
     inspection: 'Inspection Report',
     endorsement: 'Endorsement',
     questionnaire: 'Questionnaire',
+    other: 'Document',
 };
 
 function getDocumentActionLabel(activity: ActivityFeedItem): string {
-    const docLabel = DOC_TYPE_LABELS[activity.doc_type || ''] || activity.doc_type?.toUpperCase() || 'Document';
+    const isCfp = (activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('RENEWAL_EMAIL_ATTACHMENT') ||
+                  (activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('CFP');
+    const docLabel = isCfp || activity.doc_type === 'dec_page'
+        ? 'Declaration Page'
+        : (DOC_TYPE_LABELS[activity.doc_type || ''] || (activity.doc_type && activity.doc_type !== 'other' ? activity.doc_type.toUpperCase() : 'Document'));
+
     const isUpload = (activity.event_type || '').startsWith('doc.uploaded.');
     if (isUpload) return `${docLabel} Uploaded`;
     if (activity.event_type === 'document.processed') return `${docLabel} Processed`;
@@ -421,7 +428,11 @@ export function ActivityTab() {
 
                                         {/* Detail text for document events */}
                                         {isDoc && activity.detail && (
-                                            <div className={styles.detailText}>{activity.detail}</div>
+                                            <div className={styles.detailText}>
+                                                {((activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('RENEWAL_EMAIL_ATTACHMENT') || (activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('CFP') || activity.doc_type === 'dec_page') && activity.detail.includes('DIC Carrier')
+                                                    ? 'A California FAIR Plan Declaration Page was successfully uploaded and applied.'
+                                                    : activity.detail}
+                                            </div>
                                         )}
 
                                         {/* File name hint for document uploads */}
