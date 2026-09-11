@@ -22,11 +22,14 @@ export function ChatMessageList({
     channelName,
 }: ChatMessageListProps) {
     if (messages.length === 0) {
+        const isChannel = channelName.startsWith('#') || channelName === 'general' || channelName.includes('renewals') || channelName.includes('operations');
+        const formattedTitle = channelName.startsWith('#') ? channelName : (isChannel ? `#${channelName}` : channelName);
+
         return (
             <div className={styles.messageListContainer}>
                 <div className={styles.emptyState}>
-                    <h4>Welcome to #{channelName}!</h4>
-                    <p>This is the start of your team conversation. Send a message, share a policy, or paste a screenshot.</p>
+                    <h4>{isChannel ? `Welcome to ${formattedTitle}!` : `Direct conversation with ${formattedTitle}`}</h4>
+                    <p>This is the start of your {isChannel ? 'channel discussion' : 'direct message history'}. Send a message, share a policy, or paste a screenshot.</p>
                 </div>
             </div>
         );

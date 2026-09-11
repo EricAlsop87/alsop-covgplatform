@@ -44,7 +44,6 @@ export function Sidebar({ userRole }: SidebarProps) {
     const agentNavItems = [
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'CFP Summary', href: '/cfp-summary', icon: FileSpreadsheet },
-        { label: 'Team Chat', href: '/chat', icon: MessageSquare },
         { label: 'Flags', href: '/flags', icon: Flag },
         {
             label: 'Email Center',
@@ -61,6 +60,7 @@ export function Sidebar({ userRole }: SidebarProps) {
     // Admin/Service shared nav items
     const adminNavItems = (userRole === 'admin' || userRole === 'service') ? [
         { label: 'Operations', href: '/admin/submissions', icon: FileText },
+        { label: 'Communication', href: '/chat', icon: MessageSquare },
         { label: 'Recent Activity', href: '/operations/activity', icon: Clock },
     ] : [];
 

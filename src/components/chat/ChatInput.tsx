@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import styles from './ChatInput.module.scss';
 import { ChatAttachment, ChatPolicyRef } from '@/lib/teamChat';
 import { Send, Paperclip, Smile, X, Bookmark, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface ChatInputProps {
     onSendMessage: (text: string, attachments: ChatAttachment[], policyRef: ChatPolicyRef | null) => Promise<void>;
@@ -44,12 +45,16 @@ export function ChatInput({ onSendMessage, channelName }: ChatInputProps) {
     const uploadFile = async (file: File, isClipboard = false) => {
         setUploading(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const formData = new FormData();
             formData.append('file', file);
             if (isClipboard) formData.append('is_clipboard', 'true');
 
             const res = await fetch('/api/chat/upload', {
                 method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: formData,
             });
 
@@ -84,7 +89,12 @@ export function ChatInput({ onSendMessage, channelName }: ChatInputProps) {
         const timer = setTimeout(async () => {
             setIsSearchingPolicies(true);
             try {
-                const res = await fetch(`/api/cfp-summary?search=${encodeURIComponent(policySearch)}`);
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
+                const res = await fetch(`/api/cfp-summary?search=${encodeURIComponent(policySearch)}`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
                 if (res.ok) {
                     const json = await res.json();
                     const list: any[] = [];

@@ -73,20 +73,26 @@ export function ChatSidebar({
                     <div className={styles.sectionHeader}>
                         <span>Channels</span>
                     </div>
-                    {filteredChannels.map(ch => {
-                        const isActive = activeChannelId === ch.id;
-                        return (
-                            <button
-                                key={ch.id}
-                                type="button"
-                                className={`${styles.itemBtn} ${isActive ? styles.activeItem : ''}`}
-                                onClick={() => onSelectChannel(ch.id)}
-                            >
-                                <Hash size={15} className={styles.channelIcon} />
-                                <span className={styles.itemName}>{ch.name}</span>
-                            </button>
-                        );
-                    })}
+                    {filteredChannels.length === 0 ? (
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', padding: '0.2rem 0.65rem' }}>
+                            {searchQuery ? 'No matching channels' : 'No channels'}
+                        </div>
+                    ) : (
+                        filteredChannels.map(ch => {
+                            const isActive = activeChannelId === ch.id;
+                            return (
+                                <button
+                                    key={ch.id}
+                                    type="button"
+                                    className={`${styles.itemBtn} ${isActive ? styles.activeItem : ''}`}
+                                    onClick={() => onSelectChannel(ch.id)}
+                                >
+                                    <Hash size={15} className={styles.channelIcon} />
+                                    <span className={styles.itemName}>{ch.name}</span>
+                                </button>
+                            );
+                        })
+                    )}
                 </div>
 
                 {/* 2. Custom Group Chats */}
@@ -104,7 +110,7 @@ export function ChatSidebar({
                     </div>
                     {filteredGroups.length === 0 ? (
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', padding: '0.2rem 0.65rem' }}>
-                            No active group chats
+                            {searchQuery ? 'No matching group chats' : 'No active group chats'}
                         </div>
                     ) : (
                         filteredGroups.map(grp => {
@@ -129,34 +135,40 @@ export function ChatSidebar({
                     <div className={styles.sectionHeader}>
                         <span>Direct Messages</span>
                     </div>
-                    {filteredUsers.map(u => {
-                        const dmId = `dm_${[currentUserId, u.userId].sort().join('_')}`;
-                        const isActive = activeChannelId === dmId;
-                        const initials = u.userName
-                            .split(' ')
-                            .map(n => n[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase() || 'U';
+                    {filteredUsers.length === 0 ? (
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', padding: '0.2rem 0.65rem' }}>
+                            {searchQuery ? 'No matching team members' : 'Loading team members...'}
+                        </div>
+                    ) : (
+                        filteredUsers.map(u => {
+                            const dmId = `dm_${[currentUserId || 'self', u.userId].sort().join('_')}`;
+                            const isActive = activeChannelId === dmId;
+                            const initials = u.userName
+                                .split(' ')
+                                .map(n => n[0])
+                                .slice(0, 2)
+                                .join('')
+                                .toUpperCase() || 'U';
 
-                        return (
-                            <button
-                                key={u.userId}
-                                type="button"
-                                className={`${styles.itemBtn} ${isActive ? styles.activeItem : ''}`}
-                                onClick={() => onStartDM(u)}
-                            >
-                                <div className={styles.avatarWrapper}>
-                                    <div className={styles.avatar}>{initials}</div>
-                                    <div className={`${styles.statusDot} ${getStatusClass(u.status)}`} />
-                                </div>
-                                <span className={styles.itemName}>{u.userName}</span>
-                                <span className={styles.userRoleBadge}>
-                                    {u.role === 'admin' ? 'Admin' : 'VA'}
-                                </span>
-                            </button>
-                        );
-                    })}
+                            return (
+                                <button
+                                    key={u.userId}
+                                    type="button"
+                                    className={`${styles.itemBtn} ${isActive ? styles.activeItem : ''}`}
+                                    onClick={() => onStartDM(u)}
+                                >
+                                    <div className={styles.avatarWrapper}>
+                                        <div className={styles.avatar}>{initials}</div>
+                                        <div className={`${styles.statusDot} ${getStatusClass(u.status)}`} />
+                                    </div>
+                                    <span className={styles.itemName}>{u.userName}</span>
+                                    <span className={styles.userRoleBadge}>
+                                        {u.role === 'admin' ? 'Admin' : 'VA'}
+                                    </span>
+                                </button>
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>

@@ -9,6 +9,20 @@ import { CreateGroupModal } from '@/components/chat/CreateGroupModal';
 import { ChatChannel, ChatMessage, UserPresence, ChatAttachment, ChatPolicyRef } from '@/lib/teamChat';
 import { Hash, Users, MessageSquare } from 'lucide-react';
 
+import { supabase } from '@/lib/supabaseClient';
+
+async function getAuthHeader(): Promise<Record<string, string>> {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+            return { Authorization: `Bearer ${session.access_token}` };
+        }
+    } catch (err) {
+        console.error('Error retrieving session for chat:', err);
+    }
+    return {};
+}
+
 export default function TeamChatPage() {
     const [channels, setChannels] = useState<ChatChannel[]>([]);
     const [activeChannelId, setActiveChannelId] = useState<string>('general');
@@ -21,7 +35,8 @@ export default function TeamChatPage() {
     // Fetch channels and staff metadata
     const fetchChannels = useCallback(async () => {
         try {
-            const res = await fetch('/api/chat/channels');
+            const authHeaders = await getAuthHeader();
+            const res = await fetch('/api/chat/channels', { headers: authHeaders });
             if (res.ok) {
                 const data = await res.json();
                 setChannels(data.channels || []);
@@ -35,10 +50,12 @@ export default function TeamChatPage() {
     // Fetch presence
     const fetchPresence = useCallback(async () => {
         try {
-            const res = await fetch('/api/chat/presence');
+            const authHeaders = await getAuthHeader();
+            const res = await fetch('/api/chat/presence', { headers: authHeaders });
             if (res.ok) {
                 const data = await res.json();
                 setPresenceUsers(data.users || []);
+                if (data.currentUserId) setCurrentUserId(data.currentUserId);
             }
         } catch (err) {
             console.error('Error loading presence:', err);
@@ -48,7 +65,11 @@ export default function TeamChatPage() {
     // Heartbeat presence
     const sendHeartbeat = useCallback(async () => {
         try {
-            await fetch('/api/chat/presence', { method: 'POST' });
+            const authHeaders = await getAuthHeader();
+            await fetch('/api/chat/presence', {
+                method: 'POST',
+                headers: authHeaders,
+            });
         } catch {}
     }, []);
 
@@ -56,7 +77,8 @@ export default function TeamChatPage() {
     const fetchMessages = useCallback(async (channelId: string, showLoader = false) => {
         if (showLoader) setLoadingMessages(true);
         try {
-            const res = await fetch(`/api/chat/messages?channel_id=${channelId}`);
+            const authHeaders = await getAuthHeader();
+            const res = await fetch(`/api/chat/messages?channel_id=${channelId}`, { headers: authHeaders });
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data.messages || []);
@@ -112,9 +134,13 @@ export default function TeamChatPage() {
     // Send Message Handler
     const handleSendMessage = async (text: string, attachments: ChatAttachment[], policyRef: ChatPolicyRef | null) => {
         try {
+            const authHeaders = await getAuthHeader();
             const res = await fetch('/api/chat/messages', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...authHeaders,
+                },
                 body: JSON.stringify({
                     channel_id: activeChannelId,
                     text,
@@ -137,9 +163,13 @@ export default function TeamChatPage() {
     // Toggle Reaction Handler
     const handleToggleReaction = async (messageId: string, emoji: string) => {
         try {
+            const authHeaders = await getAuthHeader();
             const res = await fetch('/api/chat/reactions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...authHeaders,
+                },
                 body: JSON.stringify({
                     channel_id: activeChannelId,
                     message_id: messageId,
@@ -167,9 +197,13 @@ export default function TeamChatPage() {
     // Create Group Chat
     const handleCreateGroup = async (name: string, selectedUserIds: string[], memberNames: string[]) => {
         try {
+            const authHeaders = await getAuthHeader();
             const res = await fetch('/api/chat/channels', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...authHeaders,
+                },
                 body: JSON.stringify({
                     name,
                     type: 'group',
