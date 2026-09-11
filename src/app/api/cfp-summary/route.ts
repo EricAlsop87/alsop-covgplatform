@@ -470,6 +470,22 @@ export async function GET(req: NextRequest) {
     const policyEsDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
 
     for (const doc of docs) {
+        const fn = (doc.file_name || '').toLowerCase();
+        const isCfpDecDoc = (
+            fn.includes('renewal_email_attachment') ||
+            fn.includes('renewal_offer') ||
+            (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !fn.includes('quote') && !fn.includes('dic'))
+        );
+
+        if (isCfpDecDoc) {
+            // It's a CFP Dec Page / Renewal document uploaded to platform_documents
+            policyIdsWithDec.add(doc.policy_id);
+            if (doc.storage_path && !policyDecDocMap[doc.policy_id]) {
+                policyDecDocMap[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+            }
+            continue;
+        }
+
         if (!policyDocTypes[doc.policy_id]) {
             policyDocTypes[doc.policy_id] = new Set<string>();
         }

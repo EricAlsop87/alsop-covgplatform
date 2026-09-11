@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
+import zlib from 'zlib';
 
 /** Vercel function config */
 export const maxDuration = 30;
@@ -28,9 +29,7 @@ export async function POST(request: NextRequest) {
         // Read file bytes and extract raw text
         const buffer = Buffer.from(await file.arrayBuffer());
         
-        // Simple PDF text extraction: find text between stream/endstream markers
-        // and decode printable ASCII. This is a lightweight approach that avoids
-        // needing a full PDF parser on the serverless function.
+        // PDF text extraction with Flate decompression support
         const rawText = extractPdfText(buffer);
         const upperText = rawText.toUpperCase();
 
@@ -57,34 +56,51 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Extract readable text from a PDF buffer without a full parser.
- * Decodes text from PDF content streams and literal strings.
+ * Extract readable text from a PDF buffer.
+ * Decodes text from PDF content streams (handling FlateDecode compression) and literal strings.
  */
 function extractPdfText(buffer: Buffer): string {
     const text = buffer.toString('latin1');
     const chunks: string[] = [];
     
-    // Extract text from PDF streams
-    const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
-    let match;
-    while ((match = streamRegex.exec(text)) !== null) {
-        // Filter to printable ASCII
-        const printable = match[1].replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (printable.length > 10) {
-            chunks.push(printable);
-        }
-    }
-    
-    // Also extract text from PDF literal strings (parenthesized text)
+    // Extract text from PDF literal strings (parenthesized text)
     const stringRegex = /\(([^)]{3,})\)/g;
+    let match;
     while ((match = stringRegex.exec(text)) !== null) {
         const printable = match[1].replace(/[^\x20-\x7E]/g, '').trim();
         if (printable.length > 2) {
             chunks.push(printable);
         }
     }
+
+    // Extract and decompress text from PDF streams (FlateDecode)
+    const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+    while ((match = streamRegex.exec(text)) !== null) {
+        const streamStart = match.index + match[0].indexOf('\n') + 1;
+        const streamEnd = match.index + match[0].lastIndexOf('endstream');
+        const rawStream = buffer.subarray(streamStart, streamEnd);
+
+        try {
+            const decompressed = zlib.inflateSync(rawStream).toString('latin1');
+            let m;
+            while ((m = stringRegex.exec(decompressed)) !== null) {
+                const p = m[1].replace(/[^\x20-\x7E]/g, '').trim();
+                if (p.length > 2) chunks.push(p);
+            }
+            const printable = decompressed.replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (printable.length > 10) {
+                chunks.push(printable);
+            }
+        } catch {
+            // Uncompressed stream fallback
+            const printable = match[1].replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (printable.length > 10) {
+                chunks.push(printable);
+            }
+        }
+    }
     
-    return chunks.join(' ').slice(0, 8000); // Cap at 8k chars
+    return chunks.join(' ').slice(0, 15000); // Cap at 15k chars
 }
 
 /**
@@ -94,16 +110,36 @@ function extractPdfText(buffer: Buffer): string {
 function classifyDocument(upperText: string, fileName: string = ''): string {
     const fnUpper = fileName.toUpperCase();
 
-    // 0. Check filename signals FIRST (e.g. "Martha Manriquez CFP Dec.pdf")
-    if (
-        (fnUpper.includes('CFP') && (fnUpper.includes('DEC') || fnUpper.includes('DECLARATION') || fnUpper.includes('PAGE'))) ||
-        fnUpper.includes('FAIR PLAN DEC') ||
-        fnUpper.includes('FAIR_PLAN_DEC') ||
+    // 0. Check filename signals FIRST for California FAIR Plan Dec Pages & Renewal Attachments
+    // CFP Renewal email attachments always use names like:
+    // "Renewal_Email_Attachment_CFP 0102482286_10602788_2026-09-05_234440.pdf"
+    const isCfpFilename = (
+        fnUpper.includes('RENEWAL_EMAIL_ATTACHMENT') ||
+        fnUpper.includes('RENEWAL_OFFER') ||
+        fnUpper.includes('FAIR PLAN') ||
+        fnUpper.includes('FAIR_PLAN') ||
         fnUpper.includes('CFP DEC') ||
-        fnUpper.includes('CFP_DEC')
-    ) {
+        fnUpper.includes('CFP_DEC') ||
+        /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
+        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
+        /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
+        (fnUpper.includes('CFP') && !fnUpper.includes('BAMBOO') && !fnUpper.includes('AEGIS') && !fnUpper.includes('AMERICAN MODERN') && !fnUpper.includes('SAGESURE') && !fnUpper.includes('PSIC') && !fnUpper.includes('QUOTE') && !fnUpper.includes('RCE'))
+    );
+
+    const isCompanionCarrier = (
+        fnUpper.includes('BAMBOO') ||
+        fnUpper.includes('AEGIS') ||
+        fnUpper.includes('AMERICAN MODERN') ||
+        fnUpper.includes('AMERICANMODERN') ||
+        fnUpper.includes('SAGESURE') ||
+        fnUpper.includes('PSIC') ||
+        fnUpper.includes('PACIFIC SPECIALTY')
+    );
+
+    if (isCfpFilename && !isCompanionCarrier && !fnUpper.includes('RCE') && !fnUpper.includes('360VALUE') && !fnUpper.includes('VALUATION')) {
         return 'dec_page';
     }
+
     if (fnUpper.includes('RCE') || fnUpper.includes('360VALUE') || fnUpper.includes('VALUATION')) {
         return 'rce';
     }
@@ -122,9 +158,10 @@ function classifyDocument(upperText: string, fileName: string = ''): string {
         'DWELLING PROPERTY POLICY DECLARATIONS',
         'CFPNET.COM',
         'DWELLING FIRE',
+        'CALIFORNIA FAIR PLAN PROPERTY INSURANCE',
         'POLICY PERIOD',
     ];
-    const isCfp = upperText.includes('CALIFORNIA FAIR PLAN') || upperText.includes('FAIR PLAN ASSOCIATION') || upperText.includes('CFPNET.COM');
+    const isCfp = upperText.includes('CALIFORNIA FAIR PLAN') || upperText.includes('FAIR PLAN ASSOCIATION') || upperText.includes('CFPNET.COM') || upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE');
     const decPageHits = decPageMarkers.filter(m => upperText.includes(m)).length;
     if (isCfp || decPageHits >= 2) return 'dec_page';
 

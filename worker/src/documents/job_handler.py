@@ -41,13 +41,19 @@ def classify_document_text(text: str, file_name: str = "") -> str:
     upper_text = text.upper()
     upper_fn = file_name.upper()
 
-    # 0. Check filename signals FIRST (e.g. "Martha Manriquez CFP Dec.pdf")
-    if (
-        (upper_fn.find("CFP") != -1 and (upper_fn.find("DEC") != -1 or upper_fn.find("PAGE") != -1)) or
-        upper_fn.find("FAIR PLAN DEC") != -1 or
-        upper_fn.find("CFP DEC") != -1
-    ):
-        logger.info("Auto-classified document as 'dec_page' via filename: %s", file_name)
+    # 0. Check filename signals FIRST (e.g. "Renewal_Email_Attachment_CFP 0102482286...pdf")
+    is_companion_carrier = any(c in upper_fn for c in ["BAMBOO", "AEGIS", "AMERICAN MODERN", "AMERICANMODERN", "SAGESURE", "PSIC", "PACIFIC SPECIALTY"])
+    is_cfp_fn = (
+        "RENEWAL_EMAIL_ATTACHMENT" in upper_fn or
+        "RENEWAL_OFFER" in upper_fn or
+        "FAIR PLAN" in upper_fn or
+        "FAIR_PLAN" in upper_fn or
+        "CFP DEC" in upper_fn or
+        "CFP_DEC" in upper_fn or
+        ("CFP" in upper_fn and not is_companion_carrier and "RCE" not in upper_fn and "QUOTE" not in upper_fn)
+    )
+    if is_cfp_fn and not is_companion_carrier and "RCE" not in upper_fn and "360VALUE" not in upper_fn and "VALUATION" not in upper_fn:
+        logger.info("Auto-classified document as 'dec_page' via CFP filename: %s", file_name)
         return "dec_page"
 
     # 1. Check for California FAIR Plan Dec Page FIRST (highest priority)
