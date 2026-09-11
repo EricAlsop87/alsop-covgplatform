@@ -1030,7 +1030,7 @@ export function CFPSummaryTable({
                             <span
                                 className={`${styles.carrierBadge} ${styles.bamboo}`}
                                 style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}
-                                title="Bamboo in-force policy waiting for Olga to upload CFP DEC page"
+                                title="Bamboo in-force policy waiting for CFP DEC page upload"
                             >
                                 Pending DEC
                             </span>

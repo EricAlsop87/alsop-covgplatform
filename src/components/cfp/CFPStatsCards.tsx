@@ -54,7 +54,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
         {
             title: 'Missing DEC',
             value: stats.missing_dec.toLocaleString(),
-            sublabel: 'Needs Olga to upload DEC',
+            sublabel: 'Awaiting DEC page document',
             uploaded: decUploaded,
             color: '#f59e0b',
             bg: 'rgba(245, 158, 11, 0.1)',
@@ -63,7 +63,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
         {
             title: 'Missing RCE',
             value: stats.missing_rce.toLocaleString(),
-            sublabel: 'Needs VA to upload RCE',
+            sublabel: 'Awaiting RCE document',
             uploaded: rceUploaded,
             color: '#8b5cf6',
             bg: 'rgba(139, 92, 246, 0.1)',
