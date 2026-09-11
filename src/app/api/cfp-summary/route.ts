@@ -101,13 +101,19 @@ export function detectCarrierQuoteInfo(
     rawText?: string | null,
     docType?: string | null
 ): { carrier_key: CarrierKey; coverage_type: CoverageQuoteType; quote_number: string | null } | null {
+    // Pure RCE documents should not be categorized as quotes unless explicitly a quote doc
+    const isPureRce = docType === 'rce' && !(fileName || '').toLowerCase().includes('quote') && !(fileName || '').toLowerCase().includes('dic') && !(fileName || '').toLowerCase().includes('dec');
+    if (isPureRce) {
+        return null;
+    }
+
     const fn = (fileName || '').toLowerCase();
     const txt = (rawText || '').toLowerCase().slice(0, 3000);
     const combined = `${fn} ${txt}`;
 
     // 1. Bamboo (Q100... or Bamboo)
     const matchBamboo = (fileName || '').match(/(Q100\d{6,})/i);
-    if (combined.includes('bamboo') || combined.includes('360value') || combined.includes('360 value') || matchBamboo) {
+    if (combined.includes('bamboo') || matchBamboo) {
         const isDic = combined.includes('does not cover the peril of fire') || combined.includes('dic') || docType === 'dic_dec_page';
         return {
             carrier_key: 'bamboo',
@@ -118,7 +124,7 @@ export function detectCarrierQuoteInfo(
 
     // 2. Aegis (Q55... or Aegis or Obsidian)
     const matchAegis = (fileName || '').match(/(Q55\d{4,})/i);
-    if (combined.includes('aegis') || combined.includes('obsidian') || matchAegis) {
+    if (combined.includes('aegis') || combined.includes('obsidian pacific') || matchAegis) {
         const isDic = combined.includes('california dic quote') || combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
         return {
             carrier_key: 'aegis',
@@ -133,9 +139,6 @@ export function detectCarrierQuoteInfo(
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
         combined.includes('homeowners flex') ||
-        combined.includes('rce am') ||
-        combined.includes('rcm am') ||
-        combined.includes('rce_am') ||
         combined.includes('quote am') ||
         combined.includes('dic am') ||
         combined.includes('dic_am') ||
@@ -151,20 +154,20 @@ export function detectCarrierQuoteInfo(
         };
     }
 
-    // 4. SageSure (CASNH... or SageSure)
-    const matchSage = (fileName || '').match(/(CA[A-Za-z]{3}\d{5,})/i);
+    // 4. SageSure (Exact SageSure policy/quote prefixes: CASNH, CASNL, CAICH, CAASL, CAICL, CASNP, CASLH, CASLP)
+    const matchSage = (fileName || '').match(/(CASNH|CASNL|CAICH|CAASL|CAICL|CASNP|CASLH|CASLP|CASC)\d{5,}/i);
     if (combined.includes('sagesure') || combined.includes('sage sure') || matchSage) {
         const isDic = combined.includes('dic') || docType === 'dic_dec_page';
         return {
             carrier_key: 'sagesure',
             coverage_type: isDic ? 'DIC' : 'FULL',
-            quote_number: matchSage ? matchSage[1] : null,
+            quote_number: matchSage ? matchSage[0] : null,
         };
     }
 
     // 5. PSIC (Pacific Specialty)
     const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
-    if (combined.includes('psic') || combined.includes('pacific specialty') || combined.includes('pacificspecialty') || matchPsic) {
+    if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || combined.includes('psic') || matchPsic) {
         const isDic = combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
         return {
             carrier_key: 'psic',
@@ -199,34 +202,34 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'AM';
     }
 
-    // 2. Aegis (including Obsidian, Aegis Security, Aegis General, Q55 quotes)
+    // 2. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q55 quotes)
     if (
         combined.includes('aegis') ||
-        combined.includes('obsidian') ||
+        combined.includes('obsidian pacific') ||
         /(?:^|[^0-9])Q55[0-9]{4,}/i.test(fileName || '')
     ) {
         return 'Aegis';
     }
 
-    // 3. SageSure (CASNH, CASNL, CAICH, CAASL, CAICL, etc.)
+    // 3. SageSure (Strict exact prefixes only: CASNH, CASNL, CAICH, CAASL, CAICL, etc.)
     if (
         combined.includes('sagesure') ||
         combined.includes('sage sure') ||
-        /(?:^|[^A-Za-z0-9])CA[A-Za-z]{3}[0-9]{5,}/.test(fileName || '')
+        /(?:^|[^A-Za-z0-9])(?:CASNH|CASNL|CAICH|CAASL|CAICL|CASNP|CASLH|CASLP|CASC)[0-9]{5,}/i.test(fileName || '')
     ) {
         return 'SageSure';
     }
 
     // 4. PSIC (Pacific Specialty)
     if (
-        combined.includes('psic') ||
         combined.includes('pacific specialty') ||
-        combined.includes('pacificspecialty')
+        combined.includes('pacificspecialty') ||
+        combined.includes('psic')
     ) {
         return 'PSIC';
     }
 
-    // 5. Bamboo
+    // 5. Bamboo (Bamboo, 360Value, Q100)
     if (
         combined.includes('bamboo') ||
         combined.includes('360value') ||
