@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import styles from './ChatMessageList.module.scss';
 import { ChatMessage } from '@/lib/teamChat';
-import { FileText, ExternalLink, Eye, CheckCheck } from 'lucide-react';
+import { FileText, ExternalLink, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChatMessageListProps {
@@ -21,23 +21,25 @@ export function ChatMessageList({
     onToggleReaction,
     channelName,
 }: ChatMessageListProps) {
-    if (messages.length === 0) {
-        const isChannel = channelName.startsWith('#') || channelName === 'general' || channelName.includes('renewals') || channelName.includes('operations');
-        const formattedTitle = channelName.startsWith('#') ? channelName : (isChannel ? `#${channelName}` : channelName);
+    const bottomRef = useRef<HTMLDivElement>(null);
 
-        return (
-            <div className={styles.messageListContainer}>
-                <div className={styles.emptyState}>
-                    <h4>{isChannel ? `Welcome to ${formattedTitle}!` : `Direct conversation with ${formattedTitle}`}</h4>
-                    <p>This is the start of your {isChannel ? 'channel discussion' : 'direct message history'}. Send a message, share a policy, or paste a screenshot.</p>
-                </div>
-            </div>
-        );
-    }
+    // Automatically scroll to the latest message at bottom
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const isChannel = channelName.startsWith('#') || channelName === 'general' || channelName.includes('renewals') || channelName.includes('operations');
+    const formattedTitle = channelName.startsWith('#') ? channelName : (isChannel ? `#${channelName}` : channelName);
 
     return (
         <div className={styles.messageListContainer}>
-            {messages.map(msg => {
+            {/* Start / Welcome Banner inside the scroll stream */}
+            <div className={styles.welcomeBanner}>
+                <h4>{isChannel ? `Welcome to ${formattedTitle}!` : `Direct conversation with ${formattedTitle}`}</h4>
+                <p>This is the start of your {isChannel ? 'channel discussion' : 'direct message history'}. Send a message, share a policy, or paste a screenshot.</p>
+            </div>
+
+            {messages.map((msg, index) => {
                 const isOwn = msg.senderId === currentUserId;
                 const initials = msg.senderName
                     .split(' ')
@@ -59,7 +61,7 @@ export function ChatMessageList({
 
                 return (
                     <div
-                        key={msg.id}
+                        key={msg.id || index}
                         className={`${styles.messageRow} ${isOwn ? styles.ownMessageRow : ''}`}
                     >
                         {/* Hover Quick Actions */}
@@ -85,11 +87,6 @@ export function ChatMessageList({
                         <div className={styles.msgContentWrapper}>
                             <div className={styles.metaInfo}>
                                 <span className={styles.senderName}>{msg.senderName}</span>
-                                {msg.senderRole && (
-                                    <span className={styles.roleTag}>
-                                        {msg.senderRole === 'admin' ? 'Admin' : 'VA'}
-                                    </span>
-                                )}
                                 <span>{timeStr}</span>
                             </div>
 
@@ -169,6 +166,7 @@ export function ChatMessageList({
                     </div>
                 );
             })}
+            <div ref={bottomRef} style={{ height: 1 }} />
         </div>
     );
 }

@@ -175,9 +175,6 @@ export function ChatSidebar({
                                         <div className={`${styles.statusDot} ${getStatusClass(u.status)}`} />
                                     </div>
                                     <span className={styles.itemName}>{u.userName}</span>
-                                    <span className={styles.userRoleBadge}>
-                                        {u.role === 'admin' ? 'Admin' : 'VA'}
-                                    </span>
                                 </button>
                             );
                         })

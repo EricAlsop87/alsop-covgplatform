@@ -85,9 +85,6 @@ export function CreateGroupModal({
                                             onChange={() => handleToggleUser(u.userId)}
                                         />
                                         <span>{u.userName}</span>
-                                        <span style={{ fontSize: '0.6875rem', color: '#64748b', marginLeft: 'auto' }}>
-                                            {u.role === 'admin' ? 'Admin' : 'VA'}
-                                        </span>
                                     </label>
                                 );
                             })}

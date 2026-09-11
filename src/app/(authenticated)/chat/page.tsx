@@ -128,7 +128,7 @@ export default function TeamChatPage() {
         : activeChannel?.name || 'general';
 
     const activeDesc = activeDMUser 
-        ? `Direct message with ${activeDMUser.userName} (${activeDMUser.role === 'admin' ? 'Administrator' : 'Agent/VA'})`
+        ? `Direct message with ${activeDMUser.userName}`
         : activeChannel?.description || 'Team discussion';
 
     // Send Message Handler
