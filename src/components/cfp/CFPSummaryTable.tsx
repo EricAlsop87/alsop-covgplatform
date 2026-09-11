@@ -26,6 +26,8 @@ import {
     MessageSquare,
     MessageSquarePlus,
     Send,
+    AlertTriangle,
+    Undo2,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow } from '@/app/api/cfp-summary/route';
 import styles from './CFPSummaryTable.module.scss';
@@ -114,7 +116,7 @@ interface CFPSummaryTableProps {
     totalFamilies: number;
 }
 
-type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'no_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo' | 'has_comments';
+type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'missing_dic' | 'no_dic' | 'missing_es' | 'has_bamboo' | 'missing_bamboo' | 'has_comments' | 'returned_from_se';
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -626,7 +628,7 @@ export function CFPSummaryTable({
                 ...f,
                 terms: f.terms.map(t =>
                     t.policy_id === term.policy_id
-                        ? { ...t, in_servicing_email: true, servicing_status: 'ready' }
+                        ? { ...t, in_servicing_email: true, servicing_status: 'ready', returned_from_se: false }
                         : t
                 ),
             }))
@@ -686,6 +688,8 @@ export function CFPSummaryTable({
                         return t.has_bamboo_coverage;
                     case 'missing_bamboo':
                         return !t.has_bamboo_coverage;
+                    case 'returned_from_se':
+                        return !!t.returned_from_se;
                     case 'has_comments':
                         return (
                             (t.comment_count_dec || 0) +
@@ -842,6 +846,8 @@ export function CFPSummaryTable({
                 result = result.filter(t => t.in_servicing_email);
             } else if (columnFilters.servicing === 'not_in_se') {
                 result = result.filter(t => !t.in_servicing_email);
+            } else if (columnFilters.servicing === 'returned') {
+                result = result.filter(t => t.returned_from_se);
             }
         }
 
@@ -864,6 +870,7 @@ export function CFPSummaryTable({
         let dicAvailable = 0;
         let dicNoAvailable = 0;
         let quoteAvailable = 0;
+        let returnedFromSe = 0;
 
         for (const t of allTerms) {
             if (t.has_dec) decAvailable++;
@@ -871,6 +878,7 @@ export function CFPSummaryTable({
             if (t.has_dic || t.dic_carrier) dicAvailable++;
             if (t.no_dic_available) dicNoAvailable++;
             if (t.has_es) quoteAvailable++;
+            if (t.returned_from_se) returnedFromSe++;
         }
 
         return {
@@ -884,6 +892,7 @@ export function CFPSummaryTable({
             dicMissing: Math.max(0, total - dicAvailable - dicNoAvailable),
             quoteAvailable,
             quoteMissing: Math.max(0, total - quoteAvailable),
+            returnedFromSe,
         };
     }, [allTerms]);
 
@@ -1435,6 +1444,32 @@ export function CFPSummaryTable({
                         </span>
                     );
                 }
+                if (term.returned_from_se) {
+                    return (
+                        <div className={styles.returnedSeContainer}>
+                            <span
+                                className={styles.returnedSeBadge}
+                                title={`Returned by ${term.returned_by || 'Servicing'}: ${term.return_reason || 'Needs Action'}${term.return_notes ? `\nDetails: ${term.return_notes}` : ''}`}
+                            >
+                                <AlertTriangle size={10} /> {term.return_reason || 'Returned'}
+                            </span>
+                            <button
+                                type="button"
+                                className={styles.resendSeBtn}
+                                onClick={() => handleSendToServicing(term)}
+                                disabled={sendingToServicing === term.policy_id}
+                                title={`Click to re-send to Servicing (${term.return_reason || 'Requested'})`}
+                            >
+                                {sendingToServicing === term.policy_id ? (
+                                    <Loader2 size={10} className="animate-spin" />
+                                ) : (
+                                    <Send size={10} />
+                                )}
+                                <span>Re-send</span>
+                            </button>
+                        </div>
+                    );
+                }
                 return (
                     <button
                         type="button"
@@ -1615,6 +1650,7 @@ export function CFPSummaryTable({
                         <option value="">All Servicing</option>
                         <option value="in_se">In SE</option>
                         <option value="not_in_se">Not in SE</option>
+                        <option value="returned">Returned from SE</option>
                     </select>
                 );
             case 'notes':
@@ -1996,6 +2032,18 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('has_bamboo'); setCurrentPage(1); }}
                     >
                         Full Coverage: Yes
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${docFilter === 'returned_from_se' ? styles.active : ''} ${periodStats.returnedFromSe > 0 ? styles.returnedAlertPill : ''}`}
+                        onClick={() => { setDocFilter('returned_from_se'); setCurrentPage(1); }}
+                        title="Policies returned from Servicing that need document upload or revisions"
+                    >
+                        <AlertTriangle size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                        Returned from SE
+                        {periodStats.returnedFromSe > 0 && (
+                            <span className={styles.pillCountAlert}>{periodStats.returnedFromSe}</span>
+                        )}
                     </button>
                     <button
                         type="button"

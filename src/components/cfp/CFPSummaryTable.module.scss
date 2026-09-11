@@ -1406,3 +1406,74 @@
     }
 }
 
+.returnedSeContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.returnedSeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.35rem;
+    border-radius: 4px;
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    line-height: 1.1;
+    white-space: nowrap;
+    max-width: 105px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
+}
+
+.resendSeBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
+    transition: all 0.12s ease;
+
+    &:hover:not(:disabled) {
+        background: #1d4ed8;
+        color: #ffffff;
+        border-color: #1d4ed8;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.returnedAlertPill {
+    border-color: #f59e0b !important;
+    color: #b45309 !important;
+    background: #fffbeb !important;
+}
+
+.pillCountAlert {
+    background: #f59e0b;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    margin-left: 0.35rem;
+}
+
+

@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({
                 openItems: [],
                 completedItems: [],
-                stats: { totalReady: 0, totalEmailed: 0, totalCompleted: 0, totalWillNotProceed: 0 },
+                stats: { totalReady: 0, totalEmailed: 0, totalEmailNotNeeded: 0, totalCompleted: 0, totalWillNotProceed: 0 },
             } satisfies ServicingEmailResponse);
         }
 
@@ -166,12 +166,18 @@ export async function GET(req: NextRequest) {
                 effective_date: term?.effective_date || null,
                 expiration_date: term?.expiration_date || null,
                 status: (parsed.status as ServicingStatus) || 'ready',
+                outcome: parsed.outcome || null,
                 assigned_agent: parsed.assigned_agent || '',
+                assigned_agent_email: parsed.assigned_agent_email || null,
                 notes: parsed.notes || '',
                 va_completed_at: parsed.va_completed_at || ov.created_at,
                 va_user_name: parsed.va_user_name || null,
                 emailed_at: parsed.emailed_at || null,
                 completed_at: parsed.completed_at || null,
+                has_agent_reply: !!parsed.has_agent_reply,
+                last_reply_at: parsed.last_reply_at || null,
+                last_reply_text: parsed.last_reply_text || null,
+                last_reply_from: parsed.last_reply_from || null,
 
                 has_rce: !!rceInfo,
                 rce_carrier: rceInfo?.carrier || (rceInfo ? 'Uploaded' : null),
@@ -196,10 +202,11 @@ export async function GET(req: NextRequest) {
             items.push(item);
         }
 
-        // Separate open and completed items
+        // Separate open (active in-progress) and completed/archived items
+        // Open items include 'ready', 'emailed_to_agent', and 'email_not_needed'
         // Sort open items by near-expiry first (ascending expiration_date)
         const openItems = items
-            .filter(i => i.status === 'ready')
+            .filter(i => i.status === 'ready' || i.status === 'emailed_to_agent' || i.status === 'email_not_needed')
             .sort((a, b) => {
                 if (a.expiration_date && b.expiration_date) {
                     return new Date(a.expiration_date).getTime() - new Date(b.expiration_date).getTime();
@@ -209,9 +216,9 @@ export async function GET(req: NextRequest) {
                 return new Date(b.va_completed_at).getTime() - new Date(a.va_completed_at).getTime();
             });
 
-        // Completed items sorted newest first
+        // Completed / Archived items ('completed' or 'will_not_proceed') sorted newest first
         const completedItems = items
-            .filter(i => i.status !== 'ready')
+            .filter(i => i.status === 'completed' || i.status === 'will_not_proceed')
             .sort((a, b) => {
                 const timeA = a.completed_at || a.emailed_at || a.va_completed_at;
                 const timeB = b.completed_at || b.emailed_at || b.va_completed_at;
@@ -221,6 +228,7 @@ export async function GET(req: NextRequest) {
         const stats = {
             totalReady: items.filter(i => i.status === 'ready').length,
             totalEmailed: items.filter(i => i.status === 'emailed_to_agent').length,
+            totalEmailNotNeeded: items.filter(i => i.status === 'email_not_needed').length,
             totalCompleted: items.filter(i => i.status === 'completed').length,
             totalWillNotProceed: items.filter(i => i.status === 'will_not_proceed').length,
         };
@@ -281,6 +289,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
+        // Clean up any previous return info if it was re-sent
+        await admin
+            .from('manual_overrides')
+            .delete()
+            .eq('policy_id', policy_id)
+            .eq('field_name', 'servicing_return_info');
+
         return NextResponse.json({ success: true, item: payload });
     } catch (err: any) {
         return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });
@@ -295,7 +310,7 @@ export async function PATCH(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { policy_id, status, assigned_agent, notes } = body;
+        const { policy_id, status, assigned_agent, notes, outcome } = body;
 
         if (!policy_id) {
             return NextResponse.json({ error: 'policy_id is required' }, { status: 400 });
@@ -318,10 +333,22 @@ export async function PATCH(req: NextRequest) {
             }
         }
 
-        const nextStatus = status !== undefined ? status : current.status || 'ready';
+        // Determine next status based on status or outcome
+        let nextStatus = status !== undefined ? status : current.status || 'ready';
+        let nextOutcome = outcome !== undefined ? outcome : current.outcome || null;
+
+        if (outcome === 'renewed' && status === undefined) {
+            nextStatus = 'completed';
+        } else if (outcome === 'cancelled' && status === undefined) {
+            nextStatus = 'will_not_proceed';
+        } else if (outcome === 'new_policy' && status === undefined) {
+            nextStatus = 'completed';
+        }
+
         const updatedPayload = {
             ...current,
             status: nextStatus,
+            outcome: nextOutcome,
             assigned_agent: assigned_agent !== undefined ? assigned_agent : current.assigned_agent || '',
             notes: notes !== undefined ? notes : current.notes || '',
             updated_at: new Date().toISOString(),

@@ -50,9 +50,14 @@ export interface CFPTermRow {
     comment_count_quote: number;
     note_count: number;
     latest_note_preview?: string | null;
-    // Servicing Email
+    // Servicing Email & Returns
     in_servicing_email: boolean;
     servicing_status?: string | null;
+    returned_from_se?: boolean;
+    return_reason?: string | null;
+    return_notes?: string | null;
+    returned_by?: string | null;
+    returned_at?: string | null;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
     term_index: number;
@@ -320,7 +325,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info'])
         ),
         chunkedInQuery<{
             id: string;
@@ -385,6 +390,7 @@ export async function GET(req: NextRequest) {
     const bambooCoverageSet = new Set<string>();
     const noDicAvailableSet = new Set<string>();
     const servicingStatusMap: Record<string, string> = {};
+    const servicingReturnMap: Record<string, { reason: string; custom_notes?: string; returned_by?: string; returned_at?: string }> = {};
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
             bambooCoverageSet.add(ov.policy_id);
@@ -396,6 +402,13 @@ export async function GET(req: NextRequest) {
                 servicingStatusMap[ov.policy_id] = parsed.status || 'ready';
             } catch {
                 servicingStatusMap[ov.policy_id] = 'ready';
+            }
+        } else if (ov.field_name === 'servicing_return_info' && ov.new_value) {
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                servicingReturnMap[ov.policy_id] = parsed;
+            } catch {
+                servicingReturnMap[ov.policy_id] = { reason: 'Returned' };
             }
         }
     }
@@ -498,6 +511,11 @@ export async function GET(req: NextRequest) {
             latest_note_preview: policyLatestNotePreview[policyId] || null,
             in_servicing_email: !!servicingStatusMap[policyId],
             servicing_status: servicingStatusMap[policyId] || null,
+            returned_from_se: !servicingStatusMap[policyId] && !!servicingReturnMap[policyId],
+            return_reason: servicingReturnMap[policyId]?.reason || null,
+            return_notes: servicingReturnMap[policyId]?.custom_notes || null,
+            returned_by: servicingReturnMap[policyId]?.returned_by || null,
+            returned_at: servicingReturnMap[policyId]?.returned_at || null,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };
