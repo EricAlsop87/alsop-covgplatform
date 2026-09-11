@@ -84,11 +84,17 @@ export function ChatSidebar({
                                 <button
                                     key={ch.id}
                                     type="button"
-                                    className={`${styles.itemBtn} ${isActive ? styles.activeItem : ''}`}
+                                    className={`${styles.itemBtn} ${styles.channelBtn} ${isActive ? styles.activeItem : ''}`}
                                     onClick={() => onSelectChannel(ch.id)}
+                                    title={ch.description ? `#${ch.name} — ${ch.description}` : `#${ch.name}`}
                                 >
                                     <Hash size={15} className={styles.channelIcon} />
-                                    <span className={styles.itemName}>{ch.name}</span>
+                                    <div className={styles.channelTextCol}>
+                                        <span className={styles.itemName}>{ch.name}</span>
+                                        {ch.description && (
+                                            <span className={styles.channelDescSnippet}>{ch.description}</span>
+                                        )}
+                                    </div>
                                 </button>
                             );
                         })
@@ -115,15 +121,22 @@ export function ChatSidebar({
                     ) : (
                         filteredGroups.map(grp => {
                             const isActive = activeChannelId === grp.id;
+                            const memberSummary = (grp.memberNames || []).join(', ');
                             return (
                                 <button
                                     key={grp.id}
                                     type="button"
-                                    className={`${styles.itemBtn} ${isActive ? styles.activeItem : ''}`}
+                                    className={`${styles.itemBtn} ${styles.channelBtn} ${isActive ? styles.activeItem : ''}`}
                                     onClick={() => onSelectChannel(grp.id)}
+                                    title={memberSummary ? `${grp.name} (${memberSummary})` : grp.name}
                                 >
                                     <Users size={14} className={styles.channelIcon} />
-                                    <span className={styles.itemName}>{grp.name}</span>
+                                    <div className={styles.channelTextCol}>
+                                        <span className={styles.itemName}>{grp.name}</span>
+                                        {memberSummary && (
+                                            <span className={styles.channelDescSnippet}>{memberSummary}</span>
+                                        )}
+                                    </div>
                                 </button>
                             );
                         })

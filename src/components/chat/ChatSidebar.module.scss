@@ -110,10 +110,45 @@
     }
 }
 
+.channelBtn {
+    align-items: flex-start;
+    padding: 0.4rem 0.65rem;
+
+    .channelIcon {
+        margin-top: 2px;
+    }
+}
+
+.channelTextCol {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.channelDescSnippet {
+    font-size: 0.6875rem;
+    color: #64748b;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+    margin-top: 1px;
+}
+
 .activeItem {
     background: #eff6ff !important;
     color: var(--color-primary, #2243B6) !important;
     font-weight: 600 !important;
+
+    .channelDescSnippet {
+        color: #3b82f6 !important;
+    }
+
+    .channelIcon {
+        color: var(--color-primary, #2243B6) !important;
+    }
 }
 
 .channelIcon {

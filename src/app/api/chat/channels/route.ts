@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
-import { DEFAULT_CHANNELS, ChatChannel } from '@/lib/teamChat';
+import { DEFAULT_CHANNELS, ChatChannel, getSystemPolicyId } from '@/lib/teamChat';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,9 +96,11 @@ export async function POST(req: NextRequest) {
 
         channels.push(newChannel);
 
+        const systemPolicyId = await getSystemPolicyId(admin);
+
         await admin.from('manual_overrides').upsert(
             {
-                policy_id: '00000000-0000-0000-0000-000000000000',
+                policy_id: systemPolicyId,
                 field_name: 'team_chat_custom_channels',
                 new_value: JSON.stringify(channels),
                 actor_id: userId,

@@ -97,3 +97,11 @@ export function computePresenceStatus(lastSeenAtStr?: string | null): 'online' |
         return 'offline';
     }
 }
+
+export async function getSystemPolicyId(admin: any): Promise<string> {
+    try {
+        const { data } = await admin.from('policies').select('id').order('created_at').limit(1).maybeSingle();
+        if (data?.id) return data.id;
+    } catch {}
+    return 'a3914bd8-7b72-4884-8efe-4e43ef772705';
+}

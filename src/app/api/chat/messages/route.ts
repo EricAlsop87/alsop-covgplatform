@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
-import { ChatMessage } from '@/lib/teamChat';
+import { ChatMessage, getSystemPolicyId } from '@/lib/teamChat';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,9 +63,10 @@ export async function GET(req: NextRequest) {
         });
 
         if (updated) {
+            const systemPolicyId = await getSystemPolicyId(admin);
             await admin.from('manual_overrides').upsert(
                 {
-                    policy_id: '00000000-0000-0000-0000-000000000000',
+                    policy_id: systemPolicyId,
                     field_name: fieldName,
                     new_value: JSON.stringify(markedMessages),
                     actor_id: userId,
@@ -158,9 +159,10 @@ export async function POST(req: NextRequest) {
             messages = messages.slice(messages.length - 300);
         }
 
+        const systemPolicyId = await getSystemPolicyId(admin);
         await admin.from('manual_overrides').upsert(
             {
-                policy_id: '00000000-0000-0000-0000-000000000000',
+                policy_id: systemPolicyId,
                 field_name: fieldName,
                 new_value: JSON.stringify(messages),
                 actor_id: userId,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
-import { computePresenceStatus, UserPresence } from '@/lib/teamChat';
+import { computePresenceStatus, UserPresence, getSystemPolicyId } from '@/lib/teamChat';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,9 +85,10 @@ export async function POST(req: NextRequest) {
 
         presenceMap[userId] = now;
 
+        const systemPolicyId = await getSystemPolicyId(admin);
         await admin.from('manual_overrides').upsert(
             {
-                policy_id: '00000000-0000-0000-0000-000000000000',
+                policy_id: systemPolicyId,
                 field_name: 'team_chat_presence_map',
                 new_value: JSON.stringify(presenceMap),
                 actor_id: userId,
