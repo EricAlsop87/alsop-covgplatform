@@ -28,14 +28,17 @@ import {
     Send,
     AlertTriangle,
     Undo2,
+    Mail,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType } from '@/app/api/cfp-summary/route';
+export type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType };
 import styles from './CFPSummaryTable.module.scss';
 import { supabase } from '@/lib/supabaseClient';
 import { exportCFPToExcel } from '@/lib/cfpExport';
 import { DocCommentPopover } from './DocCommentPopover';
 import { TitleProModal } from './TitleProModal';
 import { CarrierQuoteModal } from './CarrierQuoteModal';
+import { SendMailModal } from './SendMailModal';
 
 const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo',
@@ -108,7 +111,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'sagesure', label: 'SageSure', width: 105, minWidth: 80, align: 'center' },
     { key: 'psic', label: 'PSIC', width: 105, minWidth: 80, align: 'center' },
     { key: 'title_pro', label: 'Title Pro', width: 95, minWidth: 75, align: 'center' },
-    { key: 'servicing', label: 'Servicing Team', width: 115, minWidth: 85, align: 'center' },
+    { key: 'servicing', label: 'Send Mail', width: 115, minWidth: 85, align: 'center' },
     { key: 'notes', label: 'Notes', width: 95, minWidth: 70, align: 'center' },
 ];
 
@@ -425,6 +428,29 @@ export function CFPSummaryTable({
                 ...f,
                 terms: f.terms.map(t =>
                     t.policy_id === policyId ? { ...t, title_pro: updatedData } : t
+                ),
+            }))
+        );
+    };
+
+    // ── Send Mail Modal State ─────────────────────────────────────────────
+    const [activeSendMailTerm, setActiveSendMailTerm] = useState<CFPTermRow | null>(null);
+
+    const handleMailSentSuccess = (policyId: string, recipients: string[]) => {
+        setFamilies(prev =>
+            prev.map(f => ({
+                ...f,
+                terms: f.terms.map(t =>
+                    t.policy_id === policyId
+                        ? {
+                              ...t,
+                              in_servicing_email: true,
+                              servicing_status: 'ready',
+                              cfp_mail_sent: true,
+                              cfp_mail_sent_to: recipients,
+                              cfp_mail_sent_at: new Date().toISOString(),
+                          }
+                        : t
                 ),
             }))
         );
@@ -882,10 +908,10 @@ export function CFPSummaryTable({
         }
 
         if (columnFilters.servicing) {
-            if (columnFilters.servicing === 'in_se') {
-                result = result.filter(t => t.in_servicing_email);
-            } else if (columnFilters.servicing === 'not_in_se') {
-                result = result.filter(t => !t.in_servicing_email);
+            if (columnFilters.servicing === 'sent' || columnFilters.servicing === 'in_se') {
+                result = result.filter(t => t.in_servicing_email || t.cfp_mail_sent);
+            } else if (columnFilters.servicing === 'not_sent' || columnFilters.servicing === 'not_in_se') {
+                result = result.filter(t => !t.in_servicing_email && !t.cfp_mail_sent);
             } else if (columnFilters.servicing === 'returned') {
                 result = result.filter(t => t.returned_from_se);
             }
@@ -1469,35 +1495,29 @@ export function CFPSummaryTable({
                 );
             }
 
-            case 'servicing':
-                if (term.in_servicing_email) {
-                    return (
-                        <span className={styles.inSeBadge} title="Queued for Servicing Email">
-                            <Check size={10} /> In SE
-                        </span>
-                    );
-                }
-                if (term.returned_from_se) {
+            case 'servicing': {
+                const isSent = term.cfp_mail_sent || term.in_servicing_email;
+                if (isSent) {
+                    const recipientList = term.cfp_mail_sent_to;
+                    const recipientLabel = Array.isArray(recipientList) && recipientList.length > 0
+                        ? `Sent to: ${recipientList.join(', ')}`
+                        : 'Email already sent for this policy';
+
                     return (
                         <div className={styles.returnedSeContainer}>
-                            <span
-                                className={styles.returnedSeBadge}
-                                title={`Returned by ${term.returned_by || 'Servicing'}: ${term.return_reason || 'Needs Action'}${term.return_notes ? `\nDetails: ${term.return_notes}` : ''}`}
-                            >
-                                <AlertTriangle size={10} /> {term.return_reason || 'Returned'}
+                            <span className={styles.inSeBadge} title={recipientLabel}>
+                                <Check size={10} /> Mail Sent
                             </span>
                             <button
                                 type="button"
                                 className={styles.resendSeBtn}
-                                onClick={() => handleSendToServicing(term)}
-                                disabled={sendingToServicing === term.policy_id}
-                                title={`Click to re-send to Servicing (${term.return_reason || 'Requested'})`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveSendMailTerm(term);
+                                }}
+                                title="Click to re-send or send to other recipients"
                             >
-                                {sendingToServicing === term.policy_id ? (
-                                    <Loader2 size={10} className="animate-spin" />
-                                ) : (
-                                    <Send size={10} />
-                                )}
+                                <Mail size={10} />
                                 <span>Re-send</span>
                             </button>
                         </div>
@@ -1507,18 +1527,17 @@ export function CFPSummaryTable({
                     <button
                         type="button"
                         className={styles.sendSeBtn}
-                        onClick={() => handleSendToServicing(term)}
-                        disabled={sendingToServicing === term.policy_id}
-                        title="Send policy to Servicing Email queue"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSendMailTerm(term);
+                        }}
+                        title="Click to compose and send mail to team"
                     >
-                        {sendingToServicing === term.policy_id ? (
-                            <Loader2 size={10} className="animate-spin" />
-                        ) : (
-                            <Send size={10} />
-                        )}
-                        <span>Send to SE</span>
+                        <Mail size={11} />
+                        <span>Send Mail</span>
                     </button>
                 );
+            }
 
             case 'notes':
                 return (
@@ -1674,10 +1693,9 @@ export function CFPSummaryTable({
                         onChange={e => handleColumnFilterChange('servicing', e.target.value)}
                         className={`${styles.columnFilterSelect} ${columnFilters.servicing ? styles.activeFilter : ''}`}
                     >
-                        <option value="">All Servicing</option>
-                        <option value="in_se">In SE</option>
-                        <option value="not_in_se">Not in SE</option>
-                        <option value="returned">Returned from SE</option>
+                        <option value="">All Status</option>
+                        <option value="sent">Mail Sent</option>
+                        <option value="not_sent">Not Sent</option>
                     </select>
                 );
             case 'notes':
@@ -2385,6 +2403,16 @@ export function CFPSummaryTable({
                     term={activeTitleModalTerm}
                     onClose={() => setActiveTitleModalTerm(null)}
                     onSaveSuccess={handleSaveTitleProSuccess}
+                />
+            )}
+
+            {/* ── Send Mail Modal ── */}
+            {activeSendMailTerm && (
+                <SendMailModal
+                    term={activeSendMailTerm}
+                    isOpen={!!activeSendMailTerm}
+                    onClose={() => setActiveSendMailTerm(null)}
+                    onSentSuccess={handleMailSentSuccess}
                 />
             )}
         </div>

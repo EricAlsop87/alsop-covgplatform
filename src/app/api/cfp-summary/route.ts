@@ -75,6 +75,10 @@ export interface CFPTermRow {
     return_notes?: string | null;
     returned_by?: string | null;
     returned_at?: string | null;
+    // Send Mail tracking
+    cfp_mail_sent?: boolean;
+    cfp_mail_sent_to?: string[];
+    cfp_mail_sent_at?: string | null;
     // Title Pro verification
     title_pro?: TitleProData | null;
     // Term type within family (set by API after grouping)
@@ -415,7 +419,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent'])
         ),
         chunkedInQuery<{
             id: string;
@@ -494,6 +498,7 @@ export async function GET(req: NextRequest) {
     const noDicAvailableSet = new Set<string>();
     const servicingStatusMap: Record<string, string> = {};
     const servicingReturnMap: Record<string, { reason: string; custom_notes?: string; returned_by?: string; returned_at?: string }> = {};
+    const cfpMailSentMap: Record<string, { sent_to?: string[]; sent_at?: string }> = {};
     const titleProMap: Record<string, TitleProData> = {};
     const manualCarrierQuotes: Record<string, Partial<Record<CarrierKey, CarrierQuoteData>>> = {};
 
@@ -515,6 +520,13 @@ export async function GET(req: NextRequest) {
                 servicingReturnMap[ov.policy_id] = parsed;
             } catch {
                 servicingReturnMap[ov.policy_id] = { reason: 'Returned' };
+            }
+        } else if (ov.field_name === 'cfp_mail_sent' && ov.new_value) {
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                cfpMailSentMap[ov.policy_id] = parsed;
+            } catch {
+                cfpMailSentMap[ov.policy_id] = {};
             }
         } else if (ov.field_name === 'title_pro' && ov.new_value) {
             try {
@@ -650,13 +662,16 @@ export async function GET(req: NextRequest) {
             comment_count_quote: policyCommentQuote[policyId] || 0,
             note_count: policyNoteCount[policyId] || 0,
             latest_note_preview: policyLatestNotePreview[policyId] || null,
-            in_servicing_email: !!servicingStatusMap[policyId],
+            in_servicing_email: !!servicingStatusMap[policyId] || !!cfpMailSentMap[policyId],
             servicing_status: servicingStatusMap[policyId] || null,
             returned_from_se: !servicingStatusMap[policyId] && !!servicingReturnMap[policyId],
             return_reason: servicingReturnMap[policyId]?.reason || null,
             return_notes: servicingReturnMap[policyId]?.custom_notes || null,
             returned_by: servicingReturnMap[policyId]?.returned_by || null,
             returned_at: servicingReturnMap[policyId]?.returned_at || null,
+            cfp_mail_sent: !!cfpMailSentMap[policyId] || !!servicingStatusMap[policyId],
+            cfp_mail_sent_to: cfpMailSentMap[policyId]?.sent_to || [],
+            cfp_mail_sent_at: cfpMailSentMap[policyId]?.sent_at || null,
             carrier_quotes: {
                 bamboo: manualCarrierQuotes[policyId]?.bamboo || autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
                 aegis: manualCarrierQuotes[policyId]?.aegis || autoCarrierQuotes[policyId]?.aegis || null,
