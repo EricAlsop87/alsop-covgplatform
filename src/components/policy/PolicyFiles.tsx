@@ -64,9 +64,10 @@ function getParseStatusBadge(status: string | null): { label: string; color: str
 
 const DOC_TYPE_LABELS: Record<string, { label: string; color: string; groupLabel: string }> = {
     dec_page: { label: 'DEC PAGE', color: '#3b82f6', groupLabel: 'Declaration Pages' },
-    rce: { label: 'RCE', color: '#10b981', groupLabel: 'RCE Documents' },
+    quote: { label: 'QUOTE', color: '#06b6d4', groupLabel: 'Carrier Quotes' },
     dic_dec_page: { label: 'DIC', color: '#f97316', groupLabel: 'DIC Documents' },
     es_doc: { label: 'E&S', color: '#8b5cf6', groupLabel: 'E&S Documents' },
+    rce: { label: 'RCE', color: '#10b981', groupLabel: 'RCE Documents' },
     other: { label: 'OTHER', color: '#a855f7', groupLabel: 'Other Documents' },
     invoice: { label: 'INVOICE', color: '#8b5cf6', groupLabel: 'Invoices' },
     inspection: { label: 'INSPECTION', color: '#ec4899', groupLabel: 'Inspections' },
@@ -93,6 +94,15 @@ interface UnifiedFile {
     source_name?: string | null;
     created_by?: string | null;
     bucket?: string;
+    dic_data?: {
+        carrier_name?: string | null;
+        policy_number?: string | null;
+        document_type?: string | null;
+        has_dic_endorsement?: boolean | null;
+        basic_premium?: number | null;
+        total_charge?: number | null;
+        cov_a_dwelling?: string | null;
+    } | null;
 }
 
 export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
@@ -213,6 +223,7 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
             source_name: d.source,
             created_by: d.created_by,
             bucket: 'cfp-platform-documents',
+            dic_data: d.dic_data,
         })),
     ].sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
 
@@ -267,12 +278,35 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
         return () => clearInterval(timer);
     }, [hasProcessingFiles, loadFiles]);
 
-    // Group files by doc_type
-    const groupOrder = ['dec_page', 'dic_dec_page', 'es_doc', 'rce', 'invoice', 'inspection', 'endorsement', 'questionnaire'];
+    // Group files by doc_type and quotes
+    const groupOrder = ['dec_page', 'quote', 'dic_dec_page', 'es_doc', 'rce', 'invoice', 'inspection', 'endorsement', 'questionnaire'];
     const grouped = new Map<string, UnifiedFile[]>();
+
+    const getFileGroupKey = (f: UnifiedFile): string => {
+        const fn = (f.file_name || '').toLowerCase();
+        const dicDocType = (f.dic_data?.document_type || '').toLowerCase();
+
+        // Pure RCE files stay in RCE
+        if (f.doc_type === 'rce' || (fn.includes('rce') && !fn.includes('quote')) || fn.includes('360value') || fn.includes('valuation')) {
+            return 'rce';
+        }
+
+        // Quotes detection (Bamboo Quote, Aegis Quote, AM Quote, etc.)
+        const isQuote = (
+            f.doc_type === 'quote' ||
+            (fn.includes('quote') && !fn.includes('dec')) ||
+            dicDocType.includes('quote')
+        );
+
+        if (isQuote) {
+            return 'quote';
+        }
+
+        return f.doc_type;
+    };
+
     allFiles.forEach(f => {
-        const key = f.doc_type;
-        if (!grouped.has(key)) grouped.forEach(() => {}); // Dummy to satisfy linter
+        const key = getFileGroupKey(f);
         if (!grouped.has(key)) grouped.set(key, []);
         grouped.get(key)!.push(f);
     });
@@ -701,10 +735,42 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                 created_by: file.created_by,
                                             });
 
+                                            const fnLower = (file.file_name || '').toLowerCase();
+                                            const dicDocType = (file.dic_data?.document_type || '').toLowerCase();
+                                            const isQuote = (
+                                                groupKey === 'quote' ||
+                                                file.doc_type === 'quote' ||
+                                                (fnLower.includes('quote') && !fnLower.includes('dec') && !fnLower.includes('rce')) ||
+                                                dicDocType.includes('quote')
+                                            );
+
+                                            let docBadgeLabel = docTypeInfo.label;
+                                            let docBadgeColor = docTypeInfo.color;
+
+                                            if (isQuote) {
+                                                if (file.dic_data?.has_dic_endorsement === false || (fnLower.includes('bamboo') && !fnLower.includes('dic')) || fnLower.includes('ho3') || fnLower.includes('homeowner')) {
+                                                    docBadgeLabel = 'FULL QUOTE';
+                                                    docBadgeColor = '#10b981';
+                                                } else if (file.dic_data?.has_dic_endorsement === true || fnLower.includes('dic')) {
+                                                    docBadgeLabel = 'DIC QUOTE';
+                                                    docBadgeColor = '#f97316';
+                                                } else {
+                                                    docBadgeLabel = 'QUOTE';
+                                                    docBadgeColor = '#06b6d4';
+                                                }
+                                            }
+
+                                            // Extracted quote number
+                                            const quoteNumMatch = (file.file_name || '').match(/(Q100\d{6,}|Q5\d{5,}|Q\d{6,}|005[\-\d]{7,}|HO\d{7,}[A-Z0-9]*)/i);
+                                            const extractedQuoteNum = file.dic_data?.policy_number || (quoteNumMatch ? quoteNumMatch[1] : null);
+
+                                            // Extracted premium
+                                            const extractedPremium = file.dic_data?.basic_premium ?? file.dic_data?.total_charge ?? null;
+
                                             return (
                                                 <div key={`${file.source}-${file.id}`} className={styles.fileItem}>
                                                     <div className={styles.fileInfo}>
-                                                        <div className={styles.fileIconWrap} style={{ '--doc-color': docTypeInfo.color } as React.CSSProperties}>
+                                                        <div className={styles.fileIconWrap} style={{ '--doc-color': docBadgeColor } as React.CSSProperties}>
                                                             <FileText size={18} />
                                                         </div>
                                                         <div className={styles.fileDetails}>
@@ -712,12 +778,12 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                                 <span
                                                                     className={styles.docTypeBadge}
                                                                     style={{
-                                                                        backgroundColor: `${docTypeInfo.color}18`,
-                                                                        color: docTypeInfo.color,
-                                                                        borderColor: `${docTypeInfo.color}30`,
+                                                                        backgroundColor: `${docBadgeColor}18`,
+                                                                        color: docBadgeColor,
+                                                                        borderColor: `${docBadgeColor}30`,
                                                                     }}
                                                                 >
-                                                                    {docTypeInfo.label}
+                                                                    {docBadgeLabel}
                                                                 </span>
                                                                 {carrierBadge && (
                                                                     <span
@@ -733,6 +799,46 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                                     </span>
                                                                 )}
                                                                 <span className={styles.fileNameText}>{file.file_name || 'Document'}</span>
+                                                                {extractedQuoteNum && (
+                                                                    <span
+                                                                        style={{
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            fontSize: '0.65rem',
+                                                                            fontWeight: 700,
+                                                                            padding: '0.15rem 0.45rem',
+                                                                            borderRadius: '4px',
+                                                                            background: 'rgba(6, 182, 212, 0.12)',
+                                                                            color: '#06b6d4',
+                                                                            border: '1px solid rgba(6, 182, 212, 0.25)',
+                                                                            letterSpacing: '0.02em',
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                        title={`Quote / Policy #${extractedQuoteNum}`}
+                                                                    >
+                                                                        #{extractedQuoteNum}
+                                                                    </span>
+                                                                )}
+                                                                {extractedPremium != null && (
+                                                                    <span
+                                                                        style={{
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            fontSize: '0.65rem',
+                                                                            fontWeight: 700,
+                                                                            padding: '0.15rem 0.45rem',
+                                                                            borderRadius: '4px',
+                                                                            background: 'rgba(16, 185, 129, 0.12)',
+                                                                            color: '#10b981',
+                                                                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                                                                            letterSpacing: '0.02em',
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                        title="Premium"
+                                                                    >
+                                                                        ${typeof extractedPremium === 'number' ? extractedPremium.toLocaleString() : extractedPremium} Prem
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div className={styles.fileMeta}>
                                                                 <span

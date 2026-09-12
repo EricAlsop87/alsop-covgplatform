@@ -2563,6 +2563,15 @@ export interface PlatformDocumentInfo {
     policy_number?: string | null;
     policy_address?: string | null;
     policy_insured?: string | null;
+    dic_data?: {
+        carrier_name?: string | null;
+        policy_number?: string | null;
+        document_type?: string | null;
+        has_dic_endorsement?: boolean | null;
+        basic_premium?: number | null;
+        total_charge?: number | null;
+        cov_a_dwelling?: string | null;
+    } | null;
 }
 
 /**
@@ -2585,7 +2594,7 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
                     source, created_by
                 ),
                 doc_data_dic (
-                    carrier_name
+                    carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, cov_a_dwelling
                 )
             `)
             .eq('policy_id', policyId)
@@ -2614,6 +2623,7 @@ export async function fetchPlatformDocumentsByPolicyId(policyId: string): Promis
                 carrier_name,
                 source: rce?.source || null,
                 created_by: rce?.created_by || null,
+                dic_data: dic || null,
             };
         });
 
@@ -2654,7 +2664,7 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
                     source, created_by
                 ),
                 doc_data_dic (
-                    carrier_name
+                    carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, cov_a_dwelling
                 )
             `);
 
@@ -2695,6 +2705,7 @@ export async function fetchPlatformDocumentsByClientId(clientId: string): Promis
                 carrier_name,
                 source: rce?.source || null,
                 created_by: rce?.created_by || null,
+                dic_data: dic || null,
             });
         });
 

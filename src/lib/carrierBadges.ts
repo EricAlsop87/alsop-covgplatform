@@ -248,12 +248,15 @@ export function detectDocumentCarrier(doc: {
     if (
         lower.includes('aegis') ||
         lower.includes('aegis general') ||
-        lower.includes('aegis security')
+        lower.includes('aegis security') ||
+        lower.includes('obsidian') ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName) ||
+        /(?:^|[^0-9])Q[0-9]{6,}/i.test(fileName)
     ) {
         return {
             label: 'Aegis',
             carrierKey: 'aegis',
-            tooltip: 'Aegis Security Insurance Company',
+            tooltip: 'Aegis Security / Obsidian Pacific',
             ...CARRIER_STYLES.aegis,
             hasDoc: true,
         };

@@ -14,9 +14,11 @@ export interface CarrierQuoteData {
     coverage_type: CoverageQuoteType;
     quote_number?: string | null;
     premium?: number | null;
+    dwelling_coverage?: number | null;
     notes?: string | null;
     storage_path?: string | null;
     file_name?: string | null;
+    doc_file_name?: string | null;
     verified_by?: string | null;
     verified_at?: string | null;
 }
@@ -103,45 +105,64 @@ export interface CFPFamily {
 export function detectCarrierQuoteInfo(
     fileName?: string | null,
     rawText?: string | null,
-    docType?: string | null
-): { carrier_key: CarrierKey; coverage_type: CoverageQuoteType; quote_number: string | null } | null {
-    // Pure RCE documents should not be categorized as quotes unless explicitly a quote doc
-    const isPureRce = docType === 'rce' && !(fileName || '').toLowerCase().includes('quote') && !(fileName || '').toLowerCase().includes('dic') && !(fileName || '').toLowerCase().includes('dec');
-    if (isPureRce) {
-        return null;
-    }
-
+    docType?: string | null,
+    docDataDic?: any
+): CarrierQuoteData | null {
     const fn = (fileName || '').toLowerCase();
     const txt = (rawText || '').toLowerCase().slice(0, 3000);
     const combined = `${fn} ${txt}`;
 
+    // Pure RCE documents should not be categorized as quotes
+    const isPureRce = docType === 'rce' || (fn.includes('rce') && !fn.includes('quote')) || fn.includes('360value') || fn.includes('valuation');
+    if (isPureRce) {
+        return null;
+    }
+
+    const dic = Array.isArray(docDataDic) ? docDataDic[0] : docDataDic;
+    const dicDocType = (dic?.document_type || '').toLowerCase();
+    const dicCarrier = (dic?.carrier_name || '').toLowerCase();
+
+    // If it's explicitly an issued renewal or dec page without quote indication, it's not a quote
+    if (dicDocType.includes('declaration') || dicDocType.includes('renewal') || (fn.includes('dec') && !fn.includes('quote'))) {
+        return null;
+    }
+
     // 1. Bamboo (Q100... or Bamboo)
-    const matchBamboo = (fileName || '').match(/(Q100\d{6,})/i);
-    if (combined.includes('bamboo') || matchBamboo) {
-        const isDic = combined.includes('does not cover the peril of fire') || combined.includes('dic') || docType === 'dic_dec_page';
+    const matchBamboo = (fileName || '').match(/(Q100\d{6,})/i) || (dic?.policy_number || '').match(/(Q100\d{6,})/i);
+    if (combined.includes('bamboo') || dicCarrier.includes('bamboo') || matchBamboo) {
+        const isDic = (dic && dic.has_dic_endorsement === true) || combined.includes('does not cover the peril of fire') || (fn.includes('dic') && !fn.includes('ho3') && !fn.includes('home'));
+        const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'bamboo',
             coverage_type: isDic ? 'DIC' : 'FULL',
-            quote_number: matchBamboo ? matchBamboo[1] : null,
+            quote_number: matchBamboo ? matchBamboo[1] : (dic?.policy_number || null),
+            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
+            doc_file_name: fileName || null,
         };
     }
 
-    // 2. Aegis (Q55... or Aegis or Obsidian)
-    const matchAegis = (fileName || '').match(/(Q55\d{4,})/i);
-    if (combined.includes('aegis') || combined.includes('obsidian pacific') || matchAegis) {
-        const isDic = combined.includes('california dic quote') || combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
+    // 2. Aegis (Q5... or Aegis or Obsidian)
+    const matchAegis = (fileName || '').match(/(Q5\d{5,}|Q\d{6,})/i) || (dic?.policy_number || '').match(/(Q5\d{5,}|Q\d{6,})/i);
+    if (combined.includes('aegis') || combined.includes('obsidian') || dicCarrier.includes('aegis') || dicCarrier.includes('obsidian') || matchAegis) {
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('california dic quote') || combined.includes('difference in conditions') || fn.includes('dic');
+        const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'aegis',
             coverage_type: isDic ? 'DIC' : 'FULL',
-            quote_number: matchAegis ? matchAegis[1] : null,
+            quote_number: matchAegis ? matchAegis[1] : (dic?.policy_number || null),
+            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
+            doc_file_name: fileName || null,
         };
     }
 
     // 3. American Modern (AM / 005...)
-    const matchAm = (fileName || '').match(/(005[\-\d]{7,})/);
+    const matchAm = (fileName || '').match(/(005[\-\d]{7,})/i) || (dic?.policy_number || '').match(/(005[\-\d]{7,})/i);
     if (
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
+        dicCarrier.includes('american modern') ||
         combined.includes('homeowners flex') ||
         combined.includes('quote am') ||
         combined.includes('dic am') ||
@@ -150,22 +171,30 @@ export function detectCarrierQuoteInfo(
         /[\s_]AM$/i.test(fileName || '') ||
         matchAm
     ) {
-        const isDic = combined.includes('dic') || combined.includes('difference in conditions') || docType === 'dic_dec_page';
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('dic') || combined.includes('difference in conditions');
+        const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'am',
             coverage_type: isDic ? 'DIC' : 'FULL',
-            quote_number: matchAm ? matchAm[1] : null,
+            quote_number: matchAm ? matchAm[1] : (dic?.policy_number || null),
+            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
+            doc_file_name: fileName || null,
         };
     }
 
     // 4. PSIC (Pacific Specialty)
-    const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
-    if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || combined.includes('psic') || matchPsic) {
-        const isDic = combined.includes('difference in conditions') || combined.includes('dic') || docType === 'dic_dec_page';
+    const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i) || (dic?.policy_number || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
+    if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || dicCarrier.includes('pacific') || combined.includes('psic') || matchPsic) {
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('difference in conditions') || fn.includes('dic');
+        const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'psic',
             coverage_type: isDic ? 'DIC' : 'FULL',
-            quote_number: matchPsic ? matchPsic[1] : null,
+            quote_number: matchPsic ? matchPsic[1] : (dic?.policy_number || null),
+            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
+            doc_file_name: fileName || null,
         };
     }
 
@@ -195,11 +224,12 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'AM';
     }
 
-    // 2. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q55 quotes)
+    // 2. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q55/Q56 quotes)
     if (
         combined.includes('aegis') ||
-        combined.includes('obsidian pacific') ||
-        /(?:^|[^0-9])Q55[0-9]{4,}/i.test(fileName || '')
+        combined.includes('obsidian') ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '') ||
+        /(?:^|[^0-9])Q[0-9]{6,}/i.test(fileName || '')
     ) {
         return 'Aegis';
     }
@@ -407,12 +437,13 @@ export async function GET(req: NextRequest) {
             doc_type: string;
             file_name?: string;
             storage_path?: string;
+            doc_data_dic?: any;
         }>(
             'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, cov_a_dwelling)',
             'policy_id',
             policyIds,
-            q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc'])
+            q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
         ),
         chunkedInQuery<{ policy_id: string; field_name: string; new_value: string }>(
             'manual_overrides',
@@ -455,10 +486,14 @@ export async function GET(req: NextRequest) {
 
     for (const doc of docs) {
         const fn = (doc.file_name || '').toLowerCase();
+        const dic = Array.isArray(doc.doc_data_dic) ? doc.doc_data_dic[0] : doc.doc_data_dic;
+        const dicType = (dic?.document_type || '').toLowerCase();
+        const isQuoteDoc = fn.includes('quote') || dicType.includes('quote');
+
         const isCfpDecDoc = (
             fn.includes('renewal_email_attachment') ||
             fn.includes('renewal_offer') ||
-            (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !fn.includes('quote') && !fn.includes('dic'))
+            (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic'))
         );
 
         if (isCfpDecDoc) {
@@ -475,17 +510,20 @@ export async function GET(req: NextRequest) {
         }
         policyDocTypes[doc.policy_id].add(doc.doc_type);
 
-        if (doc.doc_type === 'rce') {
+        if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc)) {
             const c = detectDocCarrier(doc.file_name, null, 'rce');
             if (c) policyRceCarrier[doc.policy_id] = c;
             if (doc.storage_path && !policyRceDoc[doc.policy_id]) {
                 policyRceDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
             }
-        } else if (doc.doc_type === 'dic_dec_page') {
-            const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
-            if (c) policyDicCarrier[doc.policy_id] = c;
-            if (doc.storage_path && !policyDicDoc[doc.policy_id]) {
-                policyDicDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+        } else if (doc.doc_type === 'dic_dec_page' || fn.includes('dic')) {
+            // Only set as in-force DIC Dec Page if it is NOT a quote
+            if (!isQuoteDoc) {
+                const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
+                if (c) policyDicCarrier[doc.policy_id] = c;
+                if (doc.storage_path && !policyDicDoc[doc.policy_id]) {
+                    policyDicDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+                }
             }
         } else if (doc.doc_type === 'es_doc') {
             if (doc.storage_path && !policyEsDoc[doc.policy_id]) {
@@ -548,17 +586,19 @@ export async function GET(req: NextRequest) {
     // Auto-detect carrier quotes from platform_documents per policy
     const autoCarrierQuotes: Record<string, Partial<Record<CarrierKey, CarrierQuoteData>>> = {};
     for (const doc of docs) {
-        const detected = detectCarrierQuoteInfo(doc.file_name, null, doc.doc_type);
+        const detected = detectCarrierQuoteInfo(doc.file_name, null, doc.doc_type, doc.doc_data_dic);
         if (detected) {
             const pid = doc.policy_id;
             if (!autoCarrierQuotes[pid]) autoCarrierQuotes[pid] = {};
             const existing = autoCarrierQuotes[pid][detected.carrier_key];
-            // Prioritize dic_dec_page or es_doc over rce, or docs with extracted quote_number
-            if (!existing || (detected.quote_number && !existing.quote_number) || doc.doc_type === 'dic_dec_page' || doc.doc_type === 'es_doc') {
+            // Prioritize docs with extracted quote_number or premium
+            if (!existing || (detected.quote_number && !existing.quote_number) || (detected.premium && !existing.premium) || doc.doc_type === 'dic_dec_page' || doc.doc_type === 'es_doc') {
                 autoCarrierQuotes[pid][detected.carrier_key] = {
                     carrier_key: detected.carrier_key,
                     coverage_type: detected.coverage_type,
                     quote_number: detected.quote_number,
+                    premium: detected.premium,
+                    dwelling_coverage: detected.dwelling_coverage,
                     storage_path: doc.storage_path,
                     file_name: doc.file_name,
                 };
