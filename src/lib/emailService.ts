@@ -95,8 +95,22 @@ class GmailSmtpProvider implements EmailProvider {
     name = 'Gmail SMTP';
 
     async send(message: EmailMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
-        const user = process.env.GMAIL_USER || 'alsopva02@gmail.com';
-        const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+        const fromEmail = typeof message.from === 'string' ? message.from : message.from?.email || '';
+        const replyToEmail = message.replyTo || '';
+
+        let user = process.env.GMAIL_USER || 'alsopva02@gmail.com';
+        let pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+
+        if ((fromEmail.includes('alsopva01') || replyToEmail.includes('alsopva01')) && process.env.GMAIL_VA01_APP_PASSWORD) {
+            user = process.env.GMAIL_VA01_USER || 'alsopva01@gmail.com';
+            pass = process.env.GMAIL_VA01_APP_PASSWORD.replace(/\s+/g, '');
+        } else if ((fromEmail.includes('alsopva03') || replyToEmail.includes('alsopva03')) && process.env.GMAIL_VA03_APP_PASSWORD) {
+            user = process.env.GMAIL_VA03_USER || 'alsopva03@gmail.com';
+            pass = process.env.GMAIL_VA03_APP_PASSWORD.replace(/\s+/g, '');
+        } else if ((fromEmail.includes('alsopva02') || replyToEmail.includes('alsopva02')) && process.env.GMAIL_VA02_APP_PASSWORD) {
+            user = process.env.GMAIL_VA02_USER || 'alsopva02@gmail.com';
+            pass = process.env.GMAIL_VA02_APP_PASSWORD.replace(/\s+/g, '');
+        }
 
         if (!pass) {
             return { success: false, error: 'GMAIL_APP_PASSWORD not configured' };

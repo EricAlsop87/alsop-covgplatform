@@ -188,7 +188,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;max-width:680px;margin:0 auto;padding:20px;">
           <p style="font-size:15px;margin-bottom:12px;">Hello,</p>
           <p style="font-size:14px;color:#334155;margin-bottom:18px;">
-            Here is the current document and quote availability status for policy <strong>CFP ${polNum.replace(/^CFP\s*/i, '')}</strong>:
+            Here is the current document and quote availability status for policy <strong>CFP ${polNum.replace(/^CFP\s*/i, '')}</strong>. Please see attached files for your reference:
           </p>
 
           <div style="background:#f1f5f9;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;">
@@ -210,6 +210,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
               ${rowsHtml}
             </tbody>
           </table>
+
+          <div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:13px;color:#166534;">
+            📎 <strong>Please see attached files for your reference</strong> (Dec Page, RCE Valuation Report, and Carrier Quotes).
+          </div>
 
           ${notesBlock}
 
