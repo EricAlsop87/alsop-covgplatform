@@ -206,7 +206,18 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
     const txt = (rawText || '').toLowerCase().slice(0, 3000);
     const combined = `${fn} ${txt}`;
 
-    // 1. American Modern (AM)
+    // 1. Bamboo (Bamboo, CASNH, 360Value, Q100)
+    if (
+        combined.includes('bamboo') ||
+        combined.includes('casnh') ||
+        combined.includes('360value') ||
+        combined.includes('360 value') ||
+        /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
+    ) {
+        return 'Bamboo';
+    }
+
+    // 2. American Modern (AM)
     if (
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
@@ -224,33 +235,29 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'AM';
     }
 
-    // 2. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q55/Q56 quotes)
-    if (
-        combined.includes('aegis') ||
-        combined.includes('obsidian') ||
-        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '') ||
-        /(?:^|[^0-9])Q[0-9]{6,}/i.test(fileName || '')
-    ) {
-        return 'Aegis';
-    }
-
     // 3. PSIC (Pacific Specialty)
     if (
         combined.includes('pacific specialty') ||
         combined.includes('pacificspecialty') ||
-        combined.includes('psic')
+        combined.includes('psic') ||
+        /(?:^|[^0-9])HO62[0-9]{6,}/i.test(fileName || '') ||
+        /(?:^|[^0-9])HO6[0-9]{6,}/i.test(fileName || '')
     ) {
         return 'PSIC';
     }
 
-    // 5. Bamboo (Bamboo, 360Value, Q100)
+    // 4. Stillwater
+    if (combined.includes('stillwater')) {
+        return 'Stillwater';
+    }
+
+    // 5. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q55/Q56 quotes)
     if (
-        combined.includes('bamboo') ||
-        combined.includes('360value') ||
-        combined.includes('360 value') ||
-        /(?:^|[^A-Za-z0-9])Q100[0-9]{6,}/i.test(fileName || '')
+        combined.includes('aegis') ||
+        combined.includes('obsidian') ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
     ) {
-        return 'Bamboo';
+        return 'Aegis';
     }
 
     if (docType === 'rce') {

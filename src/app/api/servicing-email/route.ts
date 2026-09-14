@@ -18,6 +18,16 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
     const combined = `${fn} ${txt}`;
 
     if (
+        combined.includes('bamboo') ||
+        combined.includes('casnh') ||
+        combined.includes('360value') ||
+        combined.includes('360 value') ||
+        /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
+    ) {
+        return 'Bamboo';
+    }
+
+    if (
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
         combined.includes('homeowners flex') ||
@@ -35,9 +45,23 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
     }
 
     if (
+        combined.includes('psic') ||
+        combined.includes('pacific specialty') ||
+        combined.includes('pacificspecialty') ||
+        /(?:^|[^0-9])HO62[0-9]{6,}/i.test(fileName || '') ||
+        /(?:^|[^0-9])HO6[0-9]{6,}/i.test(fileName || '')
+    ) {
+        return 'PSIC';
+    }
+
+    if (combined.includes('stillwater')) {
+        return 'Stillwater';
+    }
+
+    if (
         combined.includes('aegis') ||
         combined.includes('obsidian') ||
-        /(?:^|[^0-9])Q55[0-9]{4,}/i.test(fileName || '')
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
     ) {
         return 'Aegis';
     }
@@ -48,23 +72,6 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         /(?:^|[^A-Za-z0-9])CA[A-Za-z]{3}[0-9]{5,}/.test(fileName || '')
     ) {
         return 'SageSure';
-    }
-
-    if (
-        combined.includes('psic') ||
-        combined.includes('pacific specialty') ||
-        combined.includes('pacificspecialty')
-    ) {
-        return 'PSIC';
-    }
-
-    if (
-        combined.includes('bamboo') ||
-        combined.includes('360value') ||
-        combined.includes('360 value') ||
-        /(?:^|[^A-Za-z0-9])Q100[0-9]{6,}/i.test(fileName || '')
-    ) {
-        return 'Bamboo';
     }
 
     if (docType === 'rce') {
