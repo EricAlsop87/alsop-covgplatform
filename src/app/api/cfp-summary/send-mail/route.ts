@@ -76,13 +76,13 @@ export async function POST(req: NextRequest) {
         const now = new Date().toISOString();
         const namesList = recipientNames && recipientNames.length > 0 ? recipientNames.join(', ') : deduplicatedTo.join(', ');
 
-        // Save mail sent status in policy_field_overrides
+        // 1. Save mail sent status in manual_overrides
         const { error: overrideError } = await supabase
-            .from('policy_field_overrides')
+            .from('manual_overrides')
             .upsert({
                 policy_id: policyId,
                 field_name: 'cfp_mail_sent',
-                field_value: JSON.stringify({
+                new_value: JSON.stringify({
                     sent_at: now,
                     sent_to: deduplicatedTo,
                     sent_to_names: recipientNames || [],
@@ -90,15 +90,86 @@ export async function POST(req: NextRequest) {
                     sent_by_email: senderEmail,
                     subject,
                 }),
-                source: 'user',
+                actor_id: user.id,
                 updated_at: now,
             }, { onConflict: 'policy_id,field_name' });
 
         if (overrideError) {
-            logger.warn('CFPSendMail', 'Failed to write policy_field_override for cfp_mail_sent', { error: overrideError.message });
+            logger.warn('CFPSendMail', 'Failed to write manual_overrides for cfp_mail_sent', { error: overrideError.message });
         }
 
-        // Also record in activity_events
+        // 2. Append to servicing_email_thread so it appears in Email Hub thread drawer
+        try {
+            const { data: existingThreadOv } = await supabase
+                .from('manual_overrides')
+                .select('new_value')
+                .eq('policy_id', policyId)
+                .eq('field_name', 'servicing_email_thread')
+                .maybeSingle();
+
+            let threadMessages: any[] = [];
+            if (existingThreadOv?.new_value) {
+                try {
+                    threadMessages = JSON.parse(existingThreadOv.new_value);
+                } catch {}
+            }
+
+            threadMessages.push({
+                id: `msg_${Date.now()}`,
+                policyId,
+                direction: 'outbound',
+                senderEmail,
+                senderName,
+                recipientEmail: deduplicatedTo.join(', '),
+                recipientName: namesList,
+                subject,
+                bodyText: textBody || htmlBody.replace(/<[^>]*>?/gm, ''),
+                sentAt: now,
+                isRead: true,
+            });
+
+            await supabase.from('manual_overrides').upsert({
+                policy_id: policyId,
+                field_name: 'servicing_email_thread',
+                new_value: JSON.stringify(threadMessages),
+                actor_id: user.id,
+                updated_at: now,
+            }, { onConflict: 'policy_id,field_name' });
+        } catch (e) {
+            logger.warn('CFPSendMail', 'Failed to update servicing_email_thread', { error: String(e) });
+        }
+
+        // 3. Update servicing_email_item status to emailed_to_agent
+        try {
+            const { data: existingItemOv } = await supabase
+                .from('manual_overrides')
+                .select('new_value')
+                .eq('policy_id', policyId)
+                .eq('field_name', 'servicing_email_item')
+                .maybeSingle();
+
+            let itemData: any = {};
+            if (existingItemOv?.new_value) {
+                try { itemData = JSON.parse(existingItemOv.new_value); } catch {}
+            }
+
+            itemData.status = 'emailed_to_agent';
+            itemData.emailed_at = now;
+            itemData.assigned_agent = namesList;
+            itemData.va_user_name = senderName;
+
+            await supabase.from('manual_overrides').upsert({
+                policy_id: policyId,
+                field_name: 'servicing_email_item',
+                new_value: JSON.stringify(itemData),
+                actor_id: user.id,
+                updated_at: now,
+            }, { onConflict: 'policy_id,field_name' });
+        } catch (e) {
+            logger.warn('CFPSendMail', 'Failed to update servicing_email_item', { error: String(e) });
+        }
+
+        // 4. Record in activity_events
         try {
             await supabase.from('activity_events').insert({
                 policy_id: policyId,

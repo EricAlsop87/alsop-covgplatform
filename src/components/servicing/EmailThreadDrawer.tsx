@@ -18,13 +18,23 @@ import {
     Clock,
 } from 'lucide-react';
 import styles from './EmailThreadDrawer.module.scss';
-import { ServicingEmailItem } from '@/lib/servicingEmail';
 import { ServicingThreadMessage } from '@/lib/servicingEmailThreads';
 
+export interface EmailThreadDrawerItem {
+    policy_id: string;
+    policy_number: string;
+    named_insured?: string;
+    property_address?: string;
+    carrier_name?: string;
+    assigned_agent?: string;
+    assigned_agent_email?: string | null;
+    [key: string]: any;
+}
+
 interface EmailThreadDrawerProps {
-    item: ServicingEmailItem;
+    item: EmailThreadDrawerItem;
     onClose: () => void;
-    onStatusChange: (status: string) => void;
+    onStatusChange?: (status: string) => void;
 }
 
 export function EmailThreadDrawer({ item, onClose, onStatusChange }: EmailThreadDrawerProps) {
@@ -209,7 +219,7 @@ export function EmailThreadDrawer({ item, onClose, onStatusChange }: EmailThread
                             type="button"
                             className={styles.actionBtnComplete}
                             onClick={() => {
-                                onStatusChange('completed');
+                                onStatusChange?.('completed');
                                 onClose();
                             }}
                         >
@@ -219,7 +229,7 @@ export function EmailThreadDrawer({ item, onClose, onStatusChange }: EmailThread
                             type="button"
                             className={styles.actionBtnNotProceed}
                             onClick={() => {
-                                onStatusChange('will_not_proceed');
+                                onStatusChange?.('will_not_proceed');
                                 onClose();
                             }}
                         >

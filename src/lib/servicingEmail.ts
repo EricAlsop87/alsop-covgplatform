@@ -134,16 +134,99 @@ export interface ServicingEmailItem {
     dec_file_name?: string | null;
 }
 
+export interface SentEmailItem {
+    id: string;
+    policy_id: string;
+    policy_number: string;
+    client_id?: string;
+    named_insured: string;
+    property_address: string;
+    carrier_name: string;
+    sent_at: string;
+    sent_by: string;
+    sent_by_email?: string | null;
+    sent_to: string[];
+    sent_to_names: string[];
+    subject: string;
+    has_dec: boolean;
+    has_rce: boolean;
+    rce_carrier?: string | null;
+    has_dic: boolean;
+    dic_carrier?: string | null;
+    has_es: boolean;
+    carrier_quotes?: any;
+    has_reply?: boolean;
+    last_reply_at?: string | null;
+    last_reply_from?: string | null;
+    last_reply_text?: string | null;
+    is_unread_reply?: boolean;
+    total_messages?: number;
+}
+
+export interface ReplyThreadItem {
+    id: string;
+    policy_id: string;
+    policy_number: string;
+    client_id?: string;
+    named_insured: string;
+    property_address: string;
+    carrier_name: string;
+    subject: string;
+    last_reply_at: string;
+    last_reply_from: string;
+    last_reply_from_email?: string | null;
+    last_reply_text: string;
+    is_unread: boolean;
+    total_messages: number;
+    sent_to?: string[];
+    sent_to_names?: string[];
+}
+
+export interface PendingHandoffItem {
+    policy_id: string;
+    policy_number: string;
+    client_id?: string;
+    named_insured: string;
+    property_address: string;
+    carrier_name: string;
+    expiration_date?: string | null;
+    has_dec: boolean;
+    has_rce: boolean;
+    rce_carrier?: string | null;
+    has_dic: boolean;
+    dic_carrier?: string | null;
+    has_es: boolean;
+    carrier_quotes?: any;
+    ready_since: string;
+    notes?: string;
+}
+
+export interface EmailHubStats {
+    totalSent: number;
+    totalReplies: number;
+    unreadReplies: number;
+    pendingHandoffs: number;
+    totalCompleted?: number;
+}
+
 export interface ServicingEmailResponse {
-    openItems: ServicingEmailItem[];
-    completedItems: ServicingEmailItem[];
+    sentItems: SentEmailItem[];
+    replyItems: ReplyThreadItem[];
+    pendingItems: PendingHandoffItem[];
     stats: {
         totalReady: number;
         totalEmailed: number;
         totalEmailNotNeeded: number;
         totalCompleted: number;
         totalWillNotProceed: number;
+        totalSent?: number;
+        totalReplies?: number;
+        unreadReplies?: number;
+        pendingHandoffs?: number;
     };
+    // Legacy support
+    openItems: ServicingEmailItem[];
+    completedItems: ServicingEmailItem[];
 }
 
 /**

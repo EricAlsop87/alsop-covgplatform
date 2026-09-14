@@ -1031,3 +1031,231 @@
     color: #64748b;
     font-size: 0.875rem;
 }
+
+/* ── Sent Box & Replies Hub Styles ── */
+.recipientBadgeList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.managerBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+
+    .managerAvatar {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #2243b6;
+        color: #ffffff;
+        font-size: 0.55rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.senderTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e293b;
+    background: #f8fafc;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.replyStatusPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+
+    &.hasReply {
+        background: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    &.unreadReply {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        font-weight: 700;
+    }
+
+    &.awaitingReply {
+        background: #f8fafc;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+}
+
+.unreadDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+    display: inline-block;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.replySnippetBox {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #3b82f6;
+    border-radius: 6px;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.75rem;
+    color: #334155;
+    max-width: 420px;
+    line-height: 1.35;
+    word-break: break-word;
+    margin-top: 0.2rem;
+}
+
+.actionBtnGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.actionBtnPrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #2243b6;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: #1b3694;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(34, 67, 182, 0.2);
+    }
+}
+
+.actionBtnSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+}
+
+.actionBtnSuccess {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: #059669;
+        color: #ffffff;
+    }
+}
+
+.docPillList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.docPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+
+    &.docReady {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-color: #bfdbfe;
+    }
+
+    &.docQuote {
+        background: #fdf4ff;
+        color: #86198f;
+        border-color: #f5d0fe;
+    }
+}
+
+.emptyStateContainer {
+    padding: 3.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.75rem;
+    color: #64748b;
+
+    .emptyIcon {
+        color: #94a3b8;
+        opacity: 0.6;
+    }
+
+    .emptyTitle {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .emptySubtitle {
+        font-size: 0.8125rem;
+        max-width: 440px;
+        line-height: 1.4;
+    }
+}
+

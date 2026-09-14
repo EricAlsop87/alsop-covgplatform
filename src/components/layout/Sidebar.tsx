@@ -50,7 +50,7 @@ export function Sidebar({ userRole }: SidebarProps) {
             href: '/email',
             icon: Mail,
             subItems: [
-                { label: 'Servicing Email', href: '/email/servicing' },
+                { label: 'Sent & Replies Hub', href: '/email/servicing' },
             ],
         },
         { label: 'Campaigns', href: '/campaigns', icon: Calendar },
