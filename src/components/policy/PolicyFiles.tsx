@@ -193,6 +193,18 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
         decPageReviewMap.set(dp.id, dp);
     });
 
+    const decFileNames = new Set(decFiles.map(f => (f.file_name || '').toLowerCase()));
+    const decStoragePaths = new Set(decFiles.map(f => (f.storage_path || '').toLowerCase()));
+
+    const filteredPlatformDocs = platformDocs.filter(d => {
+        const fn = (d.file_name || '').toLowerCase();
+        const sp = (d.storage_path || '').toLowerCase();
+        if ((d.doc_type as string) === 'other' && (decFileNames.has(fn) || decStoragePaths.has(sp))) {
+            return false;
+        }
+        return true;
+    });
+
     // Unify files into a single sorted list
     const allFiles: UnifiedFile[] = [
         ...decFiles.map(f => ({
@@ -206,7 +218,7 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
             uploaded_at: f.uploaded_at,
             uploaded_by: f.uploaded_by,
         })),
-        ...platformDocs.map(d => ({
+        ...filteredPlatformDocs.map(d => ({
             id: d.id,
             source: 'platform' as const,
             doc_type: d.doc_type,

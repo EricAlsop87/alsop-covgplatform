@@ -39,24 +39,38 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Generate signed URL with admin client (bypasses RLS)
+        // Try requested bucket first, then fall back to other allowed buckets
         const admin = getSupabaseAdmin();
-        const { data, error } = await admin.storage
-            .from(bucket)
-            .createSignedUrl(storagePath, 3600); // 1 hour
+        let signedUrl: string | null = null;
+        let lastError: any = null;
 
-        if (error || !data?.signedUrl) {
-            logger.error('SignedURL', 'Failed to create signed URL', {
-                message: error?.message,
+        const candidateBuckets = [bucket, ...ALLOWED_BUCKETS.filter(b => b !== bucket)];
+
+        for (const candidateBucket of candidateBuckets) {
+            const { data, error } = await admin.storage
+                .from(candidateBucket)
+                .createSignedUrl(storagePath, 3600);
+
+            if (data?.signedUrl && !error) {
+                signedUrl = data.signedUrl;
+                break;
+            }
+            lastError = error;
+        }
+
+        if (!signedUrl) {
+            logger.error('SignedURL', 'Failed to create signed URL across candidate buckets', {
+                message: lastError?.message,
                 storagePath,
                 bucket,
             });
             return NextResponse.json(
-                { error: error?.message || 'Failed to generate URL' },
+                { error: lastError?.message || 'Failed to generate URL' },
                 { status: 500 }
             );
         }
 
-        return NextResponse.json({ signedUrl: data.signedUrl });
+        return NextResponse.json({ signedUrl });
     } catch (err) {
         logger.error('SignedURL', 'Unexpected error', {
             error: err instanceof Error ? err.message : String(err),
