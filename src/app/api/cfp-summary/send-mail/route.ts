@@ -60,59 +60,83 @@ export async function POST(req: NextRequest) {
         const attachedNames: string[] = [];
 
         try {
-            // A. Fetch Dec Page PDF
+            // A. Fetch Dec Page PDF from dec_page_submissions / dec_pages
+            let decStoragePath: string | null = null;
+            let decFileName: string | null = null;
+
             const { data: decPageRecord } = await adminClient
                 .from('dec_pages')
-                .select('file_path')
-                .or(`policy_id.eq.${policyId},policy_number.eq.${policyNumber}`)
+                .select('id, submission_id, dec_page_submissions(storage_path, file_name)')
+                .eq('policy_id', policyId)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
-            if (decPageRecord?.file_path) {
-                const cleanPath = decPageRecord.file_path.replace(/^\/+/, '');
-                const buckets = ['cfp-raw-decpage', 'dec-pages', 'cfp-platform-documents'];
+            if (decPageRecord) {
+                const sub = Array.isArray(decPageRecord.dec_page_submissions)
+                    ? decPageRecord.dec_page_submissions[0]
+                    : decPageRecord.dec_page_submissions;
+                if (sub?.storage_path) {
+                    decStoragePath = sub.storage_path;
+                    decFileName = sub.file_name;
+                } else if (decPageRecord.submission_id) {
+                    const { data: subDirect } = await adminClient
+                        .from('dec_page_submissions')
+                        .select('storage_path, file_name')
+                        .eq('id', decPageRecord.submission_id)
+                        .maybeSingle();
+                    if (subDirect?.storage_path) {
+                        decStoragePath = subDirect.storage_path;
+                        decFileName = subDirect.file_name;
+                    }
+                }
+            }
+
+            if (decStoragePath) {
+                const cleanPath = decStoragePath.replace(/^\/+/, '');
+                const buckets = ['cfp-raw-decpage', 'cfp-platform-documents'];
                 for (const b of buckets) {
                     const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
                     if (fileBlob) {
                         const buffer = Buffer.from(await fileBlob.arrayBuffer());
-                        const fileName = `FAIR_Plan_DecPage_${policyNumber || 'Policy'}.pdf`;
+                        const safeName = decFileName || `FAIR_Plan_DecPage_${policyNumber || 'Policy'}.pdf`;
                         attachments.push({
-                            name: fileName,
+                            name: safeName,
                             content: buffer.toString('base64'),
                             contentType: 'application/pdf',
                         });
-                        attachedNames.push(fileName);
+                        attachedNames.push(safeName);
                         break;
                     }
                 }
             }
 
-            // B. Fetch other policy documents (RCE, Quotes)
-            const { data: otherDocs } = await adminClient
-                .from('policy_documents')
-                .select('id, file_name, file_path, document_type')
+            // B. Fetch other policy documents (RCE, Quotes, Decs) from platform_documents
+            const { data: platformDocs } = await adminClient
+                .from('platform_documents')
+                .select('id, file_name, storage_path, doc_type')
                 .eq('policy_id', policyId)
                 .order('created_at', { ascending: false });
 
-            if (otherDocs && otherDocs.length > 0) {
-                const buckets = ['cfp-platform-documents', 'cfp-raw-decpage', 'dec-pages'];
-                for (const doc of otherDocs) {
-                    if (!doc.file_path) continue;
-                    const cleanPath = doc.file_path.replace(/^\/+/, '');
+            if (platformDocs && platformDocs.length > 0) {
+                const buckets = ['cfp-platform-documents', 'cfp-raw-decpage'];
+                for (const doc of platformDocs) {
+                    if (!doc.storage_path) continue;
+                    const cleanPath = doc.storage_path.replace(/^\/+/, '');
+                    const safeName = doc.file_name || `${doc.doc_type || 'Document'}.pdf`;
+
+                    if (attachedNames.includes(safeName)) continue;
+
                     for (const b of buckets) {
                         const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
                         if (fileBlob) {
                             const buffer = Buffer.from(await fileBlob.arrayBuffer());
-                            const safeName = doc.file_name || `${doc.document_type || 'Document'}.pdf`;
-                            if (!attachedNames.includes(safeName)) {
-                                attachments.push({
-                                    name: safeName,
-                                    content: buffer.toString('base64'),
-                                    contentType: 'application/pdf',
-                                });
-                                attachedNames.push(safeName);
-                            }
+                            attachments.push({
+                                name: safeName,
+                                content: buffer.toString('base64'),
+                                contentType: 'application/pdf',
+                            });
+                            attachedNames.push(safeName);
                             break;
                         }
                     }
