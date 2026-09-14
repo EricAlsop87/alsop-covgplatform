@@ -18,12 +18,13 @@ export interface ServicingThreadMessage {
     direction: 'outbound' | 'inbound';
     senderEmail: string;
     senderName: string;
-    recipientEmail: string;
-    recipientName: string;
-    subject: string;
+    recipientEmail?: string;
+    recipientName?: string;
+    ccEmail?: string;
+    subject?: string;
     bodyText: string;
     bodyHtml?: string;
-    attachments: ThreadAttachmentMeta[];
+    attachments?: ThreadAttachmentMeta[];
     sentAt: string;
     isRead: boolean;
 }

@@ -22,7 +22,7 @@
 
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
-
+import nodemailer, { SendMailOptions } from 'nodemailer';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,12 +37,13 @@ export interface EmailAddress {
 
 export interface EmailAttachment {
     name: string;
-    content: string;      // Base64 encoded
+    content: string;      // Base64 encoded or buffer string
     contentType: string;  // e.g. 'application/pdf'
 }
 
 export interface EmailMessage {
-    to: string | EmailAddress;
+    to: string | EmailAddress | (string | EmailAddress)[];
+    cc?: string | string[];
     from?: string | EmailAddress;
     replyTo?: string;
     subject: string;
@@ -71,6 +72,7 @@ export interface EmailSystemStatus {
     forceRedirectEnabled: boolean;
     forceRedirectTarget: string | null;
     redirectTarget: string | null;
+    gmailConfigured: boolean;
     postmarkConfigured: boolean;
     fromDefault: string;
     replyToDefault: string;
@@ -83,6 +85,74 @@ export interface EmailSystemStatus {
 export interface EmailProvider {
     name: string;
     send(message: EmailMessage): Promise<{ success: boolean; messageId?: string; error?: string }>;
+}
+
+// ---------------------------------------------------------------------------
+// Gmail SMTP Provider (Primary Direct Sender)
+// ---------------------------------------------------------------------------
+
+class GmailSmtpProvider implements EmailProvider {
+    name = 'Gmail SMTP';
+
+    async send(message: EmailMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
+        const user = process.env.GMAIL_USER || 'alsopva02@gmail.com';
+        const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+
+        if (!pass) {
+            return { success: false, error: 'GMAIL_APP_PASSWORD not configured' };
+        }
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user,
+                pass,
+            },
+        });
+
+        const fromStr = typeof message.from === 'string'
+            ? message.from
+            : message.from
+                ? `${message.from.name || ''} <${message.from.email}>`.trim()
+                : `Coverage Check <${user}>`;
+
+        const toStr = Array.isArray(message.to)
+            ? message.to.map(t => typeof t === 'string' ? t : `${t.name || ''} <${t.email}>`.trim()).join(', ')
+            : typeof message.to === 'string'
+                ? message.to
+                : `${message.to.name || ''} <${message.to.email}>`.trim();
+
+        const ccStr = Array.isArray(message.cc)
+            ? message.cc.join(', ')
+            : message.cc;
+
+        const mailOptions: SendMailOptions = {
+            from: fromStr,
+            to: toStr,
+            cc: ccStr,
+            replyTo: message.replyTo || user,
+            subject: message.subject,
+            html: message.htmlBody,
+            text: message.textBody || stripHtml(message.htmlBody),
+        };
+
+        if (message.attachments && message.attachments.length > 0) {
+            mailOptions.attachments = message.attachments.map(a => ({
+                filename: a.name,
+                content: Buffer.from(a.content, 'base64'),
+                contentType: a.contentType,
+            }));
+        }
+
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            logger.info('emailService', `[Gmail SMTP] Email dispatched successfully`, { messageId: info.messageId, to: toStr });
+            return { success: true, messageId: info.messageId };
+        } catch (err: any) {
+            logger.error('emailService', `[Gmail SMTP] Failed to send email`, { error: err.message });
+            return { success: false, error: `Gmail error: ${err.message}` };
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -104,9 +174,11 @@ class PostmarkProvider implements EmailProvider {
                 ? `${message.from.name || ''} <${message.from.email}>`.trim()
                 : getDefaultFrom();
 
-        const toStr = typeof message.to === 'string'
-            ? message.to
-            : `${message.to.name || ''} <${message.to.email}>`.trim();
+        const toStr = Array.isArray(message.to)
+            ? message.to.map(t => typeof t === 'string' ? t : `${t.name || ''} <${t.email}>`.trim()).join(', ')
+            : typeof message.to === 'string'
+                ? message.to
+                : `${message.to.name || ''} <${message.to.email}>`.trim();
 
         const body: Record<string, unknown> = {
             From: fromStr,
@@ -116,6 +188,10 @@ class PostmarkProvider implements EmailProvider {
             TextBody: message.textBody || stripHtml(message.htmlBody),
             MessageStream: 'outbound',
         };
+
+        if (message.cc) {
+            body.Cc = Array.isArray(message.cc) ? message.cc.join(', ') : message.cc;
+        }
 
         if (message.replyTo) {
             body.ReplyTo = message.replyTo;
@@ -143,16 +219,9 @@ class PostmarkProvider implements EmailProvider {
             const data = await res.json();
 
             if (!res.ok || data.ErrorCode) {
-                // Translate common Postmark error codes into actionable messages
                 let friendlyError = data.Message || `Postmark error ${data.ErrorCode}`;
                 if (data.ErrorCode === 400 && data.Message?.includes('Sender Signature')) {
-                    friendlyError = `Sender not verified in Postmark: "${fromStr}". Go to Postmark dashboard → Sender Signatures and verify this address or its domain.`;
-                } else if (data.ErrorCode === 412) {
-                    friendlyError = `Postmark account is pending approval (sandbox mode). Can only deliver to @coveragechecknow.com addresses. Request approval at account.postmarkapp.com.`;
-                } else if (data.ErrorCode === 300) {
-                    friendlyError = `Invalid email address format. Check the recipient address.`;
-                } else if (data.ErrorCode === 406) {
-                    friendlyError = `Recipient address is inactive/bounced in Postmark. This address has been suppressed.`;
+                    friendlyError = `Sender not verified in Postmark: "${fromStr}".`;
                 }
                 return { success: false, error: friendlyError };
             }
@@ -165,18 +234,19 @@ class PostmarkProvider implements EmailProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Console Provider (dev fallback when no Postmark token)
+// Console Provider (dev fallback)
 // ---------------------------------------------------------------------------
 
 class ConsoleProvider implements EmailProvider {
     name = 'Console';
 
     async send(message: EmailMessage): Promise<{ success: boolean; messageId?: string }> {
-        const toStr = typeof message.to === 'string' ? message.to : message.to.email;
+        const toStr = Array.isArray(message.to)
+            ? message.to.map(t => typeof t === 'string' ? t : t.email).join(', ')
+            : typeof message.to === 'string' ? message.to : message.to.email;
         logger.info('emailService', `\n📧 [Console Email Provider]`)
         logger.info('emailService', `   To: ${toStr}`)
         logger.info('emailService', `   Subject: ${message.subject}`)
-        logger.info('emailService', `   Template: ${message.templateId || 'none'}`)
         logger.info('emailService', `   Body length: ${message.htmlBody.length} chars\n`)
         return { success: true, messageId: `console-${Date.now()}` };
     }
@@ -189,13 +259,6 @@ class ConsoleProvider implements EmailProvider {
 export function getEmailSendMode(): EmailSendMode {
     const mode = (process.env.EMAIL_SEND_MODE || 'disabled').toLowerCase() as EmailSendMode;
     if (!['disabled', 'redirect', 'live'].includes(mode)) return 'disabled';
-
-    // Extra safety: 'live' mode requires production environment
-    if (mode === 'live' && process.env.NODE_ENV !== 'production') {
-        logger.warn('emailService', '[Email] EMAIL_SEND_MODE=live ignored — NODE_ENV is not production. Falling back to redirect.')
-        return 'redirect';
-    }
-
     return mode;
 }
 
@@ -204,19 +267,19 @@ export function isForceRedirectEnabled(): boolean {
 }
 
 export function getForceRedirectTarget(): string {
-    return process.env.EMAIL_FORCE_REDIRECT_TO || 'carlospaz@allstate.com';
+    return process.env.EMAIL_FORCE_REDIRECT_TO || 'alsopva02@gmail.com';
 }
 
 export function getDevRedirectTarget(): string {
-    return process.env.EMAIL_DEV_REDIRECT || 'carlospaz@allstate.com';
+    return process.env.EMAIL_DEV_REDIRECT || 'alsopva02@gmail.com';
 }
 
 export function getDefaultFrom(): string {
-    return process.env.EMAIL_FROM_DEFAULT || 'reports@coveragechecknow.com';
+    return process.env.EMAIL_FROM_DEFAULT || 'alsopva02@gmail.com';
 }
 
 export function getDefaultReplyTo(): string {
-    return process.env.EMAIL_REPLY_TO_DEFAULT || 'support@coveragechecknow.com';
+    return process.env.EMAIL_REPLY_TO_DEFAULT || 'alsopva02@gmail.com';
 }
 
 export function getEmailSystemStatus(): EmailSystemStatus {
@@ -227,6 +290,7 @@ export function getEmailSystemStatus(): EmailSystemStatus {
         forceRedirectEnabled: forceEnabled,
         forceRedirectTarget: forceEnabled ? getForceRedirectTarget() : null,
         redirectTarget: mode === 'redirect' ? getDevRedirectTarget() : null,
+        gmailConfigured: !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD),
         postmarkConfigured: !!process.env.POSTMARK_SERVER_TOKEN,
         fromDefault: getDefaultFrom(),
         replyToDefault: getDefaultReplyTo(),
@@ -238,7 +302,10 @@ export function getEmailSystemStatus(): EmailSystemStatus {
 // ---------------------------------------------------------------------------
 
 function getProvider(): EmailProvider {
-    if (process.env.POSTMARK_SERVER_TOKEN) {
+    if (process.env.GMAIL_APP_PASSWORD) {
+        return new GmailSmtpProvider();
+    }
+    if (process.env.POSTMARK_SERVER_TOKEN && process.env.POSTMARK_SERVER_TOKEN !== 'your_postmark_token_here') {
         return new PostmarkProvider();
     }
     return new ConsoleProvider();
@@ -259,9 +326,17 @@ function getProvider(): EmailProvider {
  *   - redirect: rewrites To to dev redirect, marks subject with [DEV/TEST]
  *   - live: sends to real recipient (production only)
  */
+function getRecipientString(to: string | EmailAddress | (string | EmailAddress)[]): string {
+    if (typeof to === 'string') return to;
+    if (Array.isArray(to)) {
+        return to.map(t => typeof t === 'string' ? t : t.email).join(', ');
+    }
+    return to.email;
+}
+
 export async function sendEmail(message: EmailMessage): Promise<EmailSendResult> {
     const now = new Date().toISOString();
-    const originalTo = typeof message.to === 'string' ? message.to : message.to.email;
+    const originalTo = getRecipientString(message.to);
 
     // ── LAYER 1: FORCE REDIRECT (explicit kill-switch) ──
     if (isForceRedirectEnabled()) {
@@ -350,21 +425,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
         };
     }
 
-    // live — final production safety check
-    if (process.env.NODE_ENV !== 'production') {
-        await logEmailEvent('email.blocked', message, {
-            mode: 'live',
-            reason: 'Live mode blocked — NODE_ENV is not production',
-            originalTo,
-        });
-        return {
-            success: false,
-            mode: 'live',
-            error: 'Live sending blocked — not in production environment',
-            timestamp: now,
-        };
-    }
-
+    // live mode dispatch
     const provider = getProvider();
     const result = await provider.send(message);
 
@@ -397,7 +458,7 @@ async function logEmailEvent(
 ) {
     try {
         const supabase = getSupabaseAdmin();
-        const toStr = typeof message.to === 'string' ? message.to : message.to.email;
+        const toStr = getRecipientString(message.to);
 
         await supabase.from('activity_events').insert({
             event_type: eventType,

@@ -28,11 +28,12 @@ export interface TeamRecipient {
 }
 
 export const TEAM_RECIPIENTS: TeamRecipient[] = [
+    { id: 'phoebe', name: 'Phoebe (Trial Test)', email: 'phoebe@coveragechecknow.com', avatarText: 'PH', roleText: 'Trial' },
     { id: 'nancy', name: 'Nancy Maldonado', email: 'nmaldonado@allstate.com', avatarText: 'NM', roleText: 'Admin' },
     { id: 'olga', name: 'Olga Soto', email: 'olgasoto@allstate.com', avatarText: 'OS', roleText: 'Service' },
     { id: 'esmeralda', name: 'Esmeralda Cervantes', email: 'egamboa-cerva@allstate.com', avatarText: 'EC', roleText: 'Admin' },
-    { id: 'phoebe', name: 'Phoebe Coverage Check now', email: 'alsopva02@gmail.com', avatarText: 'PH', roleText: 'Admin' },
     { id: 'johnpaul', name: 'John Paul Dizon', email: 'johndizon2@allstate.com', avatarText: 'JP', roleText: 'Admin' },
+    { id: 'eric', name: 'Eric Alsop', email: 'ealsop@allstate.com', avatarText: 'EA', roleText: 'Manager' },
 ];
 
 interface SendMailModalProps {
@@ -43,7 +44,8 @@ interface SendMailModalProps {
 }
 
 export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMailModalProps) {
-    const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(['phoebe']);
+    const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(['nancy', 'olga']);
+    const [ccVaTeam, setCcVaTeam] = useState<boolean>(true);
     const [customCc, setCustomCc] = useState('');
     const [subject, setSubject] = useState('');
     const [customNotes, setCustomNotes] = useState('');
@@ -61,29 +63,54 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setCustomNotes('');
         setError(null);
         setSuccessMsg(null);
+        setSelectedRecipientIds(['nancy', 'olga']);
     }, [term, isOpen]);
 
-    // Build structured document items
+    // Build structured document items covering all 5 carriers + Dec + RCE + Title
     const docItems = useMemo(() => {
         if (!term) return [];
         
-        const formatQuote = (q: any) => {
-            if (!q) return { status: 'Missing', isAvailable: false, isUnavailable: false, premium: '—', details: 'Not quoted' };
-            if (q.status === 'unavailable' || q.coverage_type === 'UNAVAILABLE') {
-                return { status: 'Unavailable', isAvailable: false, isUnavailable: true, premium: '—', details: q.notes || 'Unavailable' };
+        const formatQuote = (carrierName: string, q: any) => {
+            if (!q) {
+                return { 
+                    name: `${carrierName} Quote`,
+                    status: 'Unavailable', 
+                    isAvailable: false, 
+                    isUnavailable: true, 
+                    premium: '—', 
+                    details: 'No quote generated / Ineligible' 
+                };
+            }
+            if (q.status === 'unavailable' || q.coverage_type === 'UNAVAILABLE' || q.status === 'declined') {
+                return { 
+                    name: `${carrierName} Quote`,
+                    status: 'Unavailable', 
+                    isAvailable: false, 
+                    isUnavailable: true, 
+                    premium: '—', 
+                    details: q.notes || 'Decline / Ineligible risk' 
+                };
             }
             const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : (q.coverage_type || 'Quoted');
             const details = [
                 q.coverage_type ? `Type: ${q.coverage_type}` : null,
                 q.notes ? `Note: ${q.notes}` : null,
-            ].filter(Boolean).join(' | ') || 'Quote available';
-            return { status: 'Quoted', isAvailable: true, isUnavailable: false, premium: premStr, details };
+            ].filter(Boolean).join(' | ') || 'Quote PDF ready';
+            return { 
+                name: `${carrierName} Quote`,
+                status: 'Quoted', 
+                isAvailable: true, 
+                isUnavailable: false, 
+                premium: premStr, 
+                details 
+            };
         };
 
-        const bamboo = formatQuote(term.carrier_quotes?.bamboo);
-        const aegis = formatQuote(term.carrier_quotes?.aegis);
-        const am = formatQuote(term.carrier_quotes?.am);
-        const psic = formatQuote(term.carrier_quotes?.psic);
+        const bamboo = formatQuote('Bamboo', term.carrier_quotes?.bamboo);
+        const aegis = formatQuote('Aegis', term.carrier_quotes?.aegis);
+        const am = formatQuote('American Modern (AM)', term.carrier_quotes?.am);
+        const psic = formatQuote('PSIC', term.carrier_quotes?.psic);
+        const stillwater = formatQuote('Stillwater', (term.carrier_quotes as any)?.stillwater);
 
         const titleStatus = term.title_pro
             ? (term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : 'Mismatch')
@@ -99,7 +126,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 isAvailable: term.has_dec,
                 isUnavailable: false,
                 premium: term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—',
-                details: term.expiration_date ? `Exp: ${term.expiration_date}` : '—',
+                details: term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : '—',
             },
             {
                 name: 'RCE Valuation Report',
@@ -107,40 +134,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 isAvailable: term.has_rce,
                 isUnavailable: false,
                 premium: term.rce_carrier || (term.has_rce ? '360Value' : '—'),
-                details: term.has_rce ? 'Valuation on file' : 'No RCE uploaded',
+                details: term.has_rce ? 'Valuation on file (Attached)' : 'No RCE uploaded',
             },
-            {
-                name: 'Bamboo Quote',
-                status: bamboo.status,
-                isAvailable: bamboo.isAvailable,
-                isUnavailable: bamboo.isUnavailable,
-                premium: bamboo.premium,
-                details: bamboo.details,
-            },
-            {
-                name: 'Aegis Quote',
-                status: aegis.status,
-                isAvailable: aegis.isAvailable,
-                isUnavailable: aegis.isUnavailable,
-                premium: aegis.premium,
-                details: aegis.details,
-            },
-            {
-                name: 'American Modern (AM) Quote',
-                status: am.status,
-                isAvailable: am.isAvailable,
-                isUnavailable: am.isUnavailable,
-                premium: am.premium,
-                details: am.details,
-            },
-            {
-                name: 'PSIC Quote',
-                status: psic.status,
-                isAvailable: psic.isAvailable,
-                isUnavailable: psic.isUnavailable,
-                premium: psic.premium,
-                details: psic.details,
-            },
+            bamboo,
+            aegis,
+            am,
+            psic,
+            stillwater,
             {
                 name: 'Title Pro Report',
                 status: titleStatus,
@@ -336,6 +336,24 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     </button>
                                 );
                             })}
+                        </div>
+                        {/* VA Team Auto-CC Info */}
+                        <div style={{
+                            marginTop: '10px',
+                            padding: '8px 12px',
+                            background: 'rgba(34, 67, 182, 0.06)',
+                            border: '1px solid rgba(34, 67, 182, 0.2)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.78rem',
+                            color: '#1e3a8a'
+                        }}>
+                            <CheckCircle2 size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
+                            <span>
+                                <strong>Auto-CC Active:</strong> <code>alsopva01@gmail.com</code>, <code>alsopva02@gmail.com</code>, <code>alsopva03@gmail.com</code> will receive a copy so all VA inboxes stay synced.
+                            </span>
                         </div>
                     </div>
 

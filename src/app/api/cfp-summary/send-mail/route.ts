@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, getSupabaseAdmin } from '@/lib/supabaseClient';
 import { sendEmail } from '@/lib/emailService';
 import { logger } from '@/lib/logger';
 
@@ -38,46 +38,113 @@ export async function POST(req: NextRequest) {
         }
 
         // Determine sender email & name
-        const senderEmail = user.email || 'support@coveragechecknow.com';
+        const senderEmail = user.email || 'alsopva02@gmail.com';
         const senderName = user.user_metadata?.first_name && user.user_metadata?.last_name
             ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-            : user.email?.split('@')[0] || 'Coverage Check Now Team';
+            : user.email?.split('@')[0] || 'Coverage Check Team';
 
-        // Combine all recipient emails
-        const allTo = [...recipients];
-        if (customCc && typeof customCc === 'string') {
-            const extraEmails = customCc.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'));
-            allTo.push(...extraEmails);
+        // Deduplicate Primary Recipients
+        const deduplicatedTo = Array.from(new Set(recipients)).filter(Boolean);
+
+        // Build CC List (Always include all 3 VA emails + any custom CCs)
+        const defaultVaCcs = ['alsopva01@gmail.com', 'alsopva02@gmail.com', 'alsopva03@gmail.com'];
+        const extraCcs = (customCc && typeof customCc === 'string')
+            ? customCc.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'))
+            : [];
+        const allCc = Array.from(new Set([...defaultVaCcs, ...extraCcs])).filter(e => !deduplicatedTo.includes(e));
+
+        const adminClient = getSupabaseAdmin();
+
+        // ── Fetch & Attach Available Policy Documents (Dec Page, RCE, Quotes) ──
+        const attachments: Array<{ name: string; content: string; contentType: string }> = [];
+        const attachedNames: string[] = [];
+
+        try {
+            // A. Fetch Dec Page PDF
+            const { data: decPageRecord } = await adminClient
+                .from('dec_pages')
+                .select('file_path')
+                .or(`policy_id.eq.${policyId},policy_number.eq.${policyNumber}`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (decPageRecord?.file_path) {
+                const cleanPath = decPageRecord.file_path.replace(/^\/+/, '');
+                const buckets = ['cfp-raw-decpage', 'dec-pages', 'cfp-platform-documents'];
+                for (const b of buckets) {
+                    const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
+                    if (fileBlob) {
+                        const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                        const fileName = `FAIR_Plan_DecPage_${policyNumber || 'Policy'}.pdf`;
+                        attachments.push({
+                            name: fileName,
+                            content: buffer.toString('base64'),
+                            contentType: 'application/pdf',
+                        });
+                        attachedNames.push(fileName);
+                        break;
+                    }
+                }
+            }
+
+            // B. Fetch other policy documents (RCE, Quotes)
+            const { data: otherDocs } = await adminClient
+                .from('policy_documents')
+                .select('id, file_name, file_path, document_type')
+                .eq('policy_id', policyId)
+                .order('created_at', { ascending: false });
+
+            if (otherDocs && otherDocs.length > 0) {
+                const buckets = ['cfp-platform-documents', 'cfp-raw-decpage', 'dec-pages'];
+                for (const doc of otherDocs) {
+                    if (!doc.file_path) continue;
+                    const cleanPath = doc.file_path.replace(/^\/+/, '');
+                    for (const b of buckets) {
+                        const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
+                        if (fileBlob) {
+                            const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                            const safeName = doc.file_name || `${doc.document_type || 'Document'}.pdf`;
+                            if (!attachedNames.includes(safeName)) {
+                                attachments.push({
+                                    name: safeName,
+                                    content: buffer.toString('base64'),
+                                    contentType: 'application/pdf',
+                                });
+                                attachedNames.push(safeName);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (attErr) {
+            logger.warn('CFPSendMail', 'Error attaching documents to email', { error: String(attErr) });
         }
 
-        const deduplicatedTo = Array.from(new Set(allTo));
+        // Send a single email with To, CC, and Attachments
+        const sendResult = await sendEmail({
+            to: deduplicatedTo,
+            cc: allCc,
+            from: `${senderName} <alsopva02@gmail.com>`,
+            replyTo: senderEmail,
+            subject,
+            htmlBody,
+            textBody: textBody || htmlBody.replace(/<[^>]*>?/gm, ''),
+            attachments,
+            policyId,
+        });
 
-        // Send email to all recipients with replyTo set to sender
-        const sendPromises = deduplicatedTo.map(toEmail =>
-            sendEmail({
-                to: toEmail,
-                from: `Coverage Check Now <reports@coveragechecknow.com>`,
-                replyTo: senderEmail,
-                subject,
-                htmlBody,
-                textBody: textBody || htmlBody.replace(/<[^>]*>?/gm, ''),
-                policyId,
-            })
-        );
-
-        const results = await Promise.all(sendPromises);
-        const allSuccess = results.some(r => r.success);
-
-        if (!allSuccess) {
-            logger.error('CFPSendMail', 'Failed to send emails via emailService', { results });
-            return NextResponse.json({ success: false, error: 'Failed to send email through provider' }, { status: 500 });
+        if (!sendResult.success) {
+            logger.error('CFPSendMail', 'Failed to send email via emailService', { sendResult });
+            return NextResponse.json({ success: false, error: sendResult.error || 'Failed to send email through provider' }, { status: 500 });
         }
 
         const now = new Date().toISOString();
         const namesList = recipientNames && recipientNames.length > 0 ? recipientNames.join(', ') : deduplicatedTo.join(', ');
 
         // 1. Save mail sent status in manual_overrides
-        const { error: overrideError } = await supabase
+        const { error: overrideError } = await adminClient
             .from('manual_overrides')
             .upsert({
                 policy_id: policyId,
@@ -86,8 +153,10 @@ export async function POST(req: NextRequest) {
                     sent_at: now,
                     sent_to: deduplicatedTo,
                     sent_to_names: recipientNames || [],
+                    sent_cc: allCc,
                     sent_by: senderName,
                     sent_by_email: senderEmail,
+                    attachments: attachedNames,
                     subject,
                 }),
                 actor_id: user.id,
@@ -100,7 +169,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Append to servicing_email_thread so it appears in Email Hub thread drawer
         try {
-            const { data: existingThreadOv } = await supabase
+            const { data: existingThreadOv } = await adminClient
                 .from('manual_overrides')
                 .select('new_value')
                 .eq('policy_id', policyId)
@@ -122,13 +191,15 @@ export async function POST(req: NextRequest) {
                 senderName,
                 recipientEmail: deduplicatedTo.join(', '),
                 recipientName: namesList,
+                ccEmail: allCc.join(', '),
                 subject,
                 bodyText: textBody || htmlBody.replace(/<[^>]*>?/gm, ''),
+                attachments: attachedNames.map(name => ({ name })),
                 sentAt: now,
                 isRead: true,
             });
 
-            await supabase.from('manual_overrides').upsert({
+            await adminClient.from('manual_overrides').upsert({
                 policy_id: policyId,
                 field_name: 'servicing_email_thread',
                 new_value: JSON.stringify(threadMessages),
@@ -141,7 +212,7 @@ export async function POST(req: NextRequest) {
 
         // 3. Update servicing_email_item status to emailed_to_agent
         try {
-            const { data: existingItemOv } = await supabase
+            const { data: existingItemOv } = await adminClient
                 .from('manual_overrides')
                 .select('new_value')
                 .eq('policy_id', policyId)
@@ -158,7 +229,7 @@ export async function POST(req: NextRequest) {
             itemData.assigned_agent = namesList;
             itemData.va_user_name = senderName;
 
-            await supabase.from('manual_overrides').upsert({
+            await adminClient.from('manual_overrides').upsert({
                 policy_id: policyId,
                 field_name: 'servicing_email_item',
                 new_value: JSON.stringify(itemData),
@@ -171,7 +242,7 @@ export async function POST(req: NextRequest) {
 
         // 4. Record in activity_events
         try {
-            await supabase.from('activity_events').insert({
+            await adminClient.from('activity_events').insert({
                 policy_id: policyId,
                 actor_user_id: user.id,
                 event_type: 'email.sent',
