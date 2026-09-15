@@ -99,20 +99,20 @@ class GmailSmtpProvider implements EmailProvider {
         const replyToEmail = (message.replyTo || '').toLowerCase();
 
         let user = process.env.GMAIL_USER || 'alsopva02@gmail.com';
-        let pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+        let pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '') || 'waihnqinahtlkbdh';
         let defaultSenderName = 'Phoebe Hernandez';
 
-        if ((fromEmail.includes('alsopva01') || replyToEmail.includes('alsopva01')) && process.env.GMAIL_VA01_APP_PASSWORD) {
+        if (fromEmail.includes('alsopva01') || replyToEmail.includes('alsopva01')) {
             user = process.env.GMAIL_VA01_USER || 'alsopva01@gmail.com';
-            pass = process.env.GMAIL_VA01_APP_PASSWORD.replace(/\s+/g, '');
+            pass = process.env.GMAIL_VA01_APP_PASSWORD?.replace(/\s+/g, '') || 'gultgbnkhkdkosvq';
             defaultSenderName = 'Paula Andrea Veloza';
-        } else if ((fromEmail.includes('alsopva03') || replyToEmail.includes('alsopva03')) && process.env.GMAIL_VA03_APP_PASSWORD) {
+        } else if (fromEmail.includes('alsopva03') || replyToEmail.includes('alsopva03')) {
             user = process.env.GMAIL_VA03_USER || 'alsopva03@gmail.com';
-            pass = process.env.GMAIL_VA03_APP_PASSWORD.replace(/\s+/g, '');
+            pass = process.env.GMAIL_VA03_APP_PASSWORD?.replace(/\s+/g, '') || 'yolktbaamzeoxhiu';
             defaultSenderName = 'Danicah Jesoro';
-        } else if ((fromEmail.includes('alsopva02') || replyToEmail.includes('alsopva02')) && process.env.GMAIL_VA02_APP_PASSWORD) {
+        } else if (fromEmail.includes('alsopva02') || replyToEmail.includes('alsopva02')) {
             user = process.env.GMAIL_VA02_USER || 'alsopva02@gmail.com';
-            pass = process.env.GMAIL_VA02_APP_PASSWORD.replace(/\s+/g, '');
+            pass = (process.env.GMAIL_VA02_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || 'waihnqinahtlkbdh';
             defaultSenderName = 'Phoebe Hernandez';
         }
 
@@ -319,14 +319,29 @@ export function getEmailSystemStatus(): EmailSystemStatus {
 // Provider Selection
 // ---------------------------------------------------------------------------
 
-function getProvider(): EmailProvider {
-    if (process.env.GMAIL_APP_PASSWORD) {
+function getProvider(message?: EmailMessage): EmailProvider {
+    const fromEmail = (typeof message?.from === 'string' ? message.from : message?.from?.email || '').toLowerCase();
+    const replyToEmail = (message?.replyTo || '').toLowerCase();
+
+    // If message is from or replied to by any VA account or any @gmail.com address, ALWAYS route via Gmail SMTP!
+    if (
+        fromEmail.includes('alsopva') ||
+        replyToEmail.includes('alsopva') ||
+        fromEmail.includes('@gmail.com') ||
+        replyToEmail.includes('@gmail.com')
+    ) {
         return new GmailSmtpProvider();
     }
+
+    if (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA01_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD || process.env.GMAIL_VA03_APP_PASSWORD) {
+        return new GmailSmtpProvider();
+    }
+
     if (process.env.POSTMARK_SERVER_TOKEN && process.env.POSTMARK_SERVER_TOKEN !== 'your_postmark_token_here') {
         return new PostmarkProvider();
     }
-    return new ConsoleProvider();
+
+    return new GmailSmtpProvider();
 }
 
 // ---------------------------------------------------------------------------
@@ -369,7 +384,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
             htmlBody: buildRedirectBanner(originalTo, message.templateId, true) + message.htmlBody,
         };
 
-        const provider = getProvider();
+        const provider = getProvider(redirectedMessage);
         const result = await provider.send(redirectedMessage);
 
         await logEmailEvent('email.force_redirected', message, {
@@ -418,7 +433,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
             htmlBody: buildRedirectBanner(originalTo, message.templateId, false) + message.htmlBody,
         };
 
-        const provider = getProvider();
+        const provider = getProvider(redirectedMessage);
         const result = await provider.send(redirectedMessage);
 
         await logEmailEvent('email.redirected', message, {
@@ -444,7 +459,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
     }
 
     // live mode dispatch
-    const provider = getProvider();
+    const provider = getProvider(message);
     const result = await provider.send(message);
 
     await logEmailEvent(result.success ? 'email.sent' : 'email.failed', message, {
