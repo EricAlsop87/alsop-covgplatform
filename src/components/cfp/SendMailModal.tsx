@@ -68,6 +68,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            if (data?.user?.email) setCurrentUserEmail(data.user.email.toLowerCase());
+        });
+    }, []);
 
     // Compute all candidate attachments available for this policy term (deduplicated by storagePath)
     const availableAttachments = useMemo<AttachmentItem[]>(() => {
@@ -598,7 +605,15 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         }}>
                             <CheckCircle2 size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
                             <span>
-                                <strong>Auto-CC Active:</strong> Paula Andrea Veloza (<code>alsopva01@gmail.com</code>), Phoebe Hernandez (<code>alsopva02@gmail.com</code>), Danicah Jesoro (<code>alsopva03@gmail.com</code>) will receive a copy so all VA inboxes stay synced.
+                                {currentUserEmail.includes('alsopva01') ? (
+                                    <><strong>Auto-CC Active:</strong> Phoebe Hernandez (<code>alsopva02@gmail.com</code>) and Danicah Jesoro (<code>alsopva03@gmail.com</code>) will be CC&apos;d so all VA inboxes stay synced (your copy is automatically in your Sent box).</>
+                                ) : currentUserEmail.includes('alsopva02') ? (
+                                    <><strong>Auto-CC Active:</strong> Paula Andrea Veloza (<code>alsopva01@gmail.com</code>) and Danicah Jesoro (<code>alsopva03@gmail.com</code>) will be CC&apos;d so all VA inboxes stay synced (your copy is automatically in your Sent box).</>
+                                ) : currentUserEmail.includes('alsopva03') ? (
+                                    <><strong>Auto-CC Active:</strong> Paula Andrea Veloza (<code>alsopva01@gmail.com</code>) and Phoebe Hernandez (<code>alsopva02@gmail.com</code>) will be CC&apos;d so all VA inboxes stay synced (your copy is automatically in your Sent box).</>
+                                ) : (
+                                    <><strong>Auto-CC Active:</strong> Peer VA team inboxes will be auto-CC&apos;d so all team inboxes stay synced without duplicating your Sent box.</>
+                                )}
                             </span>
                         </div>
                     </div>

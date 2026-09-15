@@ -56,12 +56,15 @@ export async function POST(req: NextRequest) {
         // Deduplicate Primary Recipients
         const deduplicatedTo = Array.from(new Set(recipients)).filter(Boolean);
 
-        // Build CC List (Always include all 3 VA emails + any custom CCs)
+        // Build CC List (Always include peer VA emails + any custom CCs, excluding the sender)
         const defaultVaCcs = ['alsopva01@gmail.com', 'alsopva02@gmail.com', 'alsopva03@gmail.com'];
         const extraCcs = (customCc && typeof customCc === 'string')
             ? customCc.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'))
             : [];
-        const allCc = Array.from(new Set([...defaultVaCcs, ...extraCcs])).filter(e => !deduplicatedTo.includes(e));
+        const allCc = Array.from(new Set([...defaultVaCcs, ...extraCcs])).filter(
+            e => !deduplicatedTo.map(t => t.toLowerCase()).includes(e.toLowerCase()) &&
+                 e.toLowerCase() !== senderEmail.toLowerCase()
+        );
 
         const adminClient = getSupabaseAdmin();
 
