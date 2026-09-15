@@ -733,13 +733,31 @@ export async function GET(req: NextRequest) {
     // ── 7. Apply search filter ────────────────────────────────────────────
     let filtered = rows;
     if (search) {
-        const q = search.toLowerCase();
-        filtered = rows.filter(r =>
-            r.policy_number.toLowerCase().includes(q) ||
-            r.base_policy.toLowerCase().includes(q) ||
-            r.named_insured.toLowerCase().includes(q) ||
-            r.property_address.toLowerCase().includes(q)
-        );
+        const q = search.toLowerCase().trim();
+        const tokens = q.split(/\s+/).filter(Boolean);
+        filtered = rows.filter(r => {
+            const pn = (r.policy_number || '').toLowerCase();
+            const bp = (r.base_policy || '').toLowerCase();
+            const ni = (r.named_insured || '').toLowerCase();
+            const addr = (r.property_address || '').toLowerCase();
+            const combined = `${pn} ${bp} ${ni} ${addr}`;
+
+            // Check that every typed token matches in this row
+            return tokens.every(token => {
+                // If token contains digits (e.g. policy number, zip code, street number), use direct substring match
+                if (/\d/.test(token)) {
+                    return combined.includes(token);
+                }
+                // If pure letters (e.g. "huang", "charles", "alamo"):
+                // 1. Direct word-boundary match (e.g. matches "Huang" or "Charles" or "Alamo")
+                const wordBoundaryRegex = new RegExp(`(?:^|[^a-zA-Z0-9])${token}`, 'i');
+                if (wordBoundaryRegex.test(combined)) {
+                    return true;
+                }
+                // 2. Standard substring match as fallback
+                return combined.includes(token);
+            });
+        });
     }
 
     // ── 8. Group into families ────────────────────────────────────────────

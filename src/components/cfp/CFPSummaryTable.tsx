@@ -217,6 +217,24 @@ export function CFPSummaryTable({
         setFamilies(initialFamilies);
     }, [initialFamilies]);
 
+    // Local search state for immediate typing & search button trigger
+    const [localSearch, setLocalSearch] = useState(search);
+    useEffect(() => {
+        setLocalSearch(search);
+    }, [search]);
+
+    const handleExecuteSearch = (valToSearch?: string) => {
+        const query = valToSearch !== undefined ? valToSearch : localSearch;
+        onSearchChange(query);
+        setCurrentPage(1);
+    };
+
+    const handleClearSearch = () => {
+        setLocalSearch('');
+        onSearchChange('');
+        setCurrentPage(1);
+    };
+
     const [docFilter, setDocFilter] = useState<DocFilterType>('all');
     const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -1788,19 +1806,56 @@ export function CFPSummaryTable({
                             </select>
                         </div>
 
-                        {/* Search Input */}
-                        <div className={styles.searchBox}>
-                            <Search size={14} className={styles.searchIcon} />
-                            <input
-                                type="text"
-                                className={styles.searchInput}
-                                placeholder="Search policy #, insured, address..."
-                                value={search}
-                                onChange={e => {
-                                    onSearchChange(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            />
+                        {/* Search Input with Instant Button & Refresh Arrow */}
+                        <div className={styles.searchContainer}>
+                            <div className={styles.searchBox}>
+                                <Search size={14} className={styles.searchIcon} />
+                                <input
+                                    type="text"
+                                    className={styles.searchInput}
+                                    placeholder="Search policy #, insured, address..."
+                                    value={localSearch}
+                                    onChange={e => {
+                                        const v = e.target.value;
+                                        setLocalSearch(v);
+                                        onSearchChange(v);
+                                        setCurrentPage(1);
+                                    }}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleExecuteSearch();
+                                        }
+                                    }}
+                                />
+                                {localSearch && (
+                                    <button
+                                        type="button"
+                                        className={styles.searchClearBtn}
+                                        onClick={handleClearSearch}
+                                        title="Clear search"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.searchSubmitBtn}
+                                onClick={() => handleExecuteSearch()}
+                                title="Search immediately"
+                            >
+                                <Search size={13} />
+                                <span>Search</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.refreshIconBtn} ${loading ? styles.spinning : ''}`}
+                                onClick={onRefresh}
+                                title="Refresh table data"
+                            >
+                                <RotateCcw size={14} className={loading ? 'spinning' : ''} />
+                            </button>
                         </div>
                     </div>
 

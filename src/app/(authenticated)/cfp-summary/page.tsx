@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { CFPStatsCards } from '@/components/cfp/CFPStatsCards';
 import { CFPSummaryTable } from '@/components/cfp/CFPSummaryTable';
@@ -30,6 +30,9 @@ function CFPSummaryContent() {
     const [dataLoading, setDataLoading] = useState(true);
     const [totalTerms, setTotalTerms] = useState(0);
     const [totalFamilies, setTotalFamilies] = useState(0);
+
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const requestIdRef = useRef(0);
 
     // Dynamic current date defaults
     const currentYearStr = String(new Date().getFullYear());
@@ -106,8 +109,15 @@ function CFPSummaryContent() {
         }
     }, []);
 
-    // Fetch Data
+    // Fetch Data with cancellation and sequence tracking
     const fetchData = useCallback(async () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        const currentRequestId = ++requestIdRef.current;
+
         setDataLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -120,21 +130,25 @@ function CFPSummaryContent() {
             if (view) params.set('view', view);
 
             const res = await fetch(`/api/cfp-summary?${params.toString()}`, {
+                signal: controller.signal,
                 headers: {
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
             });
 
             const json = await res.json();
-            if (json.success) {
+            if (currentRequestId === requestIdRef.current && json.success) {
                 setFamilies(json.families || []);
                 setTotalTerms(json.total_terms || 0);
                 setTotalFamilies(json.total_families || 0);
             }
-        } catch (err) {
+        } catch (err: any) {
+            if (err?.name === 'AbortError') return; // Cancelled normally
             logger.error('CFPSummary', 'Failed to fetch data', { error: String(err) });
         } finally {
-            setDataLoading(false);
+            if (currentRequestId === requestIdRef.current) {
+                setDataLoading(false);
+            }
         }
     }, [year, month, search, view]);
 
@@ -145,7 +159,7 @@ function CFPSummaryContent() {
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
-        }, 200);
+        }, 150);
         return () => clearTimeout(timer);
     }, [fetchData]);
 
