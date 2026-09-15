@@ -152,10 +152,58 @@ export function ActivityTab() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [showAll, setShowAll] = useState(false);
-    const [selectedFilter, setSelectedFilter] = useState<ActivityFilterType>('all');
+
+    // Dynamic current date defaults
+    const currentYearStr = String(new Date().getFullYear());
+    const currentMonthStr = String(new Date().getMonth() + 1);
+
+    // Filters with localStorage memory persistence and current month/year defaults
+    const [selectedFilter, setSelectedFilterState] = useState<ActivityFilterType>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ccn_activity_filter_type') as ActivityFilterType;
+            if (saved) return saved;
+        }
+        return 'all';
+    });
+
+    const [selectedYear, setSelectedYearState] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ccn_activity_selected_year');
+            if (saved !== null) return saved;
+        }
+        return currentYearStr;
+    });
+
+    const [selectedMonth, setSelectedMonthState] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ccn_activity_selected_month');
+            if (saved !== null) return saved;
+        }
+        return currentMonthStr;
+    });
+
+    const setSelectedFilter = (val: ActivityFilterType) => {
+        setSelectedFilterState(val);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ccn_activity_filter_type', val);
+        }
+    };
+
+    const setSelectedYear = (val: string) => {
+        setSelectedYearState(val);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ccn_activity_selected_year', val);
+        }
+    };
+
+    const setSelectedMonth = (val: string) => {
+        setSelectedMonthState(val);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ccn_activity_selected_month', val);
+        }
+    };
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedYear, setSelectedYear] = useState<string>('2026');
-    const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
 
     const loadActivities = async (isRefresh = false) => {

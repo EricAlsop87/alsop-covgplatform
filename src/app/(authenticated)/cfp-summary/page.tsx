@@ -31,11 +31,56 @@ function CFPSummaryContent() {
     const [totalTerms, setTotalTerms] = useState(0);
     const [totalFamilies, setTotalFamilies] = useState(0);
 
-    // Filters
-    const [year, setYear] = useState('2026');
-    const [month, setMonth] = useState('');
+    // Dynamic current date defaults
+    const currentYearStr = String(new Date().getFullYear());
+    const currentMonthStr = String(new Date().getMonth() + 1);
+
+    // Filters with localStorage memory persistence and current month/year defaults
+    const [year, setYearState] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ccn_cfp_summary_year');
+            if (saved !== null) return saved;
+        }
+        return currentYearStr;
+    });
+
+    const [month, setMonthState] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ccn_cfp_summary_month');
+            if (saved !== null) return saved;
+        }
+        return currentMonthStr;
+    });
+
     const [search, setSearch] = useState('');
-    const [view, setView] = useState<'active_cfp' | 'bamboo_pipeline' | 'all'>('active_cfp');
+    const [view, setViewState] = useState<'active_cfp' | 'bamboo_pipeline' | 'all'>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ccn_cfp_summary_view');
+            if (saved === 'active_cfp' || saved === 'bamboo_pipeline' || saved === 'all') return saved;
+        }
+        return 'active_cfp';
+    });
+
+    const setYear = useCallback((newYear: string) => {
+        setYearState(newYear);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ccn_cfp_summary_year', newYear);
+        }
+    }, []);
+
+    const setMonth = useCallback((newMonth: string) => {
+        setMonthState(newMonth);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ccn_cfp_summary_month', newMonth);
+        }
+    }, []);
+
+    const setView = useCallback((newView: 'active_cfp' | 'bamboo_pipeline' | 'all') => {
+        setViewState(newView);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ccn_cfp_summary_view', newView);
+        }
+    }, []);
 
     // Fetch Stats
     const fetchStats = useCallback(async () => {
