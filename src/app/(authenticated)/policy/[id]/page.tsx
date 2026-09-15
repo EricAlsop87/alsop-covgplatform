@@ -828,6 +828,43 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
                                 </span>
                             </div>
 
+                            {/* Term Selector if multiple terms exist */}
+                            {policyDetailRaw?.all_terms && policyDetailRaw.all_terms.length > 1 && (
+                                <select
+                                    value={selectedTermId || policyDetailRaw.policy_term_id || ''}
+                                    onChange={(e) => {
+                                        const newTermId = e.target.value;
+                                        setSelectedTermId(newTermId);
+                                        router.replace(`/policy/${id}?term_id=${newTermId}`, { scroll: false });
+                                    }}
+                                    style={{
+                                        padding: '0.2rem 0.5rem',
+                                        background: 'rgba(99, 102, 241, 0.08)',
+                                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                                        borderRadius: '6px',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 600,
+                                        color: 'var(--accent-primary)',
+                                        cursor: 'pointer',
+                                        outline: 'none',
+                                    }}
+                                    title="Switch active viewing term"
+                                >
+                                    {policyDetailRaw.all_terms.map(t => {
+                                        const dateLabel = t.effective_date && t.expiration_date
+                                            ? `${t.effective_date.slice(0, 4)}–${t.expiration_date.slice(0, 4)}`
+                                            : 'Term';
+                                        const pnLabel = t.carrier_policy_number || t.source_policy_number || '';
+                                        const text = `${pnLabel ? `${pnLabel} ` : ''}(${dateLabel})${t.is_current ? ' • Renewal / Current' : ' • Expiring'}`;
+                                        return (
+                                            <option key={t.id} value={t.id}>
+                                                {text}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            )}
+
                             {policyDetailRaw?.previous_policy_number && (
                                 <div style={{
                                     display: 'inline-flex',

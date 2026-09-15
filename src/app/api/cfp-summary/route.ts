@@ -684,9 +684,9 @@ export async function GET(req: NextRequest) {
 
         // Priority for policy_number: 
         // 1. carrier_policy_number on this specific term (e.g. 'CFP 0101227750 05')
-        // 2. dec_pages.policy_number linked to this term
+        // 2. dec_pages.policy_number linked specifically to this term
         // 3. base policy number on policy record
-        const termPolicyNum = t.carrier_policy_number || termDec?.policy_number || policy?.policy_number || '';
+        const termPolicyNum = t.carrier_policy_number || termDecDocMap[t.id]?.policy_number || policy?.policy_number || '';
         const { basePolicy, suffix } = normalizePolicyNumber(termPolicyNum);
 
         const hasRce = docSet.has('rce');

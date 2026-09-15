@@ -865,11 +865,11 @@ export async function fetchDashboardPolicies(): Promise<DashboardPolicy[]> {
 
             const displayPolicyNum = currentTermSorted?.carrier_policy_number || row.policy_number || 'N/A';
 
-            // Find previous term
+            // Find previous term (next older term in descending list)
             const currentTermIndex = sortedTerms.findIndex((t: any) => t.id === currentTermSorted?.id);
-            const previousTerm = currentTermIndex !== -1 && currentTermIndex < sortedTerms.length - 1
+            const previousTerm = (currentTermIndex !== -1 && currentTermIndex < sortedTerms.length - 1)
                 ? sortedTerms[currentTermIndex + 1]
-                : (sortedTerms.length > 1 ? sortedTerms.find((t: any) => t.id !== currentTermSorted?.id) : null);
+                : null;
 
             return {
                 id: row.id,
@@ -1215,11 +1215,11 @@ export async function getPolicyDetailById(policyId: string, customClient?: Supab
             || row.policy_number
             || 'N/A';
 
-        // Find the previous term
+        // Find the previous term (next older term in descending-sorted list)
         const currentTermIndex = allTermsSorted.findIndex(t => t.id === currentTerm?.id);
-        const previousTerm = currentTermIndex !== -1 && currentTermIndex < allTermsSorted.length - 1
+        const previousTerm = (currentTermIndex !== -1 && currentTermIndex < allTermsSorted.length - 1)
             ? allTermsSorted[currentTermIndex + 1]
-            : (allTermsSorted.length > 1 ? allTermsSorted.find(t => t.id !== currentTerm?.id) : null);
+            : null;
 
         return {
             id: row.id,
@@ -1568,11 +1568,11 @@ export async function fetchPoliciesByClientId(clientId: string): Promise<Dashboa
                 if (decPageNum) displayPolicyNum = decPageNum;
             }
 
-            // Find the previous term
+            // Find the previous term (next older term in descending list)
             const currentTermIndex = sortedTerms.findIndex((t: any) => t.id === currentTermSorted?.id);
-            const previousTerm = currentTermIndex !== -1 && currentTermIndex < sortedTerms.length - 1
+            const previousTerm = (currentTermIndex !== -1 && currentTermIndex < sortedTerms.length - 1)
                 ? sortedTerms[currentTermIndex + 1]
-                : (sortedTerms.length > 1 ? sortedTerms.find((t: any) => t.id !== currentTermSorted?.id) : null);
+                : null;
 
             let previousPolicyNum: string | undefined = previousTerm?.carrier_policy_number;
             if (!previousPolicyNum && previousTerm?.source_dec_page_id) {
