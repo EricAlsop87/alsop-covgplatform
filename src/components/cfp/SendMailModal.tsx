@@ -66,43 +66,53 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setSelectedRecipientIds(['nancy', 'olga']);
     }, [term, isOpen]);
 
-    // Build structured document items covering all 5 carriers + Dec + RCE + Title
+    // Build structured document items covering all 4 companion carriers + Dec + RCE + Title
     const docItems = useMemo(() => {
         if (!term) return [];
-        
+
+        const isCarrierActive = (q: any) =>
+            Boolean(q && q.coverage_type !== 'UNAVAILABLE');
+
+        const anyCarrierQuoted = Boolean(
+            isCarrierActive(term.carrier_quotes?.bamboo) ||
+            isCarrierActive(term.carrier_quotes?.aegis) ||
+            isCarrierActive(term.carrier_quotes?.psic) ||
+            isCarrierActive(term.carrier_quotes?.am)
+        );
+
         const formatQuote = (carrierName: string, q: any) => {
             if (!q) {
-                return { 
+                return {
                     name: `${carrierName} Quote`,
-                    status: 'Unavailable', 
-                    isAvailable: false, 
-                    isUnavailable: true, 
-                    premium: '—', 
-                    details: 'No quote generated / Ineligible' 
+                    status: anyCarrierQuoted ? 'Not Quoted' : 'Not Attempted',
+                    statusType: 'not_quoted' as const,
+                    premium: '—',
+                    details: anyCarrierQuoted ? 'Not Required (Primary quote secured)' : 'Pending portal review',
                 };
             }
-            if (q.status === 'unavailable' || q.coverage_type === 'UNAVAILABLE' || q.status === 'declined') {
-                return { 
+
+            if (q.coverage_type === 'UNAVAILABLE') {
+                return {
                     name: `${carrierName} Quote`,
-                    status: 'Unavailable', 
-                    isAvailable: false, 
-                    isUnavailable: true, 
-                    premium: '—', 
-                    details: q.notes || 'Decline / Ineligible risk' 
+                    status: 'Unable to Quote',
+                    statusType: 'declined' as const,
+                    premium: '—',
+                    details: q.notes || 'Ineligible / Underwriting decline',
                 };
             }
+
             const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : (q.coverage_type || 'Quoted');
             const details = [
                 q.coverage_type ? `Type: ${q.coverage_type}` : null,
                 q.notes ? `Note: ${q.notes}` : null,
-            ].filter(Boolean).join(' | ') || 'Quote PDF ready';
-            return { 
+            ].filter(Boolean).join(' | ') || 'Quote on file (Attached)';
+
+            return {
                 name: `${carrierName} Quote`,
-                status: 'Quoted', 
-                isAvailable: true, 
-                isUnavailable: false, 
-                premium: premStr, 
-                details 
+                status: 'Quoted',
+                statusType: 'quoted' as const,
+                premium: premStr,
+                details,
             };
         };
 
@@ -112,15 +122,21 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const psic = formatQuote('PSIC', term.carrier_quotes?.psic);
 
         const titleStatus = term.title_pro
-            ? (term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : 'Mismatch')
+            ? (term.title_pro.match_status === 'matched' ? 'Verified' : term.title_pro.match_status === 'partial' ? 'Trust / LLC' : 'Mismatch')
             : 'Pending';
+        const titleStatusType = !term.title_pro
+            ? ('not_quoted' as const)
+            : term.title_pro.match_status === 'matched' || term.title_pro.match_status === 'partial'
+                ? ('available' as const)
+                : ('declined' as const);
         const titleDetails = term.title_pro
             ? `${term.title_pro.title_name || 'Verified'}${term.title_pro.notes ? ` (${term.title_pro.notes})` : ''}`
-            : 'Pending verification';
+            : 'Pending title record match';
 
         const decStatus = term.has_dec
             ? 'Available'
             : (term.has_renewal_dec ? 'Renewal Available' : 'Missing');
+        const decStatusType = (term.has_dec || term.has_renewal_dec) ? ('available' as const) : ('missing' as const);
         const decDetails = term.has_dec
             ? (term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : 'Attached')
             : (term.has_renewal_dec ? 'Renewal Offer (Attached)' : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'));
@@ -129,16 +145,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             {
                 name: 'FAIR Plan Dec Page',
                 status: decStatus,
-                isAvailable: term.has_dec || !!term.has_renewal_dec,
-                isUnavailable: false,
+                statusType: decStatusType,
                 premium: term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—',
                 details: decDetails,
             },
             {
                 name: 'RCE Valuation Report',
                 status: term.has_rce ? 'Available' : 'Missing',
-                isAvailable: term.has_rce,
-                isUnavailable: false,
+                statusType: term.has_rce ? ('available' as const) : ('missing' as const),
                 premium: term.rce_carrier || (term.has_rce ? '360Value' : '—'),
                 details: term.has_rce ? 'Valuation on file (Attached)' : 'No RCE uploaded',
             },
@@ -149,66 +163,86 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             {
                 name: 'Title Pro Report',
                 status: titleStatus,
-                isAvailable: !!term.title_pro && term.title_pro.match_status === 'matched',
-                isUnavailable: !!term.title_pro && term.title_pro.match_status === 'mismatch',
+                statusType: titleStatusType,
                 premium: '—',
                 details: titleDetails,
             },
         ];
     }, [term]);
 
-    // Build the clean HTML Email Body
+    // Build the executive HTML Email Body with professional blue theme
     const htmlBody = useMemo(() => {
         if (!term) return '';
         const polNum = term.policy_number || 'Policy';
+        const cleanPolNum = polNum.replace(/^CFP\s*/i, '');
         const insured = term.named_insured || 'Insured';
         const addr = term.property_address || 'Address on file';
         const exp = term.expiration_date || '—';
         const prem = term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—';
 
         const rowsHtml = docItems.map(item => {
-            const statusBadge = item.isAvailable
-                ? `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#dcfce7;color:#15803d;font-weight:700;font-size:12px;">✅ ${item.status}</span>`
-                : item.isUnavailable
-                    ? `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#fef3c7;color:#b45309;font-weight:700;font-size:12px;">⚠️ Unavailable</span>`
-                    : `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-weight:700;font-size:12px;">❌ Missing</span>`;
+            let badgeHtml = '';
+            if (item.statusType === 'available' || item.statusType === 'quoted') {
+                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+            } else if (item.statusType === 'declined') {
+                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+            } else if (item.statusType === 'not_quoted') {
+                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;font-weight:600;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+            } else {
+                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+            }
 
             return `
-            <tr>
-              <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#0f172a;">${item.name}</td>
-              <td style="padding:10px 14px;border:1px solid #e2e8f0;text-align:center;">${statusBadge}</td>
-              <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#334155;">${item.premium}</td>
-              <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:12px;">${item.details}</td>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:10px 14px;font-weight:600;color:#0f172a;font-size:13px;">${item.name}</td>
+              <td style="padding:10px 14px;text-align:center;">${badgeHtml}</td>
+              <td style="padding:10px 14px;color:#334155;font-weight:500;font-size:13px;">${item.premium}</td>
+              <td style="padding:10px 14px;color:#64748b;font-size:12px;">${item.details}</td>
             </tr>`;
         }).join('');
 
         const notesBlock = customNotes.trim()
-            ? `<div style="margin-top:20px;padding:14px 16px;background:#f8fafc;border-left:4px solid #6366f1;border-radius:4px;">
-                 <strong style="color:#0f172a;font-size:13px;">Additional Notes:</strong>
+            ? `<div style="margin-top:16px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:4px;">
+                 <strong style="color:#0f172a;font-size:13px;">Additional Remarks:</strong>
                  <p style="margin:6px 0 0 0;color:#334155;font-size:13px;line-height:1.5;">${customNotes.replace(/\n/g, '<br/>')}</p>
                </div>`
             : '';
 
         return `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;max-width:680px;margin:0 auto;padding:20px;">
-          <p style="font-size:15px;margin-bottom:12px;">Hello,</p>
-          <p style="font-size:14px;color:#334155;margin-bottom:18px;">
-            Here is the current document and quote availability status for policy <strong>CFP ${polNum.replace(/^CFP\s*/i, '')}</strong>. Please see attached files for your reference:
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;max-width:680px;margin:0 auto;padding:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+          <div style="border-bottom:2px solid #1e3a8a;padding-bottom:12px;margin-bottom:18px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h2 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;">
+                CFP Policy Document &amp; Quoting Summary
+              </h2>
+              <span style="font-size:12px;color:#1e40af;font-weight:700;background:#eff6ff;border:1px solid #dbeafe;padding:3px 8px;border-radius:4px;">
+                CFP ${cleanPolNum}
+              </span>
+            </div>
+          </div>
+
+          <p style="font-size:14px;color:#334155;margin:0 0 16px 0;">
+            Hello,<br/><br/>
+            Please review the current document verification and companion quote status for policy <strong>CFP ${cleanPolNum}</strong>:
           </p>
 
-          <div style="background:#f1f5f9;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;">
-            <div style="margin-bottom:4px;"><strong>Named Insured:</strong> ${insured}</div>
-            <div style="margin-bottom:4px;"><strong>Property Address:</strong> ${addr}</div>
-            <div><strong>Expiration Date:</strong> ${exp} &nbsp;|&nbsp; <strong>Annual Premium:</strong> ${prem}</div>
-          </div>
+          <table style="width:100%;border-collapse:collapse;background:#f0f7ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;border-radius:6px;margin-bottom:20px;">
+            <tr>
+              <td style="padding:12px 16px;font-size:13px;color:#1e293b;">
+                <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Named Insured:</strong> ${insured}</div>
+                <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Property Address:</strong> ${addr}</div>
+                <div><strong style="color:#1e40af;">Expiration Date:</strong> ${exp} &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">FAIR Plan Premium:</strong> ${prem}</div>
+              </td>
+            </tr>
+          </table>
 
           <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">
             <thead>
-              <tr style="background:#f8fafc;text-align:left;border-bottom:2px solid #e2e8f0;">
-                <th style="padding:10px 14px;color:#475569;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">Document / Carrier</th>
-                <th style="padding:10px 14px;color:#475569;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;text-align:center;width:120px;">Status</th>
-                <th style="padding:10px 14px;color:#475569;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">Type / Premium</th>
-                <th style="padding:10px 14px;color:#475569;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">Notes / Details</th>
+              <tr style="background:#f8fafc;text-align:left;border-bottom:2px solid #cbd5e1;">
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Document / Carrier</th>
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:center;width:140px;">Status</th>
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Type / Premium</th>
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Notes / Details</th>
               </tr>
             </thead>
             <tbody>
@@ -216,14 +250,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             </tbody>
           </table>
 
-          <div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:13px;color:#166534;">
-            📎 <strong>Please see attached files for your reference</strong> (Dec Page, RCE Valuation Report, and Carrier Quotes).
+          <div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:4px;font-size:12.5px;color:#1e293b;">
+            <strong>Attached Files:</strong> Available policy documents (Dec Page, RCE Valuation, and Companion Quotes) are attached for your reference.
           </div>
 
           ${notesBlock}
 
-          <p style="font-size:13px;color:#64748b;margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
-            Sent via Coverage Check Now &bull; Please reply directly to this email if you have any questions.
+          <p style="font-size:12px;color:#64748b;margin-top:24px;padding-top:14px;border-top:1px solid #e2e8f0;">
+            Sent via Coverage Check &bull; Please reply directly to this email if you have any questions or require updates.
           </p>
         </div>
         `;
@@ -434,9 +468,18 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                         <tr key={i}>
                                             <td className={styles.docName}>{item.name}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                {item.isAvailable && <span className={`${styles.statusBadge} ${styles.available}`}>✅ Available</span>}
-                                                {item.isUnavailable && <span className={`${styles.statusBadge} ${styles.unavailable}`}>⚠️ Unavailable</span>}
-                                                {!item.isAvailable && !item.isUnavailable && <span className={`${styles.statusBadge} ${styles.missing}`}>❌ Missing</span>}
+                                                {(item.statusType === 'available' || item.statusType === 'quoted') && (
+                                                    <span className={`${styles.statusBadge} ${styles.available}`}>{item.status}</span>
+                                                )}
+                                                {item.statusType === 'declined' && (
+                                                    <span className={`${styles.statusBadge} ${styles.declined}`}>{item.status}</span>
+                                                )}
+                                                {item.statusType === 'not_quoted' && (
+                                                    <span className={`${styles.statusBadge} ${styles.notQuoted}`}>{item.status}</span>
+                                                )}
+                                                {item.statusType === 'missing' && (
+                                                    <span className={`${styles.statusBadge} ${styles.missing}`}>{item.status}</span>
+                                                )}
                                             </td>
                                             <td className={styles.docPremium}>{item.premium}</td>
                                             <td className={styles.docDetails}>{item.details}</td>
