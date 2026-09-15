@@ -5,9 +5,17 @@ import zlib from 'zlib';
 /** Vercel function config */
 export const maxDuration = 30;
 
+export interface ClassificationResult {
+    detectedType: 'dec_page' | 'rce' | 'dic_dec_page' | 'quote';
+    carrier: 'California FAIR Plan' | 'bamboo' | 'aegis' | 'psic' | 'american_modern';
+    coverageType: 'DEC' | 'RCE' | 'DIC' | 'FULL';
+    label: string;
+    categoryIndex: number;
+}
+
 /**
- * Classify a PDF document by extracting raw text and matching keywords.
- * Returns the detected document type without storing anything.
+ * Classify a PDF document by extracting raw text and matching exact 13-category rules.
+ * Returns the detected document category without storing anything.
  */
 export async function POST(request: NextRequest) {
     try {
@@ -33,20 +41,15 @@ export async function POST(request: NextRequest) {
         const rawText = extractPdfText(buffer);
         const upperText = rawText.toUpperCase();
 
-        // Classify based on keyword matching (mirrors Python worker's classify_document_text)
-        const detectedType = classifyDocument(upperText, file.name);
-
-        // Find the label for the detected type
-        const typeLabels: Record<string, string> = {
-            'dec_page': 'Declaration Page',
-            'rce': 'RCE',
-            'dic_dec_page': 'DIC Dec Page',
-            'other': 'Other',
-        };
+        // Deterministically classify into one of the 13 supported categories
+        const result = classifyDocument(upperText, file.name);
 
         return NextResponse.json({
-            detectedType,
-            label: typeLabels[detectedType] || detectedType.toUpperCase(),
+            detectedType: result.detectedType,
+            carrier: result.carrier,
+            coverageType: result.coverageType,
+            label: result.label,
+            categoryIndex: result.categoryIndex,
             textLength: rawText.length,
         });
     } catch (error) {
@@ -100,119 +103,314 @@ function extractPdfText(buffer: Buffer): string {
         }
     }
     
-    return chunks.join(' ').slice(0, 15000); // Cap at 15k chars
+    return chunks.join(' ').slice(0, 20000); // Cap at 20k chars
 }
 
 /**
- * Classify document type based on keyword matching and filename.
- * Priority order matches Python worker's classify_document_text().
+ * Classify document into exactly one of the 13 supported categories:
+ * 1. California FAIR Plan Dec Page (All transactions: New, Renewal, Endorsement, Summary)
+ * 2. Bamboo RCE
+ * 3. Aegis RCE
+ * 4. PSIC RCE
+ * 5. American Modern RCE
+ * 6. Bamboo DIC Quote
+ * 7. Bamboo Full Quote
+ * 8. Aegis DIC Quote
+ * 9. Aegis Full Quote
+ * 10. PSIC DIC Quote
+ * 11. PSIC Full Quote
+ * 12. American Modern DIC Quote
+ * 13. American Modern Full Quote
  */
-function classifyDocument(upperText: string, fileName: string = ''): string {
+export function classifyDocument(upperText: string, fileName: string = ''): ClassificationResult {
     const fnUpper = fileName.toUpperCase();
 
-    // 0. Check filename signals FIRST for California FAIR Plan Dec Pages & Renewal Attachments
-    // CFP Renewal email attachments always use names like:
-    // "Renewal_Email_Attachment_CFP 0102482286_10602788_2026-09-05_234440.pdf"
-    const isCfpFilename = (
-        fnUpper.includes('RENEWAL_EMAIL_ATTACHMENT') ||
-        fnUpper.includes('RENEWAL_OFFER') ||
-        fnUpper.includes('FAIR PLAN') ||
-        fnUpper.includes('FAIR_PLAN') ||
-        fnUpper.includes('CFP DEC') ||
-        fnUpper.includes('CFP_DEC') ||
+    // ──────────────────────────────────────────────────────────────────────────
+    // STEP 1: California FAIR Plan Dec Page (Category 1)
+    // Dec Pages come ONLY from California FAIR Plan with Policy Numbers (010..., 020..., 011..., CFP...)
+    // ──────────────────────────────────────────────────────────────────────────
+    const hasCfpPolicyNumber = (
+        /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /(?:^|[^0-9])012\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
         /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
-        /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
-        (fnUpper.includes('CFP') && !fnUpper.includes('BAMBOO') && !fnUpper.includes('AEGIS') && !fnUpper.includes('AMERICAN MODERN') && !fnUpper.includes('SAGESURE') && !fnUpper.includes('PSIC') && !fnUpper.includes('QUOTE') && !fnUpper.includes('RCE'))
+        /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(fnUpper)
     );
 
-    const isCompanionCarrier = (
-        fnUpper.includes('BAMBOO') ||
-        fnUpper.includes('AEGIS') ||
-        fnUpper.includes('AMERICAN MODERN') ||
-        fnUpper.includes('AMERICANMODERN') ||
-        fnUpper.includes('SAGESURE') ||
-        fnUpper.includes('PSIC') ||
-        fnUpper.includes('PACIFIC SPECIALTY')
-    );
-
-    if (isCfpFilename && !isCompanionCarrier && !fnUpper.includes('RCE') && !fnUpper.includes('360VALUE') && !fnUpper.includes('VALUATION')) {
-        return 'dec_page';
-    }
-
-    if (fnUpper.includes('RCE') || fnUpper.includes('360VALUE') || fnUpper.includes('VALUATION')) {
-        return 'rce';
-    }
-    if (fnUpper.includes('DIC') && !fnUpper.includes('CFP')) {
-        return 'dic_dec_page';
-    }
-
-    // 1. Check for FAIR Plan Dec Page (highest priority)
-    // Note: CFP Dec Pages contain legal disclosures with "Difference in Conditions (DIC)",
-    // so CFP must ALWAYS be checked before DIC to prevent false DIC classification.
-    const decPageMarkers = [
+    const cfpContentMarkers = [
+        'CALIFORNIA FAIR PLAN ASSOCIATION',
         'CALIFORNIA FAIR PLAN',
-        'FAIR PLAN ASSOCIATION',
-        'FAIR PLAN',
         'DWELLING INSURANCE POLICY DECLARATIONS',
         'DWELLING PROPERTY POLICY DECLARATIONS',
+        'DWELLING ENDORSEMENT SUMMARY',
+        'COVERAGES, LIMITS, PERILS AND PREMIUMS',
         'CFPNET.COM',
-        'DWELLING FIRE',
         'CALIFORNIA FAIR PLAN PROPERTY INSURANCE',
         'POLICY PERIOD',
     ];
-    const isCfp = upperText.includes('CALIFORNIA FAIR PLAN') || upperText.includes('FAIR PLAN ASSOCIATION') || upperText.includes('CFPNET.COM') || upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE');
-    const decPageHits = decPageMarkers.filter(m => upperText.includes(m)).length;
-    if (isCfp || decPageHits >= 2) return 'dec_page';
+    const cfpMarkerHits = cfpContentMarkers.filter(m => upperText.includes(m)).length;
 
-    // 2. Check for DIC documents (BEFORE general RCE/E&S so American Modern DIC quotes are classified as DIC)
-    const dicMarkers = [
-        'DIFFERENCE IN CONDITIONS',
-        'DIC',
-        'BAMBOO',
-        'PACIFIC SPECIALTY',
-        'PSIC',
-        'HOMEOWNERS FLEX',
-        'HOMEOWNERS FLEX QUOTE',
-        'DIC - FIRE',
-    ];
-    if (dicMarkers.some(m => upperText.includes(m))) return 'dic_dec_page';
-    if (upperText.includes('AMERICAN MODERN') && (upperText.includes('FLEX') || upperText.includes('QUOTE') || upperText.includes('DIC'))) {
-        return 'dic_dec_page';
+    const isCompanionCarrierMarker = (
+        upperText.includes('GUIDEWIRE@BAMBOO') ||
+        upperText.includes('BAMBOO WEB SERVICES') ||
+        upperText.includes('WEBSERVICES@AEGIS') ||
+        upperText.includes('AEGIS WEB SERVICES') ||
+        upperText.includes('AMERICAN MODERN PROPERTY') ||
+        upperText.includes('PACIFIC SPECIALTY INSURANCE')
+    );
+
+    const isCfpDoc = (
+        (hasCfpPolicyNumber && (cfpMarkerHits >= 1 || upperText.includes('FAIR PLAN') || fnUpper.includes('CFP') || fnUpper.includes('RENEWAL_EMAIL_ATTACHMENT') || fnUpper.includes('RENEWAL_OFFER'))) ||
+        (cfpMarkerHits >= 2 && !isCompanionCarrierMarker) ||
+        (upperText.includes('CALIFORNIA FAIR PLAN') && !upperText.includes('360VALUE') && !upperText.includes('COTALITY'))
+    );
+
+    if (isCfpDoc && !isCompanionCarrierMarker) {
+        return {
+            detectedType: 'dec_page',
+            carrier: 'California FAIR Plan',
+            coverageType: 'DEC',
+            label: 'Declaration Page (California FAIR Plan)',
+            categoryIndex: 1,
+        };
     }
 
-    // 3. Check for E&S documents
-    const esMarkers = [
-        'SURPLUS LINES',
-        'STAMPING FEE',
-        'E&S',
-        'EXCESS AND SURPLUS',
-        'EXCESS & SURPLUS',
-        "LLOYD'S",
-        'AEGIS',
-        'INSPECTION FEE',
-        'CA SURPLUS LINES TAX',
-        'CA STAMPING FEE',
-    ];
-    if (esMarkers.some(m => upperText.includes(m))) return 'other'; // 'other' triggers auto-classify in worker
+    // ──────────────────────────────────────────────────────────────────────────
+    // STEP 2: RCE Valuation Documents (Categories 2 to 5)
+    // ──────────────────────────────────────────────────────────────────────────
+    const isRceStructure = (
+        upperText.includes('360VALUE') ||
+        upperText.includes('REPLACEMENT COST ESTIMAT') ||
+        upperText.includes('REPLACEMENT COST VALUATION') ||
+        upperText.includes('DETAILED REPORT ESTIMATE') ||
+        upperText.includes('VALUATION TOTALS DETAIL') ||
+        upperText.includes('VALUATION TOTALS SUMMARY') ||
+        upperText.includes('RECONSTRUCTION COST WITHOUT/WITH DEBRIS REMOVAL') ||
+        upperText.includes('RECONSTRUCTION COST WITH DEBRIS REMOVAL') ||
+        upperText.includes('COTALITY') ||
+        upperText.includes('RCT EXPRESS') ||
+        fnUpper.includes('RCE') ||
+        fnUpper.includes('360VALUE') ||
+        fnUpper.includes('VALUATION')
+    );
 
-    // 4. Check for RCE documents
-    const rceMarkers = [
-        '360VALUE',
-        'REPLACEMENT COST ESTIMATION',
-        'REPLACEMENT COST ESTIMATOR',
-        'VALUATION DATE',
-        'RCT EXPRESS',
-        'COTALITY',
-        'DETAILED REPORT ESTIMATE',
-        'RECONSTRUCTION COST WITH DEBRIS REMOVAL',
-        'VALUATION TOTALS DETAIL',
-    ];
-    if (rceMarkers.some(m => upperText.includes(m))) return 'rce';
-    if (upperText.includes('AMERICAN MODERN') && (upperText.includes('RECONSTRUCTION') || upperText.includes('VALUATION') || upperText.includes('REPLACEMENT'))) {
-        return 'rce';
+    if (isRceStructure && !upperText.includes('QUOTE SUMMARY') && !upperText.includes('HOMEOWNERS FLEX QUOTE')) {
+        // 2. Bamboo RCE
+        if (
+            upperText.includes('GUIDEWIRE@BAMBOO') ||
+            upperText.includes('BAMBOO WEB SERVICES') ||
+            upperText.includes('BAMBOO') ||
+            fnUpper.includes('BAMBOO')
+        ) {
+            return {
+                detectedType: 'rce',
+                carrier: 'bamboo',
+                coverageType: 'RCE',
+                label: 'Bamboo RCE (360Value)',
+                categoryIndex: 2,
+            };
+        }
+
+        // 3. Aegis RCE
+        if (
+            upperText.includes('WEBSERVICES@AEGIS') ||
+            upperText.includes('AEGIS WEB SERVICES') ||
+            upperText.includes('AEGIS SECURITY') ||
+            upperText.includes('AEGIS GENERAL') ||
+            upperText.includes('AEGIS') ||
+            fnUpper.includes('AEGIS')
+        ) {
+            return {
+                detectedType: 'rce',
+                carrier: 'aegis',
+                coverageType: 'RCE',
+                label: 'Aegis RCE (360Value)',
+                categoryIndex: 3,
+            };
+        }
+
+        // 4. PSIC RCE
+        if (
+            upperText.includes('PACIFIC SPECIALTY') ||
+            upperText.includes('PSIC') ||
+            fnUpper.includes('PSIC') ||
+            fnUpper.includes('PACIFIC')
+        ) {
+            return {
+                detectedType: 'rce',
+                carrier: 'psic',
+                coverageType: 'RCE',
+                label: 'PSIC RCE (360Value)',
+                categoryIndex: 4,
+            };
+        }
+
+        // 5. American Modern RCE
+        if (
+            upperText.includes('AMERICAN MODERN') ||
+            upperText.includes('AMERICANMODERN') ||
+            upperText.includes('COTALITY') ||
+            upperText.includes('VALUATION TOTALS') ||
+            upperText.includes('DETAILED REPORT ESTIMATE') ||
+            fnUpper.includes('AMERICAN MODERN') ||
+            fnUpper.includes('AM RCE') ||
+            fnUpper.includes('RCE AM')
+        ) {
+            return {
+                detectedType: 'rce',
+                carrier: 'american_modern',
+                coverageType: 'RCE',
+                label: 'American Modern RCE',
+                categoryIndex: 5,
+            };
+        }
+
+        // Default RCE to Bamboo (360Value standard)
+        return {
+            detectedType: 'rce',
+            carrier: 'bamboo',
+            coverageType: 'RCE',
+            label: 'Bamboo RCE (360Value)',
+            categoryIndex: 2,
+        };
     }
 
-    // 5. Fallback
-    return 'other';
+    // ──────────────────────────────────────────────────────────────────────────
+    // STEP 3: Carrier Quotes (DIC vs Full Quotes - Categories 6 to 13)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    // ── American Modern Quotes (Categories 12 & 13) ──
+    const isAmQuote = (
+        upperText.includes('AMERICAN MODERN') ||
+        upperText.includes('AMERICANMODERN') ||
+        upperText.includes('HOMEOWNERS FLEX') ||
+        upperText.includes('MANUFACTURED HOME') ||
+        fnUpper.includes('AMERICAN MODERN') ||
+        fnUpper.includes('AMERICANMODERN') ||
+        fnUpper.includes('QUOTE AM') ||
+        fnUpper.includes('DIC AM') ||
+        fnUpper.includes('DIC_AM') ||
+        /[\s_\-]AM[\s_\.\(\)\-]/i.test(fileName) ||
+        /(?:^|[^0-9])005[0-9]{6,}/.test(fileName)
+    );
+    if (isAmQuote) {
+        const isAmDic = (
+            upperText.includes('DIC - FIRE, EXTENDED COVERAGE') ||
+            upperText.includes('DIC -') ||
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            fnUpper.includes('DIC')
+        );
+        if (isAmDic) {
+            return {
+                detectedType: 'dic_dec_page',
+                carrier: 'american_modern',
+                coverageType: 'DIC',
+                label: 'American Modern DIC Quote',
+                categoryIndex: 12,
+            };
+        }
+        return {
+            detectedType: 'quote',
+            carrier: 'american_modern',
+            coverageType: 'FULL',
+            label: 'American Modern Full Quote',
+            categoryIndex: 13,
+        };
+    }
+
+    // ── Aegis Quotes (Categories 8 & 9) ──
+    const isAegisQuote = (
+        upperText.includes('AEGIS') ||
+        upperText.includes('OBSIDIAN') ||
+        fnUpper.includes('AEGIS') ||
+        fnUpper.includes('OBSIDIAN') ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName) ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(upperText)
+    );
+    if (isAegisQuote) {
+        const isAegisDic = (
+            upperText.includes('CALIFORNIA DIC QUOTE') ||
+            upperText.includes('DIFFERENCE IN CONDITIONS SELECTED') ||
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            fnUpper.includes('DIC')
+        );
+        if (isAegisDic) {
+            return {
+                detectedType: 'dic_dec_page',
+                carrier: 'aegis',
+                coverageType: 'DIC',
+                label: 'Aegis DIC Quote',
+                categoryIndex: 8,
+            };
+        }
+        return {
+            detectedType: 'quote',
+            carrier: 'aegis',
+            coverageType: 'FULL',
+            label: 'Aegis Full Quote (HO-3)',
+            categoryIndex: 9,
+        };
+    }
+
+    // ── PSIC Quotes (Categories 10 & 11) ──
+    const isPsicQuote = (
+        upperText.includes('PACIFIC SPECIALTY') ||
+        upperText.includes('PSIC') ||
+        fnUpper.includes('PSIC') ||
+        fnUpper.includes('PACIFIC') ||
+        /(?:^|[^0-9])HO62[0-9]{6,}/i.test(fileName) ||
+        /(?:^|[^0-9])HO6[0-9]{6,}/i.test(fileName)
+    );
+    if (isPsicQuote) {
+        const isPsicDic = (
+            upperText.includes('DIFFERENCE IN CONDITIONS INCLUDED') ||
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            fnUpper.includes('DIC')
+        );
+        if (isPsicDic) {
+            return {
+                detectedType: 'dic_dec_page',
+                carrier: 'psic',
+                coverageType: 'DIC',
+                label: 'PSIC DIC Quote',
+                categoryIndex: 10,
+            };
+        }
+        return {
+            detectedType: 'quote',
+            carrier: 'psic',
+            coverageType: 'FULL',
+            label: 'PSIC Full Quote',
+            categoryIndex: 11,
+        };
+    }
+
+    // ── Bamboo Quotes (Categories 6 & 7 - Default Companion Carrier) ──
+    const isBambooDic = (
+        upperText.includes('THIS POLICY DOES NOT COVER THE PERIL OF FIRE') ||
+        upperText.includes('DIFFERENCE IN CONDITIONS') ||
+        fnUpper.includes('DIC')
+    );
+
+    if (isBambooDic) {
+        return {
+            detectedType: 'dic_dec_page',
+            carrier: 'bamboo',
+            coverageType: 'DIC',
+            label: 'Bamboo DIC Quote',
+            categoryIndex: 6,
+        };
+    }
+
+    // Default Companion Full Quote (Category 7: Bamboo Full Quote)
+    return {
+        detectedType: 'quote',
+        carrier: 'bamboo',
+        coverageType: 'FULL',
+        label: 'Bamboo Full Quote',
+        categoryIndex: 7,
+    };
 }
+

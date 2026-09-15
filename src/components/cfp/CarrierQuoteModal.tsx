@@ -25,7 +25,6 @@ const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo Insurance',
     aegis: 'Aegis Security / General',
     am: 'American Modern (AM)',
-    sagesure: 'SageSure Insurance',
     psic: 'Pacific Specialty (PSIC)',
 };
 

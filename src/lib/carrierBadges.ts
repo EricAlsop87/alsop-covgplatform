@@ -5,7 +5,7 @@
 
 export interface CarrierBadgeInfo {
     label: string;
-    carrierKey: 'bamboo' | 'american_modern' | 'psic' | 'aegis' | 'sagesure' | 'stillwater' | 'other' | 'none';
+    carrierKey: 'bamboo' | 'american_modern' | 'psic' | 'aegis' | 'none';
     tooltip: string;
     textColor: string;
     bgColor: string;
@@ -14,7 +14,7 @@ export interface CarrierBadgeInfo {
 }
 
 /**
- * Palette definitions for the 5 primary carriers + missing/other
+ * Palette definitions for the 4 primary companion carriers + missing
  */
 export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
     textColor: string;
@@ -45,24 +45,6 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
         bgColor: 'rgba(71, 85, 105, 0.12)',
         borderColor: 'rgba(71, 85, 105, 0.30)',
     },
-    // 5. SageSure - Vibrant Lime Green (matches the bright green 'S' leaf logo)
-    sagesure: {
-        textColor: '#65a30d',
-        bgColor: 'rgba(101, 163, 13, 0.12)',
-        borderColor: 'rgba(101, 163, 13, 0.30)',
-    },
-    // 6. Stillwater - Sky Blue
-    stillwater: {
-        textColor: '#0284c7',
-        bgColor: 'rgba(2, 132, 199, 0.12)',
-        borderColor: 'rgba(2, 132, 199, 0.30)',
-    },
-    // Other
-    other: {
-        textColor: '#64748b',
-        bgColor: 'rgba(100, 116, 139, 0.12)',
-        borderColor: 'rgba(100, 116, 139, 0.30)',
-    },
     // None
     none: {
         textColor: '#94a3b8',
@@ -73,6 +55,7 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
 
 /**
  * Normalizes any carrier name, source string, or raw text into a standardized CarrierBadgeInfo.
+ * Resolves strictly to one of the 4 supported companion carriers (Bamboo, American Modern, PSIC, Aegis).
  */
 export function getCarrierBadge(
     carrierOrSource: string | null | undefined,
@@ -98,7 +81,9 @@ export function getCarrierBadge(
     if (
         lower.includes('bamboo') ||
         lower.includes('guidewire@bamboo') ||
-        lower.includes('bamboo insurance')
+        lower.includes('bamboo insurance') ||
+        lower.includes('casnh') ||
+        /(?:^|[^0-9])q100[0-9]{5,}/i.test(lower)
     ) {
         return {
             label: 'Bamboo',
@@ -121,7 +106,9 @@ export function getCarrierBadge(
         lower.includes('quote am') ||
         lower.includes('dic am') ||
         lower.includes('homeowners flex') ||
-        /\bAM\b/i.test(raw)
+        lower.includes('manufactured home') ||
+        /\bam\b/i.test(raw) ||
+        /(?:^|[^0-9])005[0-9]{6,}/.test(lower)
     ) {
         return {
             label: 'American Modern',
@@ -136,7 +123,9 @@ export function getCarrierBadge(
     if (
         lower.includes('pacific specialty') ||
         lower.includes('pacificspecialty') ||
-        lower.includes('psic')
+        lower.includes('psic') ||
+        /(?:^|[^0-9])ho62[0-9]{6,}/i.test(lower) ||
+        /(?:^|[^0-9])ho6[0-9]{6,}/i.test(lower)
     ) {
         return {
             label: 'PSIC',
@@ -151,7 +140,9 @@ export function getCarrierBadge(
     if (
         lower.includes('aegis') ||
         lower.includes('aegis general') ||
-        lower.includes('aegis security')
+        lower.includes('aegis security') ||
+        lower.includes('obsidian') ||
+        /(?:^|[^0-9])q5[0-9]{5,}/i.test(lower)
     ) {
         return {
             label: 'Aegis',
@@ -162,30 +153,7 @@ export function getCarrierBadge(
         };
     }
 
-    // 360Value default (commonly Bamboo in this system)
-    if (lower === 'rce_360value' || lower === '360value') {
-        return {
-            label: 'Bamboo',
-            carrierKey: 'bamboo',
-            tooltip: 'Bamboo 360Value Replacement Cost Estimator',
-            ...CARRIER_STYLES.bamboo,
-            hasDoc: true,
-        };
-    }
-
-    // Default / Other recognized carrier
-    if (raw) {
-        const shortLabel = raw.length > 16 ? `${raw.slice(0, 14)}...` : raw;
-        return {
-            label: shortLabel,
-            carrierKey: 'other',
-            tooltip: `${raw} (${docType.toUpperCase()})`,
-            ...CARRIER_STYLES.other,
-            hasDoc: true,
-        };
-    }
-
-    // If hasDoc is true but no specific carrier was identified
+    // Default to Bamboo for standard 360Value / Companion docs
     return {
         label: 'Bamboo',
         carrierKey: 'bamboo',
@@ -197,6 +165,7 @@ export function getCarrierBadge(
 
 /**
  * Detect carrier info directly from a document object (file_name, carrier_name, doc_type, source, created_by).
+ * Resolves strictly to one of the 4 supported companion carriers: Bamboo, American Modern, PSIC, Aegis.
  */
 export function detectDocumentCarrier(doc: {
     file_name?: string | null;
@@ -214,7 +183,7 @@ export function detectDocumentCarrier(doc: {
     const combined = `${carrierName} ${source} ${createdBy} ${fileName}`.trim();
     const lower = combined.toLowerCase();
 
-    // 1. Bamboo (Q100... quotes, CASNH, 360Value, Bamboo DIC)
+    // 1. Bamboo (Q100... quotes, CASNH, 360Value, Bamboo DIC, guidewire@bamboo)
     if (
         lower.includes('bamboo') ||
         lower.includes('guidewire@bamboo') ||
@@ -232,13 +201,14 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 2. American Modern
+    // 2. American Modern (AM, Cotality, Homeowners Flex, 005...)
     if (
         lower.includes('american modern') ||
         lower.includes('americanmodern') ||
         lower.includes('rce_american_modern') ||
         lower.includes('cotality') ||
         lower.includes('homeowners flex') ||
+        lower.includes('manufactured home') ||
         lower.includes('rce am') ||
         lower.includes('rcm am') ||
         lower.includes('quote am') ||
@@ -273,18 +243,7 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 4. Stillwater
-    if (lower.includes('stillwater')) {
-        return {
-            label: 'Stillwater',
-            carrierKey: 'stillwater',
-            tooltip: 'Stillwater Insurance Group',
-            ...CARRIER_STYLES.other,
-            hasDoc: true,
-        };
-    }
-
-    // 5. Aegis (Obsidian, Aegis Security, Q5... quotes)
+    // 4. Aegis (Obsidian, Aegis Security, Aegis General, Q5... quotes)
     if (
         lower.includes('aegis') ||
         lower.includes('aegis general') ||
@@ -301,23 +260,12 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // If it's a specific carrier name directly provided
-    if (carrierName && carrierName !== 'unknown') {
-        return {
-            label: carrierName,
-            carrierKey: 'other',
-            tooltip: carrierName,
-            ...CARRIER_STYLES.other,
-            hasDoc: true,
-        };
-    }
-
     // For RCE or DIC docs without explicit carrier name, default to Bamboo (360Value standard)
-    if (docType === 'rce') {
+    if (docType === 'rce' || docType === 'dic_dec_page') {
         return {
             label: 'Bamboo',
             carrierKey: 'bamboo',
-            tooltip: 'Bamboo 360Value RCE',
+            tooltip: docType === 'rce' ? 'Bamboo 360Value RCE' : 'Bamboo DIC Quote',
             ...CARRIER_STYLES.bamboo,
             hasDoc: true,
         };

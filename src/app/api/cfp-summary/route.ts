@@ -6,7 +6,7 @@ import { normalizePolicyNumber } from '@/lib/normalization';
 export const dynamic = 'force-dynamic';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
+export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'psic';
 export type CoverageQuoteType = 'DIC' | 'FULL' | 'QUOTE' | 'UNAVAILABLE';
 
 export interface CarrierQuoteData {
@@ -60,7 +60,7 @@ export interface CFPTermRow {
     es_file_name?: string | null;
     no_dic_available: boolean;
     is_pending_dec: boolean;
-    // 5 Carrier Quotes (Bamboo, Aegis, AM, SageSure, PSIC)
+    // 4 Companion Carrier Quotes (Bamboo, Aegis, AM, PSIC)
     carrier_quotes: Record<CarrierKey, CarrierQuoteData | null>;
     // Comments & notes
     comment_count_dec: number;
@@ -145,7 +145,7 @@ export function detectCarrierQuoteInfo(
     // 2. Aegis (Q5... or Aegis or Obsidian)
     const matchAegis = (fileName || '').match(/(Q5\d{5,}|Q\d{6,})/i) || (dic?.policy_number || '').match(/(Q5\d{5,}|Q\d{6,})/i);
     if (combined.includes('aegis') || combined.includes('obsidian') || dicCarrier.includes('aegis') || dicCarrier.includes('obsidian') || matchAegis) {
-        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('california dic quote') || combined.includes('difference in conditions') || fn.includes('dic');
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('california dic quote') || combined.includes('difference in conditions selected') || combined.includes('difference in conditions') || fn.includes('dic');
         const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'aegis',
@@ -164,6 +164,7 @@ export function detectCarrierQuoteInfo(
         combined.includes('americanmodern') ||
         dicCarrier.includes('american modern') ||
         combined.includes('homeowners flex') ||
+        combined.includes('manufactured home') ||
         combined.includes('quote am') ||
         combined.includes('dic am') ||
         combined.includes('dic_am') ||
@@ -171,7 +172,7 @@ export function detectCarrierQuoteInfo(
         /[\s_]AM$/i.test(fileName || '') ||
         matchAm
     ) {
-        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('dic') || combined.includes('difference in conditions');
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('dic - fire') || combined.includes('dic -') || combined.includes('difference in conditions') || fn.includes('dic');
         const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'am',
@@ -186,7 +187,7 @@ export function detectCarrierQuoteInfo(
     // 4. PSIC (Pacific Specialty)
     const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i) || (dic?.policy_number || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
     if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || dicCarrier.includes('pacific') || combined.includes('psic') || matchPsic) {
-        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('difference in conditions') || fn.includes('dic');
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('difference in conditions included') || combined.includes('difference in conditions') || fn.includes('dic');
         const prem = dic?.basic_premium || dic?.total_charge || null;
         return {
             carrier_key: 'psic',
@@ -209,6 +210,7 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
     // 1. Bamboo (Bamboo, CASNH, 360Value, Q100)
     if (
         combined.includes('bamboo') ||
+        combined.includes('guidewire@bamboo') ||
         combined.includes('casnh') ||
         combined.includes('360value') ||
         combined.includes('360 value') ||
@@ -222,6 +224,8 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
         combined.includes('homeowners flex') ||
+        combined.includes('manufactured home') ||
+        combined.includes('cotality') ||
         combined.includes('rce am') ||
         combined.includes('rcm am') ||
         combined.includes('rce_am') ||
@@ -246,12 +250,7 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'PSIC';
     }
 
-    // 4. Stillwater
-    if (combined.includes('stillwater')) {
-        return 'Stillwater';
-    }
-
-    // 5. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q55/Q56 quotes)
+    // 4. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q5 quotes)
     if (
         combined.includes('aegis') ||
         combined.includes('obsidian') ||
@@ -723,7 +722,6 @@ export async function GET(req: NextRequest) {
                 bamboo: manualCarrierQuotes[policyId]?.bamboo || autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
                 aegis: manualCarrierQuotes[policyId]?.aegis || autoCarrierQuotes[policyId]?.aegis || null,
                 am: manualCarrierQuotes[policyId]?.am || autoCarrierQuotes[policyId]?.am || null,
-                sagesure: manualCarrierQuotes[policyId]?.sagesure || autoCarrierQuotes[policyId]?.sagesure || null,
                 psic: manualCarrierQuotes[policyId]?.psic || autoCarrierQuotes[policyId]?.psic || null,
             },
             title_pro: titleProMap[policyId] || null,

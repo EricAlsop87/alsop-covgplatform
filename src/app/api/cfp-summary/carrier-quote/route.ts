@@ -4,10 +4,10 @@ import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
-export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
+export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'psic';
 export type CoverageQuoteType = 'DIC' | 'FULL' | 'QUOTE' | 'UNAVAILABLE';
 
-const VALID_CARRIERS: CarrierKey[] = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'];
+const VALID_CARRIERS: CarrierKey[] = ['bamboo', 'aegis', 'am', 'psic'];
 
 export async function POST(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service', 'agent'] });

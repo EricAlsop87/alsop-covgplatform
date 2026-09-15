@@ -35,87 +35,73 @@ PROCESSOR_REGISTRY = {
 
 def classify_document_text(text: str, file_name: str = "") -> str:
     """
-    Classify document text to determine document type when uploaded as 'other'.
-    Returns one of: 'dec_page', 'es_doc', 'dic_dec_page', 'rce'.
+    Classify document text to determine document type across the strict 13 categories:
+    1. CFP Dec Page ('dec_page')
+    2-5. RCE (Bamboo, Aegis, PSIC, AM) -> 'rce'
+    6-13. Quotes (DIC Quote -> 'dic_dec_page', Full Quote -> 'es_doc' or 'dic_dec_page')
     """
+    import re
     upper_text = text.upper()
     upper_fn = file_name.upper()
 
-    # 0. Check filename signals FIRST (e.g. "Renewal_Email_Attachment_CFP 0102482286...pdf")
-    is_companion_carrier = any(c in upper_fn for c in ["BAMBOO", "AEGIS", "AMERICAN MODERN", "AMERICANMODERN", "SAGESURE", "PSIC", "PACIFIC SPECIALTY"])
-    is_cfp_fn = (
-        "RENEWAL_EMAIL_ATTACHMENT" in upper_fn or
-        "RENEWAL_OFFER" in upper_fn or
-        "FAIR PLAN" in upper_fn or
-        "FAIR_PLAN" in upper_fn or
-        "CFP DEC" in upper_fn or
-        "CFP_DEC" in upper_fn or
-        ("CFP" in upper_fn and not is_companion_carrier and "RCE" not in upper_fn and "QUOTE" not in upper_fn)
+    # 1. Check California FAIR Plan Dec Page (CFP policy number or CFP headers)
+    has_cfp_pn = bool(
+        re.search(r'(?:^|[^0-9])010\d{7}(?:[^0-9]|$)', upper_text) or
+        re.search(r'(?:^|[^0-9])020\d{7}(?:[^0-9]|$)', upper_text) or
+        re.search(r'(?:^|[^0-9])011\d{7}(?:[^0-9]|$)', upper_text) or
+        re.search(r'(?:^|[^0-9])010\d{7}(?:[^0-9]|$)', upper_fn) or
+        re.search(r'(?:^|[^0-9])020\d{7}(?:[^0-9]|$)', upper_fn) or
+        re.search(r'(?:^|[^0-9])011\d{7}(?:[^0-9]|$)', upper_fn)
     )
-    if is_cfp_fn and not is_companion_carrier and "RCE" not in upper_fn and "360VALUE" not in upper_fn and "VALUATION" not in upper_fn:
-        logger.info("Auto-classified document as 'dec_page' via CFP filename: %s", file_name)
-        return "dec_page"
 
-    # 1. Check for California FAIR Plan Dec Page FIRST (highest priority)
-    # Note: Every CFP renewal offer and dec page contains a standard legal comparison chart:
-    # "Difference in Conditions (DIC) Policy", which previously caused false-positive DIC classifications.
-    # Therefore, CFP must ALWAYS be checked before DIC!
     cfp_markers = [
+        "CALIFORNIA FAIR PLAN ASSOCIATION",
         "CALIFORNIA FAIR PLAN",
-        "FAIR PLAN ASSOCIATION",
         "DWELLING INSURANCE POLICY DECLARATIONS",
         "DWELLING PROPERTY POLICY DECLARATIONS",
+        "DWELLING ENDORSEMENT SUMMARY",
+        "COVERAGES, LIMITS, PERILS AND PREMIUMS",
         "CFPNET.COM",
         "CALIFORNIA FAIR PLAN PROPERTY INSURANCE",
     ]
-    if any(m in upper_text for m in cfp_markers):
-        logger.info("Auto-classified document as 'dec_page' via California FAIR Plan markers")
+    is_companion_marker = any(m in upper_text for m in [
+        "GUIDEWIRE@BAMBOO", "BAMBOO WEB SERVICES", "WEBSERVICES@AEGIS",
+        "AEGIS WEB SERVICES", "AMERICAN MODERN PROPERTY", "PACIFIC SPECIALTY INSURANCE"
+    ])
+
+    if (has_cfp_pn or any(m in upper_text for m in cfp_markers) or "RENEWAL_EMAIL_ATTACHMENT" in upper_fn or "CFP" in upper_fn) and not is_companion_marker:
+        logger.info("Auto-classified document as 'dec_page' (California FAIR Plan)")
         return "dec_page"
 
-    # 2. Check DIC indicators (only if NOT a California FAIR Plan dec page)
-    dic_markers = [
-        "DIFFERENCE IN CONDITIONS", "DIC", "BAMBOO", "PACIFIC SPECIALTY", "PSIC",
-        "HOMEOWNERS FLEX", "HOMEOWNERS FLEX QUOTE", "DIC - FIRE",
-    ]
-    for marker in dic_markers:
-        if marker in upper_text:
-            logger.info("Auto-classified document as 'dic_dec_page' via marker: %s", marker)
-            return "dic_dec_page"
-
-    if "AMERICAN MODERN" in upper_text and ("FLEX" in upper_text or "QUOTE" in upper_text or "DIC" in upper_text):
-        logger.info("Auto-classified document as 'dic_dec_page' via American Modern DIC quote markers")
-        return "dic_dec_page"
-
-    # Check E&S indicators
-    es_markers = [
-        "SURPLUS LINES", "STAMPING FEE", "E&S", "EXCESS AND SURPLUS",
-        "EXCESS & SURPLUS", "LLOYD'S", "AEGIS", "INSPECTION FEE",
-        "CA SURPLUS LINES TAX", "CA STAMPING FEE"
-    ]
-    for marker in es_markers:
-        if marker in upper_text:
-            logger.info("Auto-classified document as 'es_doc' via marker: %s", marker)
-            return "es_doc"
-
-    # Check RCE indicators (both 360Value and American Modern / Cotality RCE)
+    # 2. Check RCE indicators (360Value, Detailed Report Estimate, Reconstruction Cost)
     rce_markers = [
-        "360VALUE", "REPLACEMENT COST ESTIMATION", "REPLACEMENT COST ESTIMATOR",
+        "360VALUE", "REPLACEMENT COST ESTIMAT", "REPLACEMENT COST VALUATION",
         "VALUATION DATE", "RCT EXPRESS", "COTALITY",
-        "DETAILED REPORT ESTIMATE", "RECONSTRUCTION COST WITH DEBRIS REMOVAL",
-        "VALUATION TOTALS DETAIL",
+        "DETAILED REPORT ESTIMATE", "RECONSTRUCTION COST", "VALUATION TOTALS"
     ]
-    for marker in rce_markers:
-        if marker in upper_text:
-            logger.info("Auto-classified document as 'rce' via marker: %s", marker)
-            return "rce"
-
-    if "AMERICAN MODERN" in upper_text and ("RECONSTRUCTION" in upper_text or "VALUATION" in upper_text or "REPLACEMENT" in upper_text):
-        logger.info("Auto-classified document as 'rce' via American Modern RCE markers")
+    if (any(m in upper_text for m in rce_markers) or "RCE" in upper_fn or "360VALUE" in upper_fn) and "QUOTE SUMMARY" not in upper_text:
+        logger.info("Auto-classified document as 'rce'")
         return "rce"
 
-    # Default to E&S document
-    logger.info("No specific classification markers matched — defaulting 'other' upload to 'es_doc'")
+    # 3. Check DIC Quotes across the 4 companion carriers
+    is_dic = (
+        "THIS POLICY DOES NOT COVER THE PERIL OF FIRE" in upper_text or
+        "CALIFORNIA DIC QUOTE" in upper_text or
+        "DIFFERENCE IN CONDITIONS SELECTED" in upper_text or
+        "DIFFERENCE IN CONDITIONS INCLUDED" in upper_text or
+        "DIC - FIRE" in upper_text or
+        "DIC -" in upper_text or
+        "DIFFERENCE IN CONDITIONS" in upper_text or
+        "DIC" in upper_fn
+    )
+    if is_dic:
+        logger.info("Auto-classified document as 'dic_dec_page' (DIC Quote)")
+        return "dic_dec_page"
+
+    # Default to es_doc for Full Quotes
+    logger.info("Auto-classified document as 'es_doc' (Full Companion Quote)")
     return "es_doc"
+
 
 
 def process_document_job(job: dict) -> None:

@@ -17,8 +17,10 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
     const txt = (rawText || '').toLowerCase().slice(0, 3000);
     const combined = `${fn} ${txt}`;
 
+    // 1. Bamboo
     if (
         combined.includes('bamboo') ||
+        combined.includes('guidewire@bamboo') ||
         combined.includes('casnh') ||
         combined.includes('360value') ||
         combined.includes('360 value') ||
@@ -27,10 +29,13 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'Bamboo';
     }
 
+    // 2. American Modern
     if (
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
         combined.includes('homeowners flex') ||
+        combined.includes('manufactured home') ||
+        combined.includes('cotality') ||
         combined.includes('rce am') ||
         combined.includes('rcm am') ||
         combined.includes('rce_am') ||
@@ -44,6 +49,7 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'AM';
     }
 
+    // 3. PSIC (Pacific Specialty)
     if (
         combined.includes('psic') ||
         combined.includes('pacific specialty') ||
@@ -54,24 +60,13 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'PSIC';
     }
 
-    if (combined.includes('stillwater')) {
-        return 'Stillwater';
-    }
-
+    // 4. Aegis
     if (
         combined.includes('aegis') ||
         combined.includes('obsidian') ||
         /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
     ) {
         return 'Aegis';
-    }
-
-    if (
-        combined.includes('sagesure') ||
-        combined.includes('sage sure') ||
-        /(?:^|[^A-Za-z0-9])CA[A-Za-z]{3}[0-9]{5,}/.test(fileName || '')
-    ) {
-        return 'SageSure';
     }
 
     if (docType === 'rce') {

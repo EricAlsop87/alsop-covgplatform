@@ -828,14 +828,12 @@ export function DataTable({ initialSearch, initialExpirationFilter, initialStatu
                         case 'rce_american_modern': if (getCarrierBadge(item.rce_carrier, item.has_rce, 'rce').carrierKey !== 'american_modern') return false; break;
                         case 'rce_psic': if (getCarrierBadge(item.rce_carrier, item.has_rce, 'rce').carrierKey !== 'psic') return false; break;
                         case 'rce_aegis': if (getCarrierBadge(item.rce_carrier, item.has_rce, 'rce').carrierKey !== 'aegis') return false; break;
-                        case 'rce_sagesure': if (getCarrierBadge(item.rce_carrier, item.has_rce, 'rce').carrierKey !== 'sagesure') return false; break;
                         case 'has_dic': if (!item.has_dic) return false; break;
                         case 'no_dic': if (item.has_dic) return false; break;
                         case 'dic_bamboo': if (getCarrierBadge(item.dic_carrier, item.has_dic, 'dic').carrierKey !== 'bamboo') return false; break;
                         case 'dic_american_modern': if (getCarrierBadge(item.dic_carrier, item.has_dic, 'dic').carrierKey !== 'american_modern') return false; break;
                         case 'dic_psic': if (getCarrierBadge(item.dic_carrier, item.has_dic, 'dic').carrierKey !== 'psic') return false; break;
                         case 'dic_aegis': if (getCarrierBadge(item.dic_carrier, item.has_dic, 'dic').carrierKey !== 'aegis') return false; break;
-                        case 'dic_sagesure': if (getCarrierBadge(item.dic_carrier, item.has_dic, 'dic').carrierKey !== 'sagesure') return false; break;
                         case 'has_es': if (!item.has_es) return false; break;
                         case 'no_es': if (item.has_es) return false; break;
                     }
@@ -1207,14 +1205,12 @@ export function DataTable({ initialSearch, initialExpirationFilter, initialStatu
                                     { value: 'rce_american_modern', label: '🔵 RCE: American Modern' },
                                     { value: 'rce_psic', label: '🟣 RCE: PSIC' },
                                     { value: 'rce_aegis', label: '🟠 RCE: Aegis' },
-                                    { value: 'rce_sagesure', label: '🩵 RCE: SageSure' },
                                     { value: 'has_dic', label: '🛡️ Has DIC (Any)' },
                                     { value: 'no_dic', label: '❌ Missing DIC' },
                                     { value: 'dic_bamboo', label: '🟢 DIC: Bamboo' },
                                     { value: 'dic_american_modern', label: '🔵 DIC: American Modern' },
                                     { value: 'dic_psic', label: '🟣 DIC: PSIC' },
                                     { value: 'dic_aegis', label: '🟠 DIC: Aegis' },
-                                    { value: 'dic_sagesure', label: '🩵 DIC: SageSure' },
                                     { value: 'has_es', label: '📑 Has E&S' },
                                     { value: 'no_es', label: '❌ Missing E&S' },
                                 ].map(opt => (
@@ -1508,10 +1504,10 @@ export function DataTable({ initialSearch, initialExpirationFilter, initialStatu
                                 has_dec: 'Has Dec Page', no_dec: 'Missing Dec Page',
                                 has_rce: 'Has RCE', no_rce: 'Missing RCE',
                                 rce_bamboo: 'RCE: Bamboo', rce_american_modern: 'RCE: American Modern',
-                                rce_psic: 'RCE: PSIC', rce_aegis: 'RCE: Aegis', rce_sagesure: 'RCE: SageSure',
+                                rce_psic: 'RCE: PSIC', rce_aegis: 'RCE: Aegis',
                                 has_dic: 'Has DIC', no_dic: 'Missing DIC',
                                 dic_bamboo: 'DIC: Bamboo', dic_american_modern: 'DIC: American Modern',
-                                dic_psic: 'DIC: PSIC', dic_aegis: 'DIC: Aegis', dic_sagesure: 'DIC: SageSure',
+                                dic_psic: 'DIC: PSIC', dic_aegis: 'DIC: Aegis',
                                 has_es: 'Has E&S', no_es: 'Missing E&S',
                             };
                             return (

@@ -110,7 +110,6 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const aegis = formatQuote('Aegis', term.carrier_quotes?.aegis);
         const am = formatQuote('American Modern (AM)', term.carrier_quotes?.am);
         const psic = formatQuote('PSIC', term.carrier_quotes?.psic);
-        const stillwater = formatQuote('Stillwater', (term.carrier_quotes as any)?.stillwater);
 
         const titleStatus = term.title_pro
             ? (term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : 'Mismatch')
@@ -140,7 +139,6 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             aegis,
             am,
             psic,
-            stillwater,
             {
                 name: 'Title Pro Report',
                 status: titleStatus,

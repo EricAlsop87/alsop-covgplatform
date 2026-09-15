@@ -44,7 +44,6 @@ const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo',
     aegis: 'Aegis',
     am: 'American Modern',
-    sagesure: 'SageSure',
     psic: 'Pacific Specialty',
 };
 import type { DocNoteTag } from '@/lib/notes';
@@ -65,7 +64,6 @@ export interface ColumnFilters {
     bamboo?: string;
     aegis?: string;
     am?: string;
-    sagesure?: string;
     psic?: string;
     title_pro?: string;
     servicing?: string;
@@ -83,7 +81,6 @@ export type CFPColumnKey =
     | 'bamboo'
     | 'aegis'
     | 'am'
-    | 'sagesure'
     | 'psic'
     | 'title_pro'
     | 'servicing'
@@ -108,7 +105,6 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'bamboo', label: 'Bamboo', width: 105, minWidth: 80, align: 'center' },
     { key: 'aegis', label: 'Aegis', width: 105, minWidth: 80, align: 'center' },
     { key: 'am', label: 'AM', width: 105, minWidth: 80, align: 'center' },
-    { key: 'sagesure', label: 'SageSure', width: 105, minWidth: 80, align: 'center' },
     { key: 'psic', label: 'PSIC', width: 105, minWidth: 80, align: 'center' },
     { key: 'title_pro', label: 'Title Pro', width: 95, minWidth: 75, align: 'center' },
     { key: 'servicing', label: 'Send Mail', width: 115, minWidth: 85, align: 'center' },
@@ -872,7 +868,7 @@ export function CFPSummaryTable({
             }
         }
 
-        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'];
+        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'am', 'psic'];
         for (const cKey of carrierFilterKeys) {
             const filterVal = columnFilters[cKey];
             if (filterVal) {
@@ -999,7 +995,6 @@ export function CFPSummaryTable({
             if (columnFilters.bamboo) parts.push(`Bamboo_${columnFilters.bamboo}`);
             if (columnFilters.aegis) parts.push(`Aegis_${columnFilters.aegis}`);
             if (columnFilters.am) parts.push(`AM_${columnFilters.am}`);
-            if (columnFilters.sagesure) parts.push(`SageSure_${columnFilters.sagesure}`);
             if (columnFilters.psic) parts.push(`PSIC_${columnFilters.psic}`);
             if (columnFilters.title_pro) parts.push(`Title_${columnFilters.title_pro}`);
             const desc = parts.length > 0 ? parts.join('_') : 'All';
@@ -1374,7 +1369,6 @@ export function CFPSummaryTable({
             case 'bamboo':
             case 'aegis':
             case 'am':
-            case 'sagesure':
             case 'psic': {
                 const carrierKey = colKey as CarrierKey;
                 const quote = term.carrier_quotes?.[carrierKey];
@@ -1644,15 +1638,12 @@ export function CFPSummaryTable({
                         <option value="Bamboo">Bamboo</option>
                         <option value="AM">American Modern</option>
                         <option value="Aegis">Aegis</option>
-                        <option value="SageSure">SageSure</option>
                         <option value="PSIC">PSIC</option>
-                        <option value="Other">Other Carrier</option>
                     </select>
                 );
             case 'bamboo':
             case 'aegis':
             case 'am':
-            case 'sagesure':
             case 'psic': {
                 const cKey = colKey as CarrierKey;
                 const cName = CARRIER_NAMES[cKey] || cKey.toUpperCase();
