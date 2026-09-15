@@ -3396,20 +3396,34 @@ export async function approveDecPage(decPageId: string, policyId: string): Promi
             return false;
         }
 
-        // 2. Find the current policy_term for this policy
-        const { data: terms, error: termErr } = await supabase
-            .from('policy_terms')
-            .select('id')
-            .eq('policy_id', policyId)
-            .eq('is_current', true)
-            .limit(1);
+        // 2. Find the exact matching policy_term for this dec page
+        let termId: string | null = dp.policy_term_id || null;
+        if (!termId && dp.policy_period_end) {
+            const { data: matchingTerms } = await supabase
+                .from('policy_terms')
+                .select('id')
+                .eq('policy_id', policyId)
+                .eq('expiration_date', dp.policy_period_end)
+                .limit(1);
+            if (matchingTerms && matchingTerms.length > 0) {
+                termId = matchingTerms[0].id;
+            }
+        }
+        if (!termId) {
+            const { data: terms, error: termErr } = await supabase
+                .from('policy_terms')
+                .select('id')
+                .eq('policy_id', policyId)
+                .eq('is_current', true)
+                .limit(1);
 
-        if (termErr || !terms?.length) {
-            logger.error('API', 'No current term found for policy', { policyId });
-            return false;
+            if (termErr || !terms?.length) {
+                logger.error('API', 'No current term found for policy', { policyId });
+                return false;
+            }
+            termId = terms[0].id;
         }
 
-        const termId = terms[0].id;
         const now = new Date().toISOString();
 
         // 3. Get current user for approved_by
@@ -3420,6 +3434,7 @@ export async function approveDecPage(decPageId: string, policyId: string): Promi
             .from('policy_terms')
             .update({
                 source_dec_page_id: decPageId,
+                carrier_policy_number: dp.policy_number || undefined,
                 approved_at: now,
                 approved_by: user?.id || null,
                 effective_date: dp.policy_period_start || undefined,

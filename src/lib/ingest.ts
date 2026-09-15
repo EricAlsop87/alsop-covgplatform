@@ -367,7 +367,7 @@ export async function ingestDecPage(
     const premium = parsePremium(fields.total_annual_premium);
     const policyTermId = await upsertPolicyTerm(policyId, effectiveDate, expirationDate, premium, policyNumber);
 
-    // 5. Link dec_pages row with relational IDs
+    // 5. Link dec_pages row with relational IDs and set source_dec_page_id on matching term
     const { error: linkError } = await admin
         .from('dec_pages')
         .update({
@@ -376,6 +376,15 @@ export async function ingestDecPage(
             policy_term_id: policyTermId,
         })
         .eq('id', decPageId);
+
+    await admin
+        .from('policy_terms')
+        .update({
+            source_dec_page_id: decPageId,
+            carrier_policy_number: policyNumber,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', policyTermId);
 
     if (linkError) {
         logger.error('Ingest', 'Failed to link dec_pages with relational IDs (non-fatal)', {

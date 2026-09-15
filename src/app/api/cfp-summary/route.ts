@@ -679,7 +679,6 @@ export async function GET(req: NextRequest) {
         const docSet = policyDocTypes[policyId] || new Set<string>();
 
         const termDec = termDecDocMap[t.id] || (t.is_current ? policyDecDocMap[policyId] : null);
-        const policyDec = policyDecDocMap[policyId];
 
         // Priority for policy_number: 
         // 1. carrier_policy_number on this specific term (e.g. 'CFP 0101227750 05')
@@ -696,10 +695,10 @@ export async function GET(req: NextRequest) {
         const dicCarrier = policyDicCarrier[policyId] || dicFromPn || (hasDic ? 'DIC' : null);
         const isPendingDec = policy?.status === 'pending_dec';
 
-        const hasDec = !!termDec || !!t.source_dec_page_id || (t.is_current && policyIdsWithDec.has(policyId));
-        const decStoragePath = termDec?.storage_path || (t.is_current ? policyDec?.storage_path : null) || null;
-        const decFileName = termDec?.file_name || (t.is_current ? policyDec?.file_name : null) || null;
-        const decBucket = (termDec?.bucket || (t.is_current ? policyDec?.bucket : null) || 'cfp-raw-decpage') as 'cfp-raw-decpage' | 'cfp-platform-documents';
+        const hasDec = !!termDec || (t.is_current && policyIdsWithDec.has(policyId));
+        const decStoragePath = termDec?.storage_path || (t.is_current ? policyDecDocMap[policyId]?.storage_path : null) || null;
+        const decFileName = termDec?.file_name || (t.is_current ? policyDecDocMap[policyId]?.file_name : null) || null;
+        const decBucket = (termDec?.bucket || (t.is_current ? policyDecDocMap[policyId]?.bucket : null) || 'cfp-raw-decpage') as 'cfp-raw-decpage' | 'cfp-platform-documents';
 
         return {
             policy_id: policyId,
