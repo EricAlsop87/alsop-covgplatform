@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
         const sendResult = await sendEmail({
             to: deduplicatedTo,
             cc: allCc,
-            from: `${senderName} <alsopva02@gmail.com>`,
+            from: `${senderName} <${senderEmail}>`,
             replyTo: senderEmail,
             subject,
             htmlBody,

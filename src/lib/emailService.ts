@@ -271,9 +271,9 @@ class ConsoleProvider implements EmailProvider {
 // ---------------------------------------------------------------------------
 
 export function getEmailSendMode(): EmailSendMode {
-    const mode = (process.env.EMAIL_SEND_MODE || 'disabled').toLowerCase() as EmailSendMode;
-    if (!['disabled', 'redirect', 'live'].includes(mode)) return 'disabled';
-    return mode;
+    const raw = (process.env.EMAIL_SEND_MODE || 'live').split('#')[0].trim().toLowerCase() as EmailSendMode;
+    if (!['disabled', 'redirect', 'live'].includes(raw)) return 'live';
+    return raw;
 }
 
 export function isForceRedirectEnabled(): boolean {
@@ -400,7 +400,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
             reason: 'Email sending is disabled (EMAIL_SEND_MODE=disabled)',
             originalTo,
         });
-        return { success: true, mode: 'disabled', timestamp: now };
+        return { success: false, error: 'Email sending is currently disabled in system settings (EMAIL_SEND_MODE=disabled)', mode: 'disabled', timestamp: now };
     }
 
     // redirect
