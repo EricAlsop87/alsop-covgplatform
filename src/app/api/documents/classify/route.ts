@@ -424,13 +424,20 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     const hasPsicIdentity = (
         upperText.includes('PACIFIC SPECIALTY') ||
         upperText.includes('PACIFICSPECIALTY') ||
-        upperText.includes('PSIC')
+        upperText.includes('PSIC') ||
+        upperText.includes('PACIFICSPECIALTY.COM') ||
+        /(?:^|[^0-9])HO6[0-9]{6,}/i.test(upperText) ||
+        fnUpper.includes('PSIC') ||
+        fnUpper.includes('PACIFIC SPECIALTY')
     );
 
     const isPsicQuote = hasPsicIdentity && (
         upperText.includes('QUOTE') ||
+        upperText.includes('CONDO INSURANCE') ||
+        upperText.includes('HOMEOWNERS') ||
         upperText.includes('PROPOSAL') ||
         upperText.includes('PREMIUM INDICATION') ||
+        /(?:^|[^0-9])HO62?[0-9]{6,}/i.test(upperText) ||
         /(?:^|[^0-9])HO62?[0-9]{6,}/i.test(fileName) ||
         upperText.includes('DIFFERENCE IN CONDITIONS')
     );
@@ -438,7 +445,8 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     if (isPsicQuote) {
         const isPsicDic = (
             upperText.includes('DIFFERENCE IN CONDITIONS INCLUDED') ||
-            upperText.includes('DIFFERENCE IN CONDITIONS')
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            fnUpper.includes('DIC')
         );
 
         if (isPsicDic) {
@@ -462,7 +470,10 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     // ── American Modern Quotes (Categories 12 & 13) ──
     const hasAmIdentity = (
         upperText.includes('AMERICAN MODERN') ||
-        upperText.includes('AMERICANMODERN')
+        upperText.includes('AMERICANMODERN') ||
+        upperText.includes('MH-CW-Q-0001') ||
+        fnUpper.includes('AMERICAN MODERN') ||
+        fnUpper.includes('AMERICANMODERN')
     );
 
     const isAmQuote = hasAmIdentity && (
@@ -470,7 +481,8 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         upperText.includes('HOMEOWNERS FLEX') ||
         upperText.includes('MANUFACTURED HOME') ||
         upperText.includes('APPLICATION') ||
-        /(?:^|[^0-9])005[\\-\\d]{7,}/.test(upperText)
+        /(?:^|[^0-9])005[\-\d]{7,}/.test(upperText) ||
+        /(?:^|[^0-9])005[\-\d]{7,}/.test(fileName)
     );
 
     if (isAmQuote) {
@@ -478,7 +490,8 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
             upperText.includes('DIC - FIRE, EXTENDED COVERAGE') ||
             upperText.includes('DIC -') ||
             upperText.includes('DIFFERENCE IN CONDITIONS') ||
-            /DIC\\s*-\\s*.*EXCL/i.test(upperText)
+            /DIC\s*-\s*.*EXCL/i.test(upperText) ||
+            fnUpper.includes('DIC')
         );
 
         if (isAmDic) {
