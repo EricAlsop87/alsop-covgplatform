@@ -4,18 +4,50 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { FileText, Loader2, Download, Eye, AlertCircle, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import {
   fetchPlatformDocumentsByClientId,
+  fetchDecPageFilesByClientId,
   getPlatformDocDownloadUrl,
+  getDecPageFileDownloadUrl,
   deleteDocument,
   PlatformDocumentInfo,
+  DecPageFileInfo,
 } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast/Toast';
 import { detectDocumentCarrier } from '@/lib/carrierBadges';
 import styles from './ClientFiles.module.css';
 import { logger } from '@/lib/logger';
 
-
 interface ClientFilesProps {
   clientId: string;
+}
+
+interface UnifiedClientFile {
+  id: string;
+  source: 'dec_page' | 'platform';
+  doc_type: string;
+  file_name: string | null;
+  file_size: number | null;
+  storage_path: string | null;
+  parse_status: string | null;
+  processing_step?: string | null;
+  match_status?: string;
+  error_message?: string | null;
+  created_at: string;
+  uploaded_by?: string | null;
+  carrier_name?: string | null;
+  source_name?: string | null;
+  created_by?: string | null;
+  policy_id?: string | null;
+  policy_number?: string | null;
+  bucket?: string;
+  dic_data?: {
+    carrier_name?: string | null;
+    policy_number?: string | null;
+    document_type?: string | null;
+    has_dic_endorsement?: boolean | null;
+    basic_premium?: number | null;
+    total_charge?: number | null;
+    cov_a_dwelling?: string | null;
+  } | null;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -54,6 +86,7 @@ function getParseStatusBadge(status: string | null): { label: string; color: str
 
 const DOC_TYPE_LABELS: Record<string, { label: string; color: string; groupLabel: string }> = {
   dec_page: { label: 'DEC PAGE', color: '#3b82f6', groupLabel: 'Declaration Pages' },
+  quote: { label: 'QUOTE', color: '#06b6d4', groupLabel: 'Carrier Quotes' },
   rce: { label: 'RCE', color: '#10b981', groupLabel: 'RCE Documents' },
   dic_dec_page: { label: 'DIC', color: '#f97316', groupLabel: 'DIC Documents' },
   es_doc: { label: 'E&S', color: '#8b5cf6', groupLabel: 'E&S Documents' },
@@ -66,14 +99,19 @@ const DOC_TYPE_LABELS: Record<string, { label: string; color: string; groupLabel
 
 export function ClientFiles({ clientId }: ClientFilesProps) {
   const [platformDocs, setPlatformDocs] = useState<PlatformDocumentInfo[]>([]);
+  const [decFiles, setDecFiles] = useState<DecPageFileInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const toast = useToast();
 
   const loadFiles = useCallback(async () => {
     try {
-      const platformData = await fetchPlatformDocumentsByClientId(clientId);
+      const [platformData, decData] = await Promise.all([
+        fetchPlatformDocumentsByClientId(clientId),
+        fetchDecPageFilesByClientId(clientId),
+      ]);
       setPlatformDocs(platformData);
+      setDecFiles(decData);
     } catch (err) {
       logger.error('ClientFiles', 'Failed to fetch client files:', { error: err instanceof Error ? err.message : String(err) })
     } finally {
@@ -86,11 +124,16 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
   }, [loadFiles]);
 
   // View: opens signed URL in new tab
-  const handleView = useCallback(async (doc: PlatformDocumentInfo) => {
-    if (!doc.storage_path) return;
-    setActionId(doc.id + '_view');
+  const handleView = useCallback(async (file: UnifiedClientFile) => {
+    if (!file.storage_path) return;
+    setActionId(file.id + '_view');
     try {
-      const url = await getPlatformDocDownloadUrl(doc.storage_path);
+      let url: string | null = null;
+      if (file.source === 'dec_page') {
+        url = await getDecPageFileDownloadUrl(file.storage_path);
+      } else {
+        url = await getPlatformDocDownloadUrl(file.storage_path, file.bucket);
+      }
       if (url) {
         window.open(url, '_blank');
       } else {
@@ -105,15 +148,20 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
   }, [toast]);
 
   // Download URL
-  const handleDownload = useCallback(async (doc: PlatformDocumentInfo) => {
-    if (!doc.storage_path) return;
-    setActionId(doc.id + '_dl');
+  const handleDownload = useCallback(async (file: UnifiedClientFile) => {
+    if (!file.storage_path) return;
+    setActionId(file.id + '_dl');
     try {
-      const url = await getPlatformDocDownloadUrl(doc.storage_path);
+      let url: string | null = null;
+      if (file.source === 'dec_page') {
+        url = await getDecPageFileDownloadUrl(file.storage_path);
+      } else {
+        url = await getPlatformDocDownloadUrl(file.storage_path, file.bucket);
+      }
       if (url) {
         const a = document.createElement('a');
         a.href = url;
-        a.download = doc.file_name || 'document.pdf';
+        a.download = file.file_name || 'document.pdf';
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
@@ -131,16 +179,16 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
   }, [toast]);
 
   // Delete
-  const handleDelete = useCallback(async (doc: PlatformDocumentInfo) => {
-    const isRce = doc.doc_type === 'rce';
+  const handleDelete = useCallback(async (file: UnifiedClientFile) => {
+    const isRce = file.source === 'platform' && file.doc_type === 'rce';
     const confirmMsg = isRce
-      ? `Delete "${doc.file_name || 'this RCE'}"?\n\nThis will also remove all RCE enrichment data associated with this client.\n\nThis action cannot be undone.`
-      : `Are you sure you want to delete ${doc.file_name || 'this document'}?\nThis action cannot be undone.`;
+      ? `Delete "${file.file_name || 'this RCE'}"?\n\nThis will also remove all RCE enrichment data associated with this client.\n\nThis action cannot be undone.`
+      : `Are you sure you want to delete ${file.file_name || 'this document'}?\nThis action cannot be undone.`;
     if (!window.confirm(confirmMsg)) return;
 
-    setActionId(doc.id + '_delete');
+    setActionId(file.id + '_delete');
     try {
-      const success = await deleteDocument(doc.id, 'platform');
+      const success = await deleteDocument(file.id, file.source);
       if (success) {
         toast.success('Document deleted successfully.');
         await loadFiles();
@@ -166,11 +214,63 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
     );
   }
 
+  // Deduplicate and combine files
+  const decFileNames = new Set(decFiles.map(f => (f.file_name || '').toLowerCase()));
+  const decStoragePaths = new Set(decFiles.map(f => (f.storage_path || '').toLowerCase()));
+
+  const filteredPlatformDocs = platformDocs.filter(d => {
+    const fn = (d.file_name || '').toLowerCase();
+    const sp = (d.storage_path || '').toLowerCase();
+    if ((d.doc_type as string) === 'other' && (decFileNames.has(fn) || decStoragePaths.has(sp))) {
+      return false;
+    }
+    return true;
+  });
+
+  const allFiles: UnifiedClientFile[] = [
+    ...decFiles.map(f => ({
+      id: f.id,
+      source: 'dec_page' as const,
+      doc_type: 'dec_page',
+      file_name: f.file_name,
+      file_size: f.file_size,
+      storage_path: f.storage_path,
+      parse_status: f.parse_status,
+      created_at: f.uploaded_at,
+      uploaded_by: f.uploaded_by,
+      policy_number: f.policy_number,
+      bucket: 'cfp-raw-decpage',
+    })),
+    ...filteredPlatformDocs.map(d => ({
+      id: d.id,
+      source: 'platform' as const,
+      doc_type: d.doc_type,
+      file_name: d.file_name,
+      file_size: d.file_size,
+      storage_path: d.storage_path,
+      parse_status: d.parse_status,
+      processing_step: d.processing_step,
+      match_status: d.match_status,
+      error_message: d.error_message,
+      created_at: d.created_at,
+      uploaded_by: d.uploaded_by,
+      carrier_name: d.carrier_name,
+      source_name: d.source,
+      created_by: d.created_by,
+      policy_id: d.policy_id,
+      bucket: 'cfp-platform-documents',
+      dic_data: d.dic_data,
+    })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
   // Group files by doc_type
-  const groupOrder = ['dic_dec_page', 'rce', 'invoice', 'inspection', 'endorsement', 'questionnaire'];
-  const grouped = new Map<string, PlatformDocumentInfo[]>();
-  platformDocs.forEach(d => {
-    const key = d.doc_type;
+  const groupOrder = ['dec_page', 'quote', 'dic_dec_page', 'es_doc', 'rce', 'invoice', 'inspection', 'endorsement', 'questionnaire'];
+  const grouped = new Map<string, UnifiedClientFile[]>();
+  allFiles.forEach(d => {
+    const fn = (d.file_name || '').toLowerCase();
+    const dicDocType = (d.dic_data?.document_type || '').toLowerCase();
+    const isQuoteDoc = d.doc_type === 'quote' || (fn.includes('quote') && !fn.includes('dec') && !fn.includes('rce')) || dicDocType.includes('quote');
+    const key = isQuoteDoc ? 'quote' : d.doc_type;
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(d);
   });
@@ -185,10 +285,10 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
     <div className={styles.filesSection}>
       <h3 className={styles.sectionTitle}>
         Client Documents
-        <span className={styles.fileCount}>({platformDocs.length})</span>
+        <span className={styles.fileCount}>({allFiles.length})</span>
       </h3>
 
-      {platformDocs.length === 0 ? (
+      {allFiles.length === 0 ? (
         <div className={styles.emptyState}>
           <FileText className={styles.emptyIcon} />
           <p>No documents linked to this client profile yet.</p>
@@ -224,7 +324,7 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                     });
 
                     return (
-                      <div key={file.id} className={styles.fileItem}>
+                      <div key={`${file.source}-${file.id}`} className={styles.fileItem}>
                         <div className={styles.fileInfo}>
                           <div className={styles.fileIconWrap} style={{ '--doc-color': docTypeInfo.color } as React.CSSProperties}>
                             <FileText size={18} />
@@ -255,7 +355,24 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                                 </span>
                               )}
                               <span className={styles.fileNameText}>{file.file_name || 'Document'}</span>
-                              {!file.policy_id && (
+                              {file.policy_number && (
+                                <span
+                                  style={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 600,
+                                    padding: '0.15rem 0.45rem',
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                                    color: '#60a5fa',
+                                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                                    marginLeft: '0.5rem',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {file.policy_number}
+                                </span>
+                              )}
+                              {!file.policy_id && !file.policy_number && file.source !== 'dec_page' && (
                                 <span
                                   style={{
                                     fontSize: '0.65rem',

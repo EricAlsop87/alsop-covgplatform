@@ -2483,6 +2483,132 @@ export async function fetchDecPageFilesByPolicyId(policyId: string): Promise<Dec
         return [];
     }
 }
+
+/**
+ * Fetch dec page files linked to a client (directly or via client's policies).
+ */
+export async function fetchDecPageFilesByClientId(clientId: string): Promise<DecPageFileInfo[]> {
+    try {
+        const { data: clientPolicies } = await supabase
+            .from('policies')
+            .select('id')
+            .eq('client_id', clientId);
+        
+        const policyIds = (clientPolicies || []).map(p => p.id).filter(Boolean);
+
+        let query = supabase
+            .from('dec_pages')
+            .select(`
+                id,
+                insured_name,
+                policy_number,
+                parse_status,
+                created_at,
+                created_by_account_id,
+                submission_id,
+                dec_page_submissions (
+                    id,
+                    storage_path,
+                    file_path,
+                    file_name,
+                    file_size,
+                    file_hash,
+                    status,
+                    account_id,
+                    created_at,
+                    accounts:account_id (
+                        id,
+                        first_name,
+                        last_name,
+                        email
+                    )
+                ),
+                accounts:created_by_account_id (
+                    id,
+                    first_name,
+                    last_name,
+                    email
+                )
+            `);
+
+        if (policyIds.length > 0) {
+            query = query.or(`client_id.eq.${clientId},policy_id.in.(${policyIds.join(',')})`);
+        } else {
+            query = query.eq('client_id', clientId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+            logger.error('API', 'Error fetching dec page files for client', { message: error.message, clientId });
+            return [];
+        }
+        
+        if (!data) return [];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rawFiles = data.map((row: any) => {
+            const sub = Array.isArray(row.dec_page_submissions)
+                ? row.dec_page_submissions[0]
+                : row.dec_page_submissions;
+            
+            const subAccount = Array.isArray(sub?.accounts) ? sub?.accounts[0] : sub?.accounts;
+            const decAccount = Array.isArray(row.accounts) ? row.accounts[0] : row.accounts;
+            const account = subAccount || decAccount;
+
+            let uploaded_by: string | null = null;
+            if (account) {
+                const fn = account.first_name || '';
+                const ln = account.last_name || '';
+                uploaded_by = `${fn} ${ln}`.trim() || account.email || null;
+            }
+
+            return {
+                id: sub?.id || row.id,
+                dec_page_id: row.id,
+                storage_path: sub?.storage_path || sub?.file_path || null,
+                file_name: sub?.file_name || null,
+                file_size: sub?.file_size || null,
+                uploaded_at: sub?.created_at || row.created_at,
+                parse_status: row.parse_status,
+                insured_name: row.insured_name,
+                policy_number: row.policy_number,
+                uploaded_by,
+                _sub_status: sub?.status || null,
+                _file_hash: sub?.file_hash || null,
+            };
+        });
+
+        // Filter out duplicate/failed tracking rows
+        const filtered = rawFiles.filter(f => f._sub_status !== 'duplicate' && f._sub_status !== 'failed');
+
+        // Deduplicate by file_hash
+        const hashMap = new Map<string, typeof filtered[0]>();
+        const statusPriority: Record<string, number> = { parsed: 0, needs_review: 1 };
+        for (const f of filtered) {
+            const key = f._file_hash || f.id;
+            const existing = hashMap.get(key);
+            if (!existing) {
+                hashMap.set(key, f);
+            } else {
+                const existingPriority = statusPriority[existing.parse_status || ''] ?? 99;
+                const newPriority = statusPriority[f.parse_status || ''] ?? 99;
+                if (newPriority < existingPriority) {
+                    hashMap.set(key, f);
+                }
+            }
+        }
+
+        // Return deduplicated files
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        return [...hashMap.values()].map(({ _sub_status, _file_hash, ...rest }) => rest);
+    } catch (err) {
+        logger.error('API', 'Unexpected error fetching dec page files for client', {
+            error: err instanceof Error ? err.message : String(err),
+        });
+        return [];
+    }
+}
 /**
  * Internal helper: generate a signed URL via the server-side API route.
  * This bypasses Supabase storage RLS by using the admin client on the server.
