@@ -130,9 +130,28 @@ export function categorizeActivityItem(a: ActivityFeedItem): ActivityFilterType 
     if (a.type === 'merge') return 'merge';
 
     const fn = (a.file_name || a.file_path || a.meta?.file_name || '').toUpperCase();
-    const docType = (a.doc_type || '').toLowerCase();
+    const docType = (a.doc_type || a.meta?.doc_type || '').toLowerCase();
 
-    // 1. Declaration Pages (CFP Dec Pages)
+    // 1. RCE Reports (Check FIRST before Dec Pages)
+    const isRce = docType === 'rce' ||
+        (a as any).source === 'rce_american_modern' ||
+        (a as any).source === 'rce_360value' ||
+        ((fn.includes('RCE') ||
+          fn.includes('360VALUE') ||
+          fn.includes('360 VALUE') ||
+          fn.includes('REPLACEMENT COST') ||
+          fn.includes('RCM AM') ||
+          fn.includes('RCE AM') ||
+          fn.includes('AM RCE') ||
+          fn.includes('ESTIMATE-') ||
+          fn.includes('DETAILED REPORT') ||
+          fn.includes('COTALITY') ||
+          fn.includes('RCT EXPRESS') ||
+          fn.includes('VALUATION')) && !fn.includes('QUOTE') && !fn.includes('DIC'));
+
+    if (isRce) return 'rce';
+
+    // 2. Declaration Pages (CFP Dec Pages)
     const isDecPage = a.type === 'upload' ||
         a.bucket === 'cfp-raw-decpage' ||
         docType === 'dec_page' ||
@@ -141,12 +160,6 @@ export function categorizeActivityItem(a: ActivityFeedItem): ActivityFilterType 
         (fn.includes('CFP') && (fn.includes('DEC') || fn.includes('DECLARATION')) && !fn.includes('DIC') && !fn.includes('QUOTE') && !fn.includes('BAMBOO') && !fn.includes('AEGIS') && !fn.includes('AMERICAN MODERN') && !fn.includes('PSIC') && !fn.includes('SAGESURE'));
 
     if (isDecPage) return 'dec';
-
-    // 2. RCE Reports
-    const isRce = docType === 'rce' ||
-        ((fn.includes('RCE') || fn.includes('360VALUE') || fn.includes('360 VALUE') || fn.includes('REPLACEMENT COST') || fn.includes('RCM AM') || fn.includes('VALUATION')) && !fn.includes('QUOTE'));
-
-    if (isRce) return 'rce';
 
     // 3. Quotes & DICs (Companion Carrier Quotes, DIC Quotes, Full Quotes, E&S Quotes)
     const isQuoteOrDic = docType === 'dic_dec_page' ||
@@ -178,7 +191,11 @@ function getDocumentActionLabel(activity: ActivityFeedItem): string {
     if (cat === 'dec') {
         docLabel = 'Declaration Page';
     } else if (cat === 'rce') {
-        docLabel = 'RCE Report';
+        if (fn.includes('AM') || fn.includes('AMERICAN MODERN') || (activity as any).source === 'rce_american_modern') {
+            docLabel = 'American Modern RCE Report';
+        } else {
+            docLabel = 'RCE Report';
+        }
     } else if (cat === 'dic') {
         if (docType === 'es_doc' || fn.includes('E&S') || fn.includes('FULL') || fn.includes('SAGESURE')) {
             docLabel = 'Full / E&S Quote';
@@ -221,6 +238,9 @@ function getDocumentDetailText(activity: ActivityFeedItem): string {
         return 'A California FAIR Plan Declaration Page was successfully uploaded and applied.';
     }
     if (cat === 'rce') {
+        if (fn.includes('AM') || fn.includes('AMERICAN MODERN') || (activity as any).source === 'rce_american_modern') {
+            return 'An American Modern RCE Report was successfully uploaded and applied.';
+        }
         return 'An RCE Report was successfully uploaded and applied.';
     }
     if (cat === 'dic') {
@@ -236,7 +256,7 @@ function getDocumentDetailText(activity: ActivityFeedItem): string {
     if (docType === 'inspection') return 'An Inspection Report was successfully uploaded.';
     if (docType === 'endorsement') return 'An Endorsement was successfully uploaded.';
     if (docType === 'questionnaire') return 'A Questionnaire was successfully uploaded.';
-    if (activity.detail && !activity.detail.toUpperCase().includes('ES_DOC') && !activity.detail.includes('DIC Carrier')) {
+    if (activity.detail && !activity.detail.toUpperCase().includes('ES_DOC') && !activity.detail.includes('DIC Carrier') && !activity.detail.includes('Declaration Page was successfully parsed and applied to')) {
         return activity.detail;
     }
     return 'A document was successfully uploaded.';

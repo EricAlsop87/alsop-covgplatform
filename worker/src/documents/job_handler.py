@@ -44,7 +44,42 @@ def classify_document_text(text: str, file_name: str = "") -> str:
     upper_text = text.upper()
     upper_fn = file_name.upper()
 
-    # 1. Check California FAIR Plan Dec Page (CFP policy number or CFP headers)
+    # 1. Check RCE indicators FIRST (360Value, Detailed Report Estimate, Reconstruction Cost, Cotality, RCT Express)
+    rce_markers = [
+        "360VALUE", "REPLACEMENT COST ESTIMAT", "REPLACEMENT COST VALUATION",
+        "VALUATION DATE", "RCT EXPRESS", "COTALITY",
+        "DETAILED REPORT ESTIMATE", "ESTIMATE-", "RECONSTRUCTION COST", "VALUATION TOTALS",
+        "COST DATA AS OF", "FINISHED FLOOR AREA", "FINISHED LIVING AREA",
+        "RECONSTRUCTION COST W/O DEBRIS REMOVAL", "RECONSTRUCTION COST WITH DEBRIS REMOVAL"
+    ]
+    is_rce = (
+        any(m in upper_text for m in rce_markers) or
+        "RCE" in upper_fn or
+        "360VALUE" in upper_fn or
+        "ESTIMATE-" in upper_fn or
+        ("AMERICAN MODERN" in upper_fn and "QUOTE" not in upper_fn and "DIC" not in upper_fn)
+    ) and "QUOTE SUMMARY" not in upper_text and "THIS POLICY DOES NOT COVER" not in upper_text and "HOMEOWNERS FLEX QUOTE" not in upper_text
+
+    if is_rce:
+        logger.info("Auto-classified document as 'rce'")
+        return "rce"
+
+    # 2. Check DIC Quotes across the 4 companion carriers
+    is_dic = (
+        "THIS POLICY DOES NOT COVER THE PERIL OF FIRE" in upper_text or
+        "CALIFORNIA DIC QUOTE" in upper_text or
+        "DIFFERENCE IN CONDITIONS SELECTED" in upper_text or
+        "DIFFERENCE IN CONDITIONS INCLUDED" in upper_text or
+        "DIC - FIRE" in upper_text or
+        "DIC -" in upper_text or
+        "DIFFERENCE IN CONDITIONS" in upper_text or
+        "DIC" in upper_fn
+    )
+    if is_dic:
+        logger.info("Auto-classified document as 'dic_dec_page' (DIC Quote)")
+        return "dic_dec_page"
+
+    # 3. Check California FAIR Plan Dec Page (CFP policy number or CFP headers)
     has_cfp_pn = bool(
         re.search(r'(?:^|[^0-9])010\d{7}(?:[^0-9]|$)', upper_text) or
         re.search(r'(?:^|[^0-9])020\d{7}(?:[^0-9]|$)', upper_text) or
@@ -66,37 +101,13 @@ def classify_document_text(text: str, file_name: str = "") -> str:
     ]
     is_companion_marker = any(m in upper_text for m in [
         "GUIDEWIRE@BAMBOO", "BAMBOO WEB SERVICES", "WEBSERVICES@AEGIS",
-        "AEGIS WEB SERVICES", "AMERICAN MODERN PROPERTY", "PACIFIC SPECIALTY INSURANCE"
+        "AEGIS WEB SERVICES", "AMERICAN MODERN", "COTALITY", "RCT EXPRESS",
+        "DETAILED REPORT ESTIMATE", "PACIFIC SPECIALTY INSURANCE"
     ])
 
     if (has_cfp_pn or any(m in upper_text for m in cfp_markers) or "RENEWAL_EMAIL_ATTACHMENT" in upper_fn or "CFP" in upper_fn) and not is_companion_marker:
         logger.info("Auto-classified document as 'dec_page' (California FAIR Plan)")
         return "dec_page"
-
-    # 2. Check RCE indicators (360Value, Detailed Report Estimate, Reconstruction Cost)
-    rce_markers = [
-        "360VALUE", "REPLACEMENT COST ESTIMAT", "REPLACEMENT COST VALUATION",
-        "VALUATION DATE", "RCT EXPRESS", "COTALITY",
-        "DETAILED REPORT ESTIMATE", "RECONSTRUCTION COST", "VALUATION TOTALS"
-    ]
-    if (any(m in upper_text for m in rce_markers) or "RCE" in upper_fn or "360VALUE" in upper_fn) and "QUOTE SUMMARY" not in upper_text:
-        logger.info("Auto-classified document as 'rce'")
-        return "rce"
-
-    # 3. Check DIC Quotes across the 4 companion carriers
-    is_dic = (
-        "THIS POLICY DOES NOT COVER THE PERIL OF FIRE" in upper_text or
-        "CALIFORNIA DIC QUOTE" in upper_text or
-        "DIFFERENCE IN CONDITIONS SELECTED" in upper_text or
-        "DIFFERENCE IN CONDITIONS INCLUDED" in upper_text or
-        "DIC - FIRE" in upper_text or
-        "DIC -" in upper_text or
-        "DIFFERENCE IN CONDITIONS" in upper_text or
-        "DIC" in upper_fn
-    )
-    if is_dic:
-        logger.info("Auto-classified document as 'dic_dec_page' (DIC Quote)")
-        return "dic_dec_page"
 
     # Default to es_doc for Full Quotes
     logger.info("Auto-classified document as 'es_doc' (Full Companion Quote)")
@@ -259,10 +270,12 @@ def process_document_job(job: dict) -> None:
             else:
                 am_rce_markers = [
                     "RCT EXPRESS", "COTALITY", "DETAILED REPORT ESTIMATE",
-                    "VALUATION TOTALS DETAIL", "RECONSTRUCTION COST",
+                    "DETAILED REPORT", "ESTIMATE-", "VALUATION TOTALS DETAIL",
+                    "VALUATION TOTALS SUMMARY", "VALUATION TOTALS", "RECONSTRUCTION COST",
+                    "RECONSTRUCTION COST WITH DEBRIS REMOVAL", "COST DATA AS OF"
                 ]
                 is_american_modern_rce = any(m in upper_text for m in am_rce_markers) or (
-                    "AMERICAN MODERN" in upper_text and ("RECONSTRUCTION" in upper_text or "VALUATION" in upper_text)
+                    "AMERICAN MODERN" in upper_text and ("RECONSTRUCTION" in upper_text or "VALUATION" in upper_text or "ESTIMATE" in upper_text or "DEBRIS" in upper_text)
                 )
 
                 if is_american_modern_rce:

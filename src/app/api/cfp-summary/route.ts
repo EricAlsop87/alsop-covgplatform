@@ -229,33 +229,28 @@ export function detectCarrierQuoteInfo(
     return null;
 }
 
-function detectDocCarrier(fileName?: string | null, rawText?: string | null, docType?: string | null): string | null {
+function detectDocCarrier(fileName?: string | null, rawText?: string | null, docType?: string | null, rceSource?: string | null, rceCreatedBy?: string | null): string | null {
     const fn = (fileName || '').toLowerCase();
     const txt = (rawText || '').toLowerCase().slice(0, 3000);
-    const combined = `${fn} ${txt}`;
+    const src = (rceSource || '').toLowerCase();
+    const createdBy = (rceCreatedBy || '').toLowerCase();
+    const combined = `${fn} ${txt} ${src} ${createdBy}`;
 
-    // 1. Bamboo (Bamboo, CASNH, 360Value, Q100)
+    // 1. American Modern (AM) — check RCE source and AM markers FIRST
     if (
-        combined.includes('bamboo') ||
-        combined.includes('guidewire@bamboo') ||
-        combined.includes('casnh') ||
-        combined.includes('360value') ||
-        combined.includes('360 value') ||
-        /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
-    ) {
-        return 'Bamboo';
-    }
-
-    // 2. American Modern (AM)
-    if (
+        src.includes('american_modern') ||
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
         combined.includes('homeowners flex') ||
         combined.includes('manufactured home') ||
         combined.includes('cotality') ||
+        combined.includes('rct express') ||
+        combined.includes('detailed report estimate') ||
+        combined.includes('estimate-') ||
         combined.includes('rce am') ||
         combined.includes('rcm am') ||
         combined.includes('rce_am') ||
+        combined.includes('am rce') ||
         combined.includes('quote am') ||
         combined.includes('dic am') ||
         combined.includes('dic_am') ||
@@ -266,8 +261,10 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'AM';
     }
 
-    // 3. PSIC (Pacific Specialty)
+    // 2. PSIC (Pacific Specialty)
     if (
+        createdBy.includes('pacific') ||
+        createdBy.includes('psic') ||
         combined.includes('pacific specialty') ||
         combined.includes('pacificspecialty') ||
         combined.includes('psic') ||
@@ -277,13 +274,27 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'PSIC';
     }
 
-    // 4. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q5 quotes)
+    // 3. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q5 quotes)
     if (
+        createdBy.includes('aegis') ||
         combined.includes('aegis') ||
         combined.includes('obsidian') ||
         /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
     ) {
         return 'Aegis';
+    }
+
+    // 4. Bamboo (Bamboo, CASNH, 360Value, Q100)
+    if (
+        createdBy.includes('bamboo') ||
+        combined.includes('bamboo') ||
+        combined.includes('guidewire@bamboo') ||
+        combined.includes('casnh') ||
+        combined.includes('360value') ||
+        combined.includes('360 value') ||
+        /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
+    ) {
+        return 'Bamboo';
     }
 
     if (docType === 'rce') {
@@ -594,7 +605,7 @@ export async function GET(req: NextRequest) {
             termDocTypes[t.id].add(doc.doc_type);
 
             if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || rce) {
-                const c = detectDocCarrier(doc.file_name, null, 'rce');
+                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source, rce?.created_by);
                 if (c) termRceCarrier[t.id] = c;
                 if (doc.storage_path && !termRceDoc[t.id]) {
                     termRceDoc[t.id] = {

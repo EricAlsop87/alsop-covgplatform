@@ -63,19 +63,19 @@ export async function POST(request: NextRequest) {
  */
 function cleanPdfStream(decompressed: string): string {
     let out = '';
-    const tjRegex = /\[(.*?)\]\\s*TJ/gi;
+    const tjRegex = /\[(.*?)\]\s*TJ/gi;
     let m;
     while ((m = tjRegex.exec(decompressed)) !== null) {
         const arrayContent = m[1];
         const strParts: string[] = [];
-        const partRegex = /\\((.*?)\\)/g;
+        const partRegex = /\((.*?)\)/g;
         let pm;
         while ((pm = partRegex.exec(arrayContent)) !== null) {
             strParts.push(pm[1]);
         }
         out += ' ' + strParts.join('');
     }
-    const singleTjRegex = /\\((.*?)\\)\\s*Tj/gi;
+    const singleTjRegex = /\((.*?)\)\s*Tj/gi;
     while ((m = singleTjRegex.exec(decompressed)) !== null) {
         out += ' ' + m[1];
     }
@@ -91,19 +91,19 @@ function extractPdfText(buffer: Buffer): string {
     const chunks: string[] = [];
     
     // Extract text from PDF literal strings (parenthesized text)
-    const stringRegex = /\\(([^)]{2,})\\)/g;
+    const stringRegex = /\(([^)]{2,})\)/g;
     let match;
     while ((match = stringRegex.exec(text)) !== null) {
-        const printable = match[1].replace(/[^\\x20-\\x7E]/g, '').trim();
+        const printable = match[1].replace(/[^\x20-\x7E]/g, '').trim();
         if (printable.length > 1) {
             chunks.push(printable);
         }
     }
 
     // Extract and decompress text from PDF streams (FlateDecode)
-    const streamRegex = /stream\\r?\\n([\\s\\S]*?)\\r?\\nendstream/g;
+    const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
     while ((match = streamRegex.exec(text)) !== null) {
-        const streamStart = match.index + match[0].indexOf('\\n') + 1;
+        const streamStart = match.index + match[0].indexOf('\n') + 1;
         const streamEnd = match.index + match[0].lastIndexOf('endstream');
         const rawStream = buffer.subarray(streamStart, streamEnd);
 
@@ -113,7 +113,7 @@ function extractPdfText(buffer: Buffer): string {
             if (streamText.length > 5) {
                 chunks.push(streamText);
             }
-            const printable = decompressed.replace(/[^\\x20-\\x7E\\n\\r]/g, ' ').replace(/\\s+/g, ' ').trim();
+            const printable = decompressed.replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
             if (printable.length > 10) {
                 chunks.push(printable);
             }
@@ -122,10 +122,10 @@ function extractPdfText(buffer: Buffer): string {
                 const decompressed = zlib.inflateRawSync(rawStream).toString('latin1');
                 const streamText = cleanPdfStream(decompressed);
                 if (streamText.length > 5) chunks.push(streamText);
-                const printable = decompressed.replace(/[^\\x20-\\x7E\\n\\r]/g, ' ').replace(/\\s+/g, ' ').trim();
+                const printable = decompressed.replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
                 if (printable.length > 10) chunks.push(printable);
             } catch {
-                const printable = match[1].replace(/[^\\x20-\\x7E\\n\\r]/g, ' ').replace(/\\s+/g, ' ').trim();
+                const printable = match[1].replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
                 if (printable.length > 10) {
                     chunks.push(printable);
                 }
@@ -155,62 +155,41 @@ function extractPdfText(buffer: Buffer): string {
 export function classifyDocument(upperText: string, fileName: string = ''): ClassificationResult {
     const fnUpper = fileName.toUpperCase();
 
-    // ── STEP 1: California FAIR Plan Dec Page (Category 1) ──
-    const hasCfpPolicyNumber = (
-        /(?:^|[^0-9])010\\d{7}(?:[^0-9]|$)/.test(upperText) ||
-        /(?:^|[^0-9])020\\d{7}(?:[^0-9]|$)/.test(upperText) ||
-        /(?:^|[^0-9])011\\d{7}(?:[^0-9]|$)/.test(upperText) ||
-        /(?:^|[^0-9])012\\d{7}(?:[^0-9]|$)/.test(upperText) ||
-        /CFP\\s*0[120]\\d{8}/.test(upperText) ||
-        /(?:^|[^0-9])010\\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
-        /(?:^|[^0-9])020\\d{7}(?:[^0-9]|$)/.test(fnUpper)
+    // ── STEP 1: RCE Valuation Documents (Check FIRST before generic policy numbers) ──
+    // Category 5: American Modern RCE (Cotality / RCT Express / Detailed Report)
+    const hasAmRceMarkers = (
+        (upperText.includes('AMERICAN MODERN') ||
+         upperText.includes('AMERICANMODERN') ||
+         upperText.includes('COTALITY') ||
+         upperText.includes('RCT EXPRESS') ||
+         upperText.includes('DETAILED REPORT ESTIMATE') ||
+         upperText.includes('ESTIMATE-') ||
+         fnUpper.includes('AMERICAN MODERN') ||
+         fnUpper.includes('COTALITY') ||
+         fnUpper.includes('RCE AM') ||
+         fnUpper.includes('AM RCE')) &&
+        (upperText.includes('DETAILED REPORT') ||
+         upperText.includes('ESTIMATE-') ||
+         upperText.includes('VALUATION TOTALS') ||
+         upperText.includes('RECONSTRUCTION COST') ||
+         upperText.includes('FINISHED FLOOR AREA') ||
+         upperText.includes('FINISHED LIVING AREA') ||
+         upperText.includes('COST DATA AS OF') ||
+         upperText.includes('DEBRIS REMOVAL')) &&
+        !upperText.includes('HOMEOWNERS FLEX QUOTE') &&
+        !upperText.includes('THIS POLICY DOES NOT COVER THE PERIL OF FIRE')
     );
 
-    const hasCfpOrgMarker = (
-        upperText.includes('CALIFORNIA FAIR PLAN ASSOCIATION') ||
-        upperText.includes('CALIFORNIA FAIR PLAN') ||
-        upperText.includes('CFPNET.COM')
-    );
-
-    const hasCfpDecMarker = (
-        upperText.includes('DWELLING INSURANCE POLICY DECLARATIONS') ||
-        upperText.includes('DWELLING PROPERTY POLICY DECLARATIONS') ||
-        upperText.includes('DWELLING ENDORSEMENT SUMMARY') ||
-        upperText.includes('COVERAGES, LIMITS, PERILS AND PREMIUMS') ||
-        upperText.includes('IMPORTANT NOTICE REGARDING CHANGES TO YOUR DWELLING POLICY') ||
-        upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE')
-    );
-
-    const isCompanionCarrierMarker = (
-        upperText.includes('GUIDEWIRE@BAMBOO') ||
-        upperText.includes('BAMBOO WEB SERVICES') ||
-        upperText.includes('WEBSERVICES@AEGIS') ||
-        upperText.includes('AEGIS WEB SERVICES') ||
-        upperText.includes('AMERICAN MODERN PROPERTY') ||
-        upperText.includes('PACIFIC SPECIALTY INSURANCE')
-    );
-
-    if (hasCfpPolicyNumber && hasCfpOrgMarker && hasCfpDecMarker && !isCompanionCarrierMarker) {
+    if (hasAmRceMarkers) {
         return {
-            detectedType: 'dec_page',
-            carrier: 'California FAIR Plan',
-            coverageType: 'DEC',
-            label: 'Declaration Page (California FAIR Plan)',
-            categoryIndex: 1,
+            detectedType: 'rce',
+            carrier: 'american_modern',
+            coverageType: 'RCE',
+            label: 'American Modern RCE',
+            categoryIndex: 5,
         };
     }
 
-    if (hasCfpPolicyNumber && hasCfpOrgMarker && !isCompanionCarrierMarker && (upperText.includes('POLICY PERIOD') || upperText.includes('NAMED INSURED'))) {
-        return {
-            detectedType: 'dec_page',
-            carrier: 'California FAIR Plan',
-            coverageType: 'DEC',
-            label: 'Declaration Page (California FAIR Plan)',
-            categoryIndex: 1,
-        };
-    }
-
-    // ── STEP 2: RCE Valuation Documents (Categories 2 to 5) ──
     const has360ValueStructure = (
         (upperText.includes('REPLACEMENT COST ESTIMAT') ||
          upperText.includes('REPLACEMENT COST VALUATION') ||
@@ -308,31 +287,61 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         };
     }
 
-    // Category 5: American Modern RCE
-    const hasAmRceMarkers = (
-        (upperText.includes('AMERICAN MODERN') ||
-         upperText.includes('AMERICANMODERN') ||
-         upperText.includes('COTALITY') ||
-         upperText.includes('RCT EXPRESS') ||
-         fnUpper.includes('AMERICAN MODERN') ||
-         fnUpper.includes('COTALITY')) &&
-        (upperText.includes('DETAILED REPORT ESTIMATE') ||
-         upperText.includes('ESTIMATE-') ||
-         (upperText.includes('VALUATION TOTALS SUMMARY') && upperText.includes('VALUATION TOTALS DETAIL')) ||
-         upperText.includes('RECONSTRUCTION COST W/O DEBRIS REMOVAL') ||
-         upperText.includes('RECONSTRUCTION COST WITH DEBRIS REMOVAL') ||
-         (upperText.includes('REPLACEMENT COST ESTIMAT') && upperText.includes('VALUATION TOTALS')) ||
-         upperText.includes('FINISHED LIVING AREA') ||
-         upperText.includes('FINISHED FLOOR AREA'))
+    // ── STEP 2: California FAIR Plan Dec Page (Category 1) ──
+    const hasCfpPolicyNumber = (
+        /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /(?:^|[^0-9])012\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /CFP\s*0[120]\d{8}/.test(upperText) ||
+        /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
+        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper)
     );
 
-    if (hasAmRceMarkers) {
+    const hasCfpOrgMarker = (
+        upperText.includes('CALIFORNIA FAIR PLAN ASSOCIATION') ||
+        upperText.includes('CALIFORNIA FAIR PLAN') ||
+        upperText.includes('CFPNET.COM')
+    );
+
+    const hasCfpDecMarker = (
+        upperText.includes('DWELLING INSURANCE POLICY DECLARATIONS') ||
+        upperText.includes('DWELLING PROPERTY POLICY DECLARATIONS') ||
+        upperText.includes('DWELLING ENDORSEMENT SUMMARY') ||
+        upperText.includes('COVERAGES, LIMITS, PERILS AND PREMIUMS') ||
+        upperText.includes('IMPORTANT NOTICE REGARDING CHANGES TO YOUR DWELLING POLICY') ||
+        upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE')
+    );
+
+    const isCompanionCarrierMarker = (
+        upperText.includes('GUIDEWIRE@BAMBOO') ||
+        upperText.includes('BAMBOO WEB SERVICES') ||
+        upperText.includes('WEBSERVICES@AEGIS') ||
+        upperText.includes('AEGIS WEB SERVICES') ||
+        upperText.includes('AMERICAN MODERN') ||
+        upperText.includes('COTALITY') ||
+        upperText.includes('RCT EXPRESS') ||
+        upperText.includes('DETAILED REPORT ESTIMATE') ||
+        upperText.includes('PACIFIC SPECIALTY INSURANCE')
+    );
+
+    if (hasCfpPolicyNumber && hasCfpOrgMarker && hasCfpDecMarker && !isCompanionCarrierMarker) {
         return {
-            detectedType: 'rce',
-            carrier: 'american_modern',
-            coverageType: 'RCE',
-            label: 'American Modern RCE',
-            categoryIndex: 5,
+            detectedType: 'dec_page',
+            carrier: 'California FAIR Plan',
+            coverageType: 'DEC',
+            label: 'Declaration Page (California FAIR Plan)',
+            categoryIndex: 1,
+        };
+    }
+
+    if (hasCfpPolicyNumber && hasCfpOrgMarker && !isCompanionCarrierMarker && (upperText.includes('POLICY PERIOD') || upperText.includes('NAMED INSURED'))) {
+        return {
+            detectedType: 'dec_page',
+            carrier: 'California FAIR Plan',
+            coverageType: 'DEC',
+            label: 'Declaration Page (California FAIR Plan)',
+            categoryIndex: 1,
         };
     }
 
