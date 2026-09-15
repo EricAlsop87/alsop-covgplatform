@@ -48,6 +48,10 @@ export interface CFPTermRow {
     dec_storage_path?: string | null;
     dec_file_name?: string | null;
     dec_bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents' | null;
+    has_renewal_dec?: boolean;
+    renewal_dec_storage_path?: string | null;
+    renewal_dec_file_name?: string | null;
+    renewal_dec_bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents' | null;
     has_rce: boolean;
     rce_carrier: string | null;
     rce_storage_path?: string | null;
@@ -731,6 +735,28 @@ export async function GET(req: NextRequest) {
         const decFileName = termDec?.file_name || null;
         const decBucket = (termDec?.bucket || 'cfp-raw-decpage') as 'cfp-raw-decpage' | 'cfp-platform-documents';
 
+        // Check if there is an incoming contiguous renewal term that has a dec page uploaded
+        let hasRenewalDec = false;
+        let renewalDecStoragePath: string | null = null;
+        let renewalDecFileName: string | null = null;
+        let renewalDecBucket: 'cfp-raw-decpage' | 'cfp-platform-documents' | null = null;
+
+        if (!hasDec && polTerms.length > 1) {
+            const renewalTerm = polTerms.find((otherTerm: any) =>
+                otherTerm.id !== t.id &&
+                otherTerm.effective_date && t.expiration_date &&
+                otherTerm.effective_date === t.expiration_date &&
+                termDecDocMap[otherTerm.id]
+            );
+            if (renewalTerm) {
+                const rDoc = termDecDocMap[renewalTerm.id];
+                hasRenewalDec = true;
+                renewalDecStoragePath = rDoc?.storage_path || null;
+                renewalDecFileName = rDoc?.file_name || null;
+                renewalDecBucket = rDoc?.bucket || 'cfp-platform-documents';
+            }
+        }
+
         // Quotes, Mail Sent, Title Pro only attach to the current/active term (or single-term policies)
         const termCfpMailSent = isCurrentOrOnlyTerm ? cfpMailSentMap[policyId] : undefined;
         const termServicingStatus = isCurrentOrOnlyTerm ? (servicingStatusMap[policyId] || (termCfpMailSent ? 'emailed_to_agent' : null)) : null;
@@ -792,6 +818,10 @@ export async function GET(req: NextRequest) {
             dec_storage_path: decStoragePath,
             dec_file_name: decFileName,
             dec_bucket: decBucket,
+            has_renewal_dec: hasRenewalDec,
+            renewal_dec_storage_path: renewalDecStoragePath,
+            renewal_dec_file_name: renewalDecFileName,
+            renewal_dec_bucket: renewalDecBucket,
             has_rce: hasRce,
             rce_carrier: rceCarrier,
             rce_storage_path: termRceDoc[t.id]?.storage_path || null,

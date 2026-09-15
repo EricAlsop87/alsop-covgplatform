@@ -1332,36 +1332,71 @@ export function CFPSummaryTable({
                 );
 
             case 'dec': {
-                const decNode = term.has_dec ? (
-                    <button
-                        type="button"
-                        className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreviewDoc({
-                                title: `DEC Page — ${term.policy_number}`,
-                                subtitle: term.named_insured || undefined,
-                                docType: 'dec',
-                                storagePath: term.dec_storage_path,
-                                bucket: (term.dec_bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-raw-decpage',
-                                fileName: term.dec_file_name || `${term.policy_number}_DEC.pdf`,
-                                policyId: term.policy_id,
-                            });
-                        }}
-                        title="Click to preview DEC Page"
-                    >
-                        <Check size={13} /> DEC
-                    </button>
-                ) : (
-                    <Link
-                        href={`/upload-document?policy_id=${term.policy_id}&doc_type=dec_page`}
-                        className={`${styles.docBadge} ${styles.no}`}
-                        title="Missing DEC Page — click to upload"
-                        target="_blank"
-                    >
-                        <Plus size={12} /> None
-                    </Link>
-                );
+                let decNode;
+                if (term.has_dec) {
+                    decNode = (
+                        <button
+                            type="button"
+                            className={`${styles.docBadge} ${styles.yes} ${styles.clickableBadge}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handlePreviewDoc({
+                                    title: `DEC Page — ${term.policy_number}`,
+                                    subtitle: term.named_insured || undefined,
+                                    docType: 'dec',
+                                    storagePath: term.dec_storage_path,
+                                    bucket: (term.dec_bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-raw-decpage',
+                                    fileName: term.dec_file_name || `${term.policy_number}_DEC.pdf`,
+                                    policyId: term.policy_id,
+                                });
+                            }}
+                            title="Click to preview DEC Page"
+                        >
+                            <Check size={13} /> DEC
+                        </button>
+                    );
+                } else if (term.has_renewal_dec) {
+                    decNode = (
+                        <button
+                            type="button"
+                            className={`${styles.docBadge} ${styles.clickableBadge}`}
+                            style={{
+                                background: 'rgba(14, 165, 233, 0.12)',
+                                color: '#0284c7',
+                                border: '1px solid rgba(14, 165, 233, 0.35)',
+                                fontWeight: 600,
+                                fontSize: '0.74rem',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handlePreviewDoc({
+                                    title: `Renewal DEC Offer — ${term.policy_number}`,
+                                    subtitle: `${term.named_insured || 'Policy'} (Renewal Offer)`,
+                                    docType: 'dec',
+                                    storagePath: term.renewal_dec_storage_path,
+                                    bucket: (term.renewal_dec_bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-platform-documents',
+                                    fileName: term.renewal_dec_file_name || `${term.policy_number}_Renewal_DEC.pdf`,
+                                    policyId: term.policy_id,
+                                });
+                            }}
+                            title="Renewal DEC Offer uploaded for upcoming term — click to preview"
+                        >
+                            <Check size={12} style={{ color: '#0284c7' }} /> Renewal Offer
+                        </button>
+                    );
+                } else {
+                    decNode = (
+                        <Link
+                            href={`/upload-document?policy_id=${term.policy_id}&doc_type=dec_page`}
+                            className={`${styles.docBadge} ${styles.no}`}
+                            title="Missing DEC Page — click to upload"
+                            target="_blank"
+                        >
+                            <Plus size={12} /> None
+                        </Link>
+                    );
+                }
                 return (
                     <div className={styles.cellWithComment}>
                         {decNode}

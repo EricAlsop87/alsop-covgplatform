@@ -118,16 +118,21 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             ? `${term.title_pro.title_name || 'Verified'}${term.title_pro.notes ? ` (${term.title_pro.notes})` : ''}`
             : 'Pending verification';
 
+        const decStatus = term.has_dec
+            ? 'Available'
+            : (term.has_renewal_dec ? 'Renewal Available' : 'Missing');
+        const decDetails = term.has_dec
+            ? (term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : 'Attached')
+            : (term.has_renewal_dec ? 'Renewal Offer (Attached)' : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'));
+
         return [
             {
                 name: 'FAIR Plan Dec Page',
-                status: term.has_dec ? 'Available' : 'Missing',
-                isAvailable: term.has_dec,
+                status: decStatus,
+                isAvailable: term.has_dec || !!term.has_renewal_dec,
                 isUnavailable: false,
                 premium: term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—',
-                details: term.has_dec
-                    ? (term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : 'Attached')
-                    : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'),
+                details: decDetails,
             },
             {
                 name: 'RCE Valuation Report',
