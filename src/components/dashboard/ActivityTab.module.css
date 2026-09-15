@@ -59,137 +59,6 @@
     cursor: not-allowed;
 }
 
-/* ── Date Filtering Section ── */
-.dateFilterContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 0.85rem;
-    padding: 0.75rem 0.85rem;
-    background: var(--bg-surface-raised, rgba(255, 255, 255, 0.03));
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    border-radius: var(--radius-md, 8px);
-}
-
-.dateFilterHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.dateFilterTitle {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-mid);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.calendarIcon {
-    color: var(--accent-primary, #6366f1);
-}
-
-.yearSelectorWrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.filterLabel {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.yearSelect {
-    padding: 0.25rem 0.6rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-high);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm, 4px);
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.15s ease;
-}
-
-.yearSelect:focus {
-    border-color: var(--accent-primary);
-}
-
-.monthPillsScroll {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: thin;
-}
-
-.monthPill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.22rem 0.55rem;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--text-mid);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: 9999px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-    user-select: none;
-}
-
-.monthPill:hover {
-    color: var(--text-high);
-    border-color: var(--border-strong, #4b5563);
-    background: var(--bg-surface-raised);
-}
-
-.monthPillActive {
-    color: #ffffff;
-    background: var(--accent-primary, #4f46e5);
-    border-color: var(--accent-primary, #4f46e5);
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25);
-}
-
-.monthPillActive:hover {
-    color: #ffffff;
-    background: var(--accent-primary, #4f46e5);
-    border-color: var(--accent-primary, #4f46e5);
-}
-
-.monthPillEmpty {
-    opacity: 0.55;
-}
-
-.monthPillBadge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 0.02rem 0.35rem;
-    border-radius: 9999px;
-    background: var(--border-subtle, rgba(255, 255, 255, 0.1));
-    color: var(--text-muted);
-}
-
-.monthPillActive .monthPillBadge {
-    background: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
-}
-
 .controlsRow {
     display: flex;
     flex-direction: column;
@@ -197,6 +66,67 @@
     margin-bottom: 1rem;
     padding-bottom: 0.85rem;
     border-bottom: 1px solid var(--border-subtle);
+}
+
+.topControlRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.periodFilterGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.periodSelectWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--bg-surface-raised, rgba(255, 255, 255, 0.04));
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
+    border-radius: var(--radius-md, 6px);
+    transition: all 0.15s ease;
+}
+
+.periodSelectWrapper:hover {
+    border-color: var(--border-strong, #4b5563);
+    background: var(--bg-surface);
+}
+
+.periodSelectIcon {
+    color: var(--accent-primary, #6366f1);
+    flex-shrink: 0;
+}
+
+.periodSelectLabel {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.periodSelect {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-high, #f8fafc);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    padding: 0.1rem 0.2rem;
+}
+
+.periodSelect option {
+    background: #1e293b;
+    color: #ffffff;
 }
 
 .searchWrapper {

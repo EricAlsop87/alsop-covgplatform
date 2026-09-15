@@ -154,7 +154,7 @@ export function ActivityTab() {
     const [showAll, setShowAll] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState<ActivityFilterType>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedYear, setSelectedYear] = useState<string>('all');
+    const [selectedYear, setSelectedYear] = useState<string>('2026');
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
 
@@ -337,8 +337,8 @@ export function ActivityTab() {
             }
         });
         const arr = Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
-        if (arr.length === 0) {
-            arr.push(new Date().getFullYear().toString());
+        if (!arr.includes('2026')) {
+            arr.unshift('2026');
         }
         return arr;
     }, [activities]);
@@ -364,17 +364,40 @@ export function ActivityTab() {
         return countsMap;
     }, [activities, selectedYear]);
 
-    // Activities filtered by date (Year + Month) first
+    // Available months in dropdown: Starting from June 2026 (month >= 6) and sorted latest to oldest
+    const availableMonths = useMemo(() => {
+        const validMonths = MONTH_NAMES.filter(m => {
+            const mNum = parseInt(m.value, 10);
+            if (selectedYear === '2026') {
+                return mNum >= 6; // June 2026 onwards
+            }
+            return (monthCounts[m.value] || 0) > 0;
+        });
+
+        // Sort descending by month number (September, August, July, June)
+        return validMonths.sort((a, b) => parseInt(b.value, 10) - parseInt(a.value, 10));
+    }, [selectedYear, monthCounts]);
+
+    // Activities filtered by date (Year + Month)
     const dateFilteredActivities = useMemo(() => {
         return activities.filter(a => {
             if (!a.created_at) return true;
             const d = new Date(a.created_at);
             const yr = d.getFullYear().toString();
-            const mo = String(d.getMonth() + 1);
+            const mo = d.getMonth() + 1;
+            const moStr = String(mo);
 
             if (selectedYear !== 'all' && yr !== selectedYear) return false;
-            if (selectedMonth !== 'all' && mo !== selectedMonth) return false;
-            return true;
+
+            if (selectedMonth === 'all') {
+                if (selectedYear === '2026') {
+                    // Start from June 2026 onwards by default
+                    return mo >= 6;
+                }
+                return true;
+            }
+
+            return moStr === selectedMonth;
         });
     }, [activities, selectedYear, selectedMonth]);
 
@@ -451,7 +474,7 @@ export function ActivityTab() {
         ...(counts.issues > 0 ? [{ id: 'issues' as const, label: 'Needs Review', icon: <AlertTriangle size={12} />, isIssues: true }] : []),
     ];
 
-    const hasActiveDateFilter = selectedYear !== 'all' || selectedMonth !== 'all';
+    const hasActiveDateFilter = selectedYear !== '2026' || selectedMonth !== 'all';
 
     return (
         <div className={styles.container}>
@@ -475,91 +498,80 @@ export function ActivityTab() {
                     </button>
                     <span className={styles.count}>
                         {selectedFilter === 'all' && !searchQuery.trim() && !hasActiveDateFilter
-                            ? `${activities.length} total events`
-                            : `${filteredActivities.length} of ${activities.length} events`}
+                            ? `${dateFilteredActivities.length} uploads (June – Sep 2026)`
+                            : `${filteredActivities.length} of ${activities.length} total events`}
                     </span>
                 </div>
             </div>
 
-            {/* Date Filtering Bar (Year + Month) */}
-            {!loading && activities.length > 0 && (
-                <div className={styles.dateFilterContainer}>
-                    <div className={styles.dateFilterHeader}>
-                        <div className={styles.dateFilterTitle}>
-                            <Calendar size={14} className={styles.calendarIcon} />
-                            <span>Filter by Upload Period:</span>
-                        </div>
-                        <div className={styles.yearSelectorWrapper}>
-                            <span className={styles.filterLabel}>Year:</span>
-                            <select
-                                className={styles.yearSelect}
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(e.target.value)}
-                            >
-                                <option value="all">All Years</option>
-                                {availableYears.map(yr => (
-                                    <option key={yr} value={yr}>{yr}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className={styles.monthPillsScroll}>
-                        <button
-                            type="button"
-                            className={`${styles.monthPill} ${selectedMonth === 'all' ? styles.monthPillActive : ''}`}
-                            onClick={() => setSelectedMonth('all')}
-                        >
-                            All Months
-                            <span className={styles.monthPillBadge}>
-                                {selectedYear === 'all'
-                                    ? activities.length
-                                    : activities.filter(a => a.created_at && new Date(a.created_at).getFullYear().toString() === selectedYear).length}
-                            </span>
-                        </button>
-                        {MONTH_NAMES.map(m => {
-                            const count = monthCounts[m.value] || 0;
-                            const isActive = selectedMonth === m.value;
-                            return (
-                                <button
-                                    key={m.value}
-                                    type="button"
-                                    className={`${styles.monthPill} ${isActive ? styles.monthPillActive : ''} ${count === 0 ? styles.monthPillEmpty : ''}`}
-                                    onClick={() => setSelectedMonth(m.value)}
-                                    title={`${m.fullName} ${selectedYear !== 'all' ? selectedYear : ''} (${count} uploads)`}
-                                >
-                                    {m.label}
-                                    <span className={styles.monthPillBadge}>{count}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Search Bar & Quick Filter Pill Bar */}
+            {/* Search Bar & Period Filter Row */}
             {!loading && activities.length > 0 && (
                 <div className={styles.controlsRow}>
-                    <div className={styles.searchWrapper}>
-                        <Search size={14} className={styles.searchIcon} />
-                        <input
-                            type="text"
-                            className={styles.searchInput}
-                            placeholder="Search by CFP #, insured name, or file name..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                        {searchQuery && (
-                            <button
-                                className={styles.searchClearBtn}
-                                onClick={() => setSearchQuery('')}
-                                title="Clear search"
-                                type="button"
-                            >
-                                <X size={13} />
-                            </button>
-                        )}
+                    <div className={styles.topControlRow}>
+                        <div className={styles.searchWrapper}>
+                            <Search size={14} className={styles.searchIcon} />
+                            <input
+                                type="text"
+                                className={styles.searchInput}
+                                placeholder="Search by CFP #, insured name, or file name..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button
+                                    className={styles.searchClearBtn}
+                                    onClick={() => setSearchQuery('')}
+                                    title="Clear search"
+                                    type="button"
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Clean Month & Year Dropdown Selectors */}
+                        <div className={styles.periodFilterGroup}>
+                            <div className={styles.periodSelectWrapper}>
+                                <Calendar size={13} className={styles.periodSelectIcon} />
+                                <span className={styles.periodSelectLabel}>Month:</span>
+                                <select
+                                    className={styles.periodSelect}
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                >
+                                    <option value="all">
+                                        All Months {selectedYear === '2026' ? '(June – Present)' : ''} ({dateFilteredActivities.length})
+                                    </option>
+                                    {availableMonths.map(m => {
+                                        const count = monthCounts[m.value] || 0;
+                                        return (
+                                            <option key={m.value} value={m.value}>
+                                                {m.fullName} {selectedYear !== 'all' ? selectedYear : ''} ({count} uploads)
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </div>
+
+                            <div className={styles.periodSelectWrapper}>
+                                <span className={styles.periodSelectLabel}>Year:</span>
+                                <select
+                                    className={styles.periodSelect}
+                                    value={selectedYear}
+                                    onChange={(e) => {
+                                        setSelectedYear(e.target.value);
+                                        setSelectedMonth('all');
+                                    }}
+                                >
+                                    {availableYears.map(yr => (
+                                        <option key={yr} value={yr}>{yr}</option>
+                                    ))}
+                                    <option value="all">All Years</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
+
                     <div className={styles.filterBar}>
                         {filterOptions.map(opt => {
                             const count = counts[opt.id];
