@@ -6,9 +6,9 @@ import zlib from 'zlib';
 export const maxDuration = 30;
 
 export interface ClassificationResult {
-    detectedType: 'dec_page' | 'rce' | 'dic_dec_page' | 'quote';
-    carrier: 'California FAIR Plan' | 'bamboo' | 'aegis' | 'psic' | 'american_modern';
-    coverageType: 'DEC' | 'RCE' | 'DIC' | 'FULL';
+    detectedType: 'dec_page' | 'rce' | 'dic_dec_page' | 'quote' | 'other';
+    carrier: 'California FAIR Plan' | 'bamboo' | 'aegis' | 'psic' | 'american_modern' | null;
+    coverageType: 'DEC' | 'RCE' | 'DIC' | 'FULL' | null;
     label: string;
     categoryIndex: number;
 }
@@ -154,36 +154,42 @@ function extractPdfText(buffer: Buffer): string {
  * 11. PSIC Full Quote
  * 12. American Modern DIC Quote
  * 13. American Modern Full Quote
+ *
+ * If the required marker combination is not confidently satisfied, classifies as Unknown / Needs Review (categoryIndex: 0).
+ * Never infers SageSure, Stillwater, carrier, or document subtype from filename alone.
  */
 export function classifyDocument(upperText: string, fileName: string = ''): ClassificationResult {
     const fnUpper = fileName.toUpperCase();
 
     // ──────────────────────────────────────────────────────────────────────────
     // STEP 1: California FAIR Plan Dec Page (Category 1)
-    // Dec Pages come ONLY from California FAIR Plan with Policy Numbers (010..., 020..., 011..., CFP...)
+    // Strong Detection Rule:
+    // "California FAIR Plan Association" + "DWELLING INSURANCE POLICY DECLARATIONS" + CFP policy number
     // ──────────────────────────────────────────────────────────────────────────
     const hasCfpPolicyNumber = (
         /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])012\d{7}(?:[^0-9]|$)/.test(upperText) ||
+        /CFP\s*0[120]\d{8}/.test(upperText) ||
         /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
-        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
-        /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(fnUpper)
+        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper)
     );
 
-    const cfpContentMarkers = [
-        'CALIFORNIA FAIR PLAN ASSOCIATION',
-        'CALIFORNIA FAIR PLAN',
-        'DWELLING INSURANCE POLICY DECLARATIONS',
-        'DWELLING PROPERTY POLICY DECLARATIONS',
-        'DWELLING ENDORSEMENT SUMMARY',
-        'COVERAGES, LIMITS, PERILS AND PREMIUMS',
-        'CFPNET.COM',
-        'CALIFORNIA FAIR PLAN PROPERTY INSURANCE',
-        'POLICY PERIOD',
-    ];
-    const cfpMarkerHits = cfpContentMarkers.filter(m => upperText.includes(m)).length;
+    const hasCfpOrgMarker = (
+        upperText.includes('CALIFORNIA FAIR PLAN ASSOCIATION') ||
+        upperText.includes('CALIFORNIA FAIR PLAN') ||
+        upperText.includes('CFPNET.COM')
+    );
+
+    const hasCfpDecMarker = (
+        upperText.includes('DWELLING INSURANCE POLICY DECLARATIONS') ||
+        upperText.includes('DWELLING PROPERTY POLICY DECLARATIONS') ||
+        upperText.includes('DWELLING ENDORSEMENT SUMMARY') ||
+        upperText.includes('COVERAGES, LIMITS, PERILS AND PREMIUMS') ||
+        upperText.includes('IMPORTANT NOTICE REGARDING CHANGES TO YOUR DWELLING POLICY') ||
+        upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE')
+    );
 
     const isCompanionCarrierMarker = (
         upperText.includes('GUIDEWIRE@BAMBOO') ||
@@ -194,13 +200,18 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         upperText.includes('PACIFIC SPECIALTY INSURANCE')
     );
 
-    const isCfpDoc = (
-        (hasCfpPolicyNumber && (cfpMarkerHits >= 1 || upperText.includes('FAIR PLAN') || fnUpper.includes('CFP') || fnUpper.includes('RENEWAL_EMAIL_ATTACHMENT') || fnUpper.includes('RENEWAL_OFFER'))) ||
-        (cfpMarkerHits >= 2 && !isCompanionCarrierMarker) ||
-        (upperText.includes('CALIFORNIA FAIR PLAN') && !upperText.includes('360VALUE') && !upperText.includes('COTALITY'))
-    );
+    if (hasCfpPolicyNumber && hasCfpOrgMarker && hasCfpDecMarker && !isCompanionCarrierMarker) {
+        return {
+            detectedType: 'dec_page',
+            carrier: 'California FAIR Plan',
+            coverageType: 'DEC',
+            label: 'Declaration Page (California FAIR Plan)',
+            categoryIndex: 1,
+        };
+    }
 
-    if (isCfpDoc && !isCompanionCarrierMarker) {
+    // Also catch CFP renewal attachment PDFs if org and policy number are confirmed
+    if (hasCfpPolicyNumber && hasCfpOrgMarker && !isCompanionCarrierMarker && (upperText.includes('POLICY PERIOD') || upperText.includes('NAMED INSURED'))) {
         return {
             detectedType: 'dec_page',
             carrier: 'California FAIR Plan',
@@ -213,29 +224,19 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     // ──────────────────────────────────────────────────────────────────────────
     // STEP 2: RCE Valuation Documents (Categories 2 to 5)
     // ──────────────────────────────────────────────────────────────────────────
-    const isRceStructure = (
-        upperText.includes('360VALUE') ||
-        upperText.includes('REPLACEMENT COST ESTIMAT') ||
-        upperText.includes('REPLACEMENT COST VALUATION') ||
-        upperText.includes('DETAILED REPORT ESTIMATE') ||
-        upperText.includes('VALUATION TOTALS DETAIL') ||
-        upperText.includes('VALUATION TOTALS SUMMARY') ||
-        upperText.includes('RECONSTRUCTION COST WITHOUT/WITH DEBRIS REMOVAL') ||
-        upperText.includes('RECONSTRUCTION COST WITH DEBRIS REMOVAL') ||
-        upperText.includes('COTALITY') ||
-        upperText.includes('RCT EXPRESS') ||
-        fnUpper.includes('RCE') ||
-        fnUpper.includes('360VALUE') ||
-        fnUpper.includes('VALUATION')
+    const has360ValueStructure = (
+        (upperText.includes('REPLACEMENT COST ESTIMAT') || upperText.includes('REPLACEMENT COST VALUATION') || upperText.includes('360VALUE')) &&
+        (upperText.includes('VALUATION ID') || upperText.includes('VALUATION TOTALS') || upperText.includes('ESTIMATE SUMMARY') || upperText.includes('RECONSTRUCTION COST') || upperText.includes('DETAILED REPORT ESTIMATE'))
     );
 
-    if (isRceStructure && !upperText.includes('QUOTE SUMMARY') && !upperText.includes('HOMEOWNERS FLEX QUOTE')) {
-        // 2. Bamboo RCE
+    if (has360ValueStructure) {
+        // Category 2: Bamboo RCE
+        // Rule: 360Value RCE structure + carrier = guidewire@bamboo / Bamboo Web Services / Bamboo Insurance
         if (
             upperText.includes('GUIDEWIRE@BAMBOO') ||
             upperText.includes('BAMBOO WEB SERVICES') ||
-            upperText.includes('BAMBOO') ||
-            fnUpper.includes('BAMBOO')
+            upperText.includes('BAMBOO INSURANCE') ||
+            (upperText.includes('BAMBOO') && upperText.includes('PREPARED FOR:'))
         ) {
             return {
                 detectedType: 'rce',
@@ -246,14 +247,14 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
             };
         }
 
-        // 3. Aegis RCE
+        // Category 3: Aegis RCE
+        // Rule: 360Value RCE structure + carrier = Aegis Web Services / webservices@aegis / Aegis Security
         if (
-            upperText.includes('WEBSERVICES@AEGIS') ||
             upperText.includes('AEGIS WEB SERVICES') ||
+            upperText.includes('WEBSERVICES@AEGIS') ||
             upperText.includes('AEGIS SECURITY') ||
             upperText.includes('AEGIS GENERAL') ||
-            upperText.includes('AEGIS') ||
-            fnUpper.includes('AEGIS')
+            (upperText.includes('AEGIS') && upperText.includes('PREPARED FOR:'))
         ) {
             return {
                 detectedType: 'rce',
@@ -264,12 +265,12 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
             };
         }
 
-        // 4. PSIC RCE
+        // Category 4: PSIC RCE
+        // Rule: 360Value RCE structure + carrier = Pacific Specialty in Prepared By / Created By / User
         if (
             upperText.includes('PACIFIC SPECIALTY') ||
-            upperText.includes('PSIC') ||
-            fnUpper.includes('PSIC') ||
-            fnUpper.includes('PACIFIC')
+            upperText.includes('PACIFICSPECIALTY') ||
+            (upperText.includes('PSIC') && upperText.includes('PREPARED FOR:'))
         ) {
             return {
                 detectedType: 'rce',
@@ -279,34 +280,26 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
                 categoryIndex: 4,
             };
         }
+    }
 
-        // 5. American Modern RCE
-        if (
-            upperText.includes('AMERICAN MODERN') ||
-            upperText.includes('AMERICANMODERN') ||
-            upperText.includes('COTALITY') ||
-            upperText.includes('VALUATION TOTALS') ||
-            upperText.includes('DETAILED REPORT ESTIMATE') ||
-            fnUpper.includes('AMERICAN MODERN') ||
-            fnUpper.includes('AM RCE') ||
-            fnUpper.includes('RCE AM')
-        ) {
-            return {
-                detectedType: 'rce',
-                carrier: 'american_modern',
-                coverageType: 'RCE',
-                label: 'American Modern RCE',
-                categoryIndex: 5,
-            };
-        }
+    // Category 5: American Modern RCE
+    // Rule: American Modern + Detailed Report ESTIMATE / Valuation Totals Summary / Valuation Totals Detail
+    const hasAmRceMarkers = (
+        (upperText.includes('AMERICAN MODERN') || upperText.includes('AMERICANMODERN')) &&
+        (upperText.includes('DETAILED REPORT ESTIMATE') ||
+         (upperText.includes('VALUATION TOTALS SUMMARY') && upperText.includes('VALUATION TOTALS DETAIL')) ||
+         upperText.includes('COTALITY') ||
+         upperText.includes('RCT EXPRESS') ||
+         (upperText.includes('REPLACEMENT COST ESTIMAT') && upperText.includes('VALUATION TOTALS')))
+    );
 
-        // Default RCE to Bamboo (360Value standard)
+    if (hasAmRceMarkers) {
         return {
             detectedType: 'rce',
-            carrier: 'bamboo',
+            carrier: 'american_modern',
             coverageType: 'RCE',
-            label: 'Bamboo RCE (360Value)',
-            categoryIndex: 2,
+            label: 'American Modern RCE',
+            categoryIndex: 5,
         };
     }
 
@@ -314,61 +307,61 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     // STEP 3: Carrier Quotes (DIC vs Full Quotes - Categories 6 to 13)
     // ──────────────────────────────────────────────────────────────────────────
 
-    // ── American Modern Quotes (Categories 12 & 13) ──
-    const isAmQuote = (
-        upperText.includes('AMERICAN MODERN') ||
-        upperText.includes('AMERICANMODERN') ||
-        upperText.includes('HOMEOWNERS FLEX') ||
-        upperText.includes('MANUFACTURED HOME') ||
-        fnUpper.includes('AMERICAN MODERN') ||
-        fnUpper.includes('AMERICANMODERN') ||
-        fnUpper.includes('QUOTE AM') ||
-        fnUpper.includes('DIC AM') ||
-        fnUpper.includes('DIC_AM') ||
-        /[\s_\-]AM[\s_\.\(\)\-]/i.test(fileName) ||
-        /(?:^|[^0-9])005[0-9]{6,}/.test(fileName)
+    // ── Bamboo Quotes (Categories 6 & 7) ──
+    // Rule: Bamboo Insurance Quote Summary + quote number; then DIC if THIS POLICY DOES NOT COVER THE PERIL OF FIRE
+    const isBambooQuote = (
+        upperText.includes('BAMBOO INSURANCE QUOTE SUMMARY') ||
+        (upperText.includes('BAMBOO') && upperText.includes('QUOTE SUMMARY')) ||
+        (upperText.includes('BAMBOO INSURANCE') && /(?:Q100\d{6,}|CASNH\d+)/.test(upperText))
     );
-    if (isAmQuote) {
-        const isAmDic = (
-            upperText.includes('DIC - FIRE, EXTENDED COVERAGE') ||
-            upperText.includes('DIC -') ||
-            upperText.includes('DIFFERENCE IN CONDITIONS') ||
-            fnUpper.includes('DIC')
+
+    if (isBambooQuote) {
+        const isBambooDic = (
+            upperText.includes('THIS POLICY DOES NOT COVER THE PERIL OF FIRE') ||
+            upperText.includes('DIFFERENCE IN CONDITIONS')
         );
-        if (isAmDic) {
+
+        if (isBambooDic) {
             return {
                 detectedType: 'dic_dec_page',
-                carrier: 'american_modern',
+                carrier: 'bamboo',
                 coverageType: 'DIC',
-                label: 'American Modern DIC Quote',
-                categoryIndex: 12,
+                label: 'Bamboo DIC Quote',
+                categoryIndex: 6,
             };
         }
         return {
             detectedType: 'quote',
-            carrier: 'american_modern',
+            carrier: 'bamboo',
             coverageType: 'FULL',
-            label: 'American Modern Full Quote',
-            categoryIndex: 13,
+            label: 'Bamboo Full Quote',
+            categoryIndex: 7,
         };
     }
 
     // ── Aegis Quotes (Categories 8 & 9) ──
-    const isAegisQuote = (
+    // Rule: California DIC Quote and/or Difference in Conditions Selected -> Category 8
+    //       E&S Homeowner (HO-3) Quote and no California DIC Quote marker -> Category 9
+    const hasAegisIdentity = (
         upperText.includes('AEGIS') ||
         upperText.includes('OBSIDIAN') ||
-        fnUpper.includes('AEGIS') ||
-        fnUpper.includes('OBSIDIAN') ||
-        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName) ||
         /(?:^|[^0-9])Q5[0-9]{5,}/i.test(upperText)
     );
+
+    const isAegisQuote = hasAegisIdentity && (
+        upperText.includes('QUOTE') ||
+        upperText.includes('E&S HOMEOWNER') ||
+        upperText.includes('HO-3') ||
+        upperText.includes('DIFFERENCE IN CONDITIONS')
+    );
+
     if (isAegisQuote) {
         const isAegisDic = (
             upperText.includes('CALIFORNIA DIC QUOTE') ||
             upperText.includes('DIFFERENCE IN CONDITIONS SELECTED') ||
-            upperText.includes('DIFFERENCE IN CONDITIONS') ||
-            fnUpper.includes('DIC')
+            upperText.includes('DIFFERENCE IN CONDITIONS')
         );
+
         if (isAegisDic) {
             return {
                 detectedType: 'dic_dec_page',
@@ -388,20 +381,28 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     }
 
     // ── PSIC Quotes (Categories 10 & 11) ──
-    const isPsicQuote = (
+    // Rule: PSIC Quote; then Difference in Conditions Included anywhere in full PDF -> Category 10
+    //       PSIC Quote without Difference in Conditions Included -> Category 11
+    const hasPsicIdentity = (
         upperText.includes('PACIFIC SPECIALTY') ||
-        upperText.includes('PSIC') ||
-        fnUpper.includes('PSIC') ||
-        fnUpper.includes('PACIFIC') ||
-        /(?:^|[^0-9])HO62[0-9]{6,}/i.test(fileName) ||
-        /(?:^|[^0-9])HO6[0-9]{6,}/i.test(fileName)
+        upperText.includes('PACIFICSPECIALTY') ||
+        upperText.includes('PSIC')
     );
+
+    const isPsicQuote = hasPsicIdentity && (
+        upperText.includes('QUOTE') ||
+        upperText.includes('PROPOSAL') ||
+        upperText.includes('PREMIUM INDICATION') ||
+        /(?:^|[^0-9])HO62?[0-9]{6,}/i.test(fileName) ||
+        upperText.includes('DIFFERENCE IN CONDITIONS')
+    );
+
     if (isPsicQuote) {
         const isPsicDic = (
             upperText.includes('DIFFERENCE IN CONDITIONS INCLUDED') ||
-            upperText.includes('DIFFERENCE IN CONDITIONS') ||
-            fnUpper.includes('DIC')
+            upperText.includes('DIFFERENCE IN CONDITIONS')
         );
+
         if (isPsicDic) {
             return {
                 detectedType: 'dic_dec_page',
@@ -420,30 +421,58 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         };
     }
 
-    // ── Bamboo Quotes (Categories 6 & 7 - Default Companion Carrier) ──
-    const isBambooDic = (
-        upperText.includes('THIS POLICY DOES NOT COVER THE PERIL OF FIRE') ||
-        upperText.includes('DIFFERENCE IN CONDITIONS') ||
-        fnUpper.includes('DIC')
+    // ── American Modern Quotes (Categories 12 & 13) ──
+    // Rule: American Modern Quote; then coverage line matching DIC - ... -> Category 12
+    //       American Modern Quote without DIC - ... coverage line -> Category 13
+    const hasAmIdentity = (
+        upperText.includes('AMERICAN MODERN') ||
+        upperText.includes('AMERICANMODERN')
     );
 
-    if (isBambooDic) {
+    const isAmQuote = hasAmIdentity && (
+        upperText.includes('QUOTE') ||
+        upperText.includes('HOMEOWNERS FLEX') ||
+        upperText.includes('MANUFACTURED HOME') ||
+        upperText.includes('APPLICATION') ||
+        /(?:^|[^0-9])005[\-\d]{7,}/.test(upperText)
+    );
+
+    if (isAmQuote) {
+        const isAmDic = (
+            upperText.includes('DIC - FIRE, EXTENDED COVERAGE') ||
+            upperText.includes('DIC -') ||
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            /DIC\s*-\s*.*EXCL/i.test(upperText)
+        );
+
+        if (isAmDic) {
+            return {
+                detectedType: 'dic_dec_page',
+                carrier: 'american_modern',
+                coverageType: 'DIC',
+                label: 'American Modern DIC Quote',
+                categoryIndex: 12,
+            };
+        }
         return {
-            detectedType: 'dic_dec_page',
-            carrier: 'bamboo',
-            coverageType: 'DIC',
-            label: 'Bamboo DIC Quote',
-            categoryIndex: 6,
+            detectedType: 'quote',
+            carrier: 'american_modern',
+            coverageType: 'FULL',
+            label: 'American Modern Full Quote',
+            categoryIndex: 13,
         };
     }
 
-    // Default Companion Full Quote (Category 7: Bamboo Full Quote)
+    // ──────────────────────────────────────────────────────────────────────────
+    // FALLBACK: Unknown / Needs Review (Category 0)
+    // If required marker combination is not confidently satisfied, classify as Unknown / Needs Review.
+    // Never infer SageSure, Stillwater, carrier, or subtype from filename alone.
+    // ──────────────────────────────────────────────────────────────────────────
     return {
-        detectedType: 'quote',
-        carrier: 'bamboo',
-        coverageType: 'FULL',
-        label: 'Bamboo Full Quote',
-        categoryIndex: 7,
+        detectedType: 'other',
+        carrier: null,
+        coverageType: null,
+        label: 'Unknown / Needs Review',
+        categoryIndex: 0,
     };
 }
-
