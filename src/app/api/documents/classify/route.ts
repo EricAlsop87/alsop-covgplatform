@@ -342,13 +342,18 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     const isBambooQuote = (
         upperText.includes('BAMBOO INSURANCE QUOTE SUMMARY') ||
         (upperText.includes('BAMBOO') && upperText.includes('QUOTE SUMMARY')) ||
-        (upperText.includes('BAMBOO INSURANCE') && /(?:Q100\\d{6,}|CASNH\\d+)/.test(upperText))
+        (upperText.includes('BAMBOO INSURANCE') && /(?:Q100\\d{6,}|CASNH\\d+)/.test(upperText)) ||
+        upperText.includes('MS TRANSVERSE INSURANCE COMPANY') ||
+        (upperText.includes('BAMBOO') && upperText.includes('YOUR HOME QUOTE NUMBER IS')) ||
+        fnUpper.includes('BAMBOO')
     );
 
     if (isBambooQuote) {
         const isBambooDic = (
             upperText.includes('THIS POLICY DOES NOT COVER THE PERIL OF FIRE') ||
-            upperText.includes('DIFFERENCE IN CONDITIONS')
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            upperText.includes('DIC 04 2020') ||
+            fnUpper.includes('DIC')
         );
 
         if (isBambooDic) {
@@ -373,13 +378,18 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     const hasAegisIdentity = (
         upperText.includes('AEGIS') ||
         upperText.includes('OBSIDIAN') ||
-        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(upperText)
+        upperText.includes('HISCOX') ||
+        upperText.includes("LLOYD'S") ||
+        upperText.includes('LLOYDS') ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(upperText) ||
+        fnUpper.includes('AEGIS')
     );
 
     const isAegisQuote = hasAegisIdentity && (
         upperText.includes('QUOTE') ||
         upperText.includes('E&S HOMEOWNER') ||
         upperText.includes('HO-3') ||
+        upperText.includes('CALIFORNIA DIC QUOTE') ||
         upperText.includes('DIFFERENCE IN CONDITIONS')
     );
 
@@ -387,7 +397,9 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         const isAegisDic = (
             upperText.includes('CALIFORNIA DIC QUOTE') ||
             upperText.includes('DIFFERENCE IN CONDITIONS SELECTED') ||
-            upperText.includes('DIFFERENCE IN CONDITIONS')
+            upperText.includes('DIFFERENCE IN CONDITIONS') ||
+            upperText.includes('OBSIDIAN PACIFIC') ||
+            fnUpper.includes('DIC')
         );
 
         if (isAegisDic) {

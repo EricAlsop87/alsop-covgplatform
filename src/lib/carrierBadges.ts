@@ -279,13 +279,16 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 3. Aegis (Obsidian, Aegis Security, Aegis General, webservices@aegis, Q5... quotes)
+    // 3. Aegis (Obsidian, Obsidian Pacific, Hiscox, Lloyd's, Aegis Security, Aegis General, webservices@aegis, Q5... quotes)
     if (
         lower.includes('aegis') ||
         lower.includes('aegis general') ||
         lower.includes('aegis security') ||
         lower.includes('webservices@aegis') ||
         lower.includes('obsidian') ||
+        lower.includes('hiscox') ||
+        lower.includes("lloyd's") ||
+        lower.includes('lloyds') ||
         /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName)
     ) {
         return {
@@ -297,12 +300,14 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 4. Bamboo (guidewire@bamboo, bamboo web services, bamboo insurance, Q100..., CASNH)
+    // 4. Bamboo (guidewire@bamboo, bamboo web services, bamboo insurance, MS Transverse, Q100..., CASNH)
     if (
         lower.includes('bamboo') ||
         lower.includes('guidewire@bamboo') ||
         lower.includes('bamboo insurance') ||
         lower.includes('bamboo web services') ||
+        lower.includes('ms transverse') ||
+        lower.includes('transverse insurance') ||
         lower.includes('casnh') ||
         /(?:^|[^0-9])Q100[0-9]{5,}/i.test(fileName)
     ) {
