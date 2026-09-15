@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     FileText, Upload, Loader2, CheckCircle, CheckCircle2, Clock, AlertTriangle,
@@ -29,6 +29,11 @@ interface PreviewDocState {
     policyId?: string;
     docType?: string;
 }
+
+// Module-level in-memory cache for instant 0ms tab switching and revalidation
+let globalActivityCache: ActivityFeedItem[] | null = null;
+let globalActivityCacheTime = 0;
+const CACHE_TTL_MS = 30_000; // 30s fresh cache
 
 const MONTH_NAMES = [
     { value: '1', label: 'Jan', fullName: 'January' },
@@ -159,14 +164,12 @@ interface FilterOption {
     isIssues?: boolean;
 }
 
-const MAX_VISIBLE = 25;
-
 export function ActivityTab() {
     const router = useRouter();
-    const [activities, setActivities] = useState<ActivityFeedItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [activities, setActivities] = useState<ActivityFeedItem[]>(() => globalActivityCache || []);
+    const [loading, setLoading] = useState(() => !globalActivityCache);
     const [refreshing, setRefreshing] = useState(false);
-    const [showAll, setShowAll] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(30);
 
     // Dynamic current date defaults
     const currentYearStr = String(new Date().getFullYear());
@@ -219,14 +222,17 @@ export function ActivityTab() {
     };
 
     const [searchQuery, setSearchQuery] = useState('');
+    const deferredSearchQuery = useDeferredValue(searchQuery);
     const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
 
     const loadActivities = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
-        else setLoading(true);
+        else if (!globalActivityCache) setLoading(true);
         try {
-            // Fetch recent activities (350 items provides comprehensive coverage with fast load times)
+            // Fetch recent activities (350 items provides comprehensive coverage with fast parallel queries)
             const data = await fetchActivityFeed(350);
+            globalActivityCache = data;
+            globalActivityCacheTime = Date.now();
             setActivities(data);
         } catch (err) {
             logger.error('ActivityTab', 'Activity feed error:', { error: err instanceof Error ? err.message : String(err) });
@@ -237,8 +243,15 @@ export function ActivityTab() {
     };
 
     useEffect(() => {
-        loadActivities();
+        if (!globalActivityCache || Date.now() - globalActivityCacheTime > CACHE_TTL_MS) {
+            loadActivities();
+        }
     }, []);
+
+    // Reset pagination window when filters or search change
+    useEffect(() => {
+        setVisibleCount(30);
+    }, [selectedFilter, selectedYear, selectedMonth, deferredSearchQuery]);
 
     // Close preview modal on Escape key
     useEffect(() => {
@@ -509,7 +522,7 @@ export function ActivityTab() {
             });
         }
 
-        const q = searchQuery.trim().toLowerCase();
+        const q = deferredSearchQuery.trim().toLowerCase();
         if (q) {
             list = list.filter(a => {
                 const polNum = (a.policy_number || a.meta?.policy_number || '').toLowerCase();
@@ -528,10 +541,12 @@ export function ActivityTab() {
         }
 
         return list;
-    }, [dateFilteredActivities, selectedFilter, searchQuery]);
+    }, [dateFilteredActivities, selectedFilter, deferredSearchQuery]);
 
-    const visibleActivities = showAll ? filteredActivities : filteredActivities.slice(0, MAX_VISIBLE);
-    const hasMore = filteredActivities.length > MAX_VISIBLE;
+    const visibleActivities = useMemo(() => {
+        return filteredActivities.slice(0, visibleCount);
+    }, [filteredActivities, visibleCount]);
+    const hasMore = filteredActivities.length > visibleCount;
 
     const filterOptions: FilterOption[] = [
         { id: 'all', label: 'All', icon: <Layers size={12} /> },
@@ -650,7 +665,6 @@ export function ActivityTab() {
                                     key={opt.id}
                                     onClick={() => {
                                         setSelectedFilter(opt.id);
-                                        setShowAll(false);
                                     }}
                                     className={[
                                         styles.filterPill,
@@ -953,17 +967,33 @@ export function ActivityTab() {
                         })}
                     </div>
 
-                    {/* Show more / less */}
+                    {/* Progressive Pagination Controls */}
                     {hasMore && (
                         <div className={styles.showMoreRow}>
                             <button
                                 className={styles.showMoreBtn}
-                                onClick={() => setShowAll(!showAll)}
+                                onClick={() => setVisibleCount(prev => prev + 50)}
                             >
-                                {showAll
-                                    ? `Show fewer (${MAX_VISIBLE})`
-                                    : `Show all ${filteredActivities.length} events`
-                                }
+                                Load More (+50) · Showing {visibleActivities.length} of {filteredActivities.length}
+                            </button>
+                            {filteredActivities.length > visibleCount && (
+                                <button
+                                    className={styles.showMoreBtn}
+                                    style={{ marginLeft: 8 }}
+                                    onClick={() => setVisibleCount(filteredActivities.length)}
+                                >
+                                    Show All ({filteredActivities.length})
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {visibleCount > 30 && filteredActivities.length > 30 && (
+                        <div className={styles.showMoreRow} style={{ marginTop: hasMore ? 8 : 0 }}>
+                            <button
+                                className={styles.showMoreBtn}
+                                onClick={() => setVisibleCount(30)}
+                            >
+                                Show Fewer (30)
                             </button>
                         </div>
                     )}

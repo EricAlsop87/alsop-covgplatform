@@ -3089,83 +3089,115 @@ export interface ActivityFeedItem {
 
 /**
  * Fetch recent uploads + platform documents + merge events for the dashboard activity feed.
+ * Fully parallelized for sub-second response times.
  */
-export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]> {
+export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]> {
     try {
-        // ── Source A: California FAIR Plan Dec Page Submissions ──
-        const { data: decData, error: decError } = await supabase
-            .from('dec_page_submissions')
-            .select(`
-                id,
-                status,
-                file_path,
-                storage_path,
-                file_name,
-                error_message,
-                created_at,
-                updated_at,
-                account_id,
-                dec_pages (
-                    insured_name,
-                    policy_number,
+        // Parallelize all 4 primary data sources simultaneously
+        const [decRes, pDocRes, mergeRes, docEventRes] = await Promise.all([
+            // Source A: CFP Dec Page Submissions
+            supabase
+                .from('dec_page_submissions')
+                .select(`
+                    id,
+                    status,
+                    file_path,
+                    storage_path,
+                    file_name,
+                    error_message,
+                    created_at,
+                    updated_at,
+                    account_id,
+                    dec_pages (
+                        insured_name,
+                        policy_number,
+                        policy_id,
+                        client_id
+                    ),
+                    accounts:account_id (
+                        first_name,
+                        last_name,
+                        role
+                    )
+                `)
+                .order('created_at', { ascending: false })
+                .limit(limit),
+
+            // Source B: Platform Documents (RCEs, Quotes, DICs, etc.)
+            supabase
+                .from('platform_documents')
+                .select(`
+                    id,
                     policy_id,
-                    client_id
-                ),
-                accounts:account_id (
-                    first_name,
-                    last_name,
-                    role
+                    doc_type,
+                    file_name,
+                    storage_path,
+                    parse_status,
+                    match_status,
+                    created_at,
+                    created_by,
+                    policies (
+                        id,
+                        policy_number,
+                        client_id,
+                        clients (
+                            id,
+                            named_insured
+                        )
+                    )
+                `)
+                .order('created_at', { ascending: false })
+                .limit(limit),
+
+            // Source C: Merge Events
+            supabase
+                .from('activity_events')
+                .select('id, event_type, title, detail, client_id, policy_id, meta, created_at')
+                .in('event_type', ['merge.client', 'merge.policy'])
+                .order('created_at', { ascending: false })
+                .limit(limit),
+
+            // Source D: Activity Events
+            supabase
+                .from('activity_events')
+                .select('*')
+                .or(
+                    'event_type.in.(document.processed,document.needs_review,document.no_match,document.failed),' +
+                    'event_type.like.doc.uploaded.%'
                 )
-            `)
-            .order('created_at', { ascending: false })
-            .limit(limit);
+                .order('created_at', { ascending: false })
+                .limit(limit)
+        ]);
 
-        if (decError) {
-            logger.error('API', 'Error fetching dec_page_submissions for activity feed', { message: decError.message });
-        }
+        const decData = decRes.data || [];
+        const pDocs = pDocRes.data || [];
+        const mergeData = mergeRes.data || [];
+        const docEvents = docEventRes.data || [];
 
-        // Collect unique policy IDs for batch enrichment/flags lookup
+        // ── Process Source A: Dec Submissions ──
         const policyIds = new Set<string>();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for (const row of (decData || [])) {
+        for (const row of decData as any[]) {
             const dpRaw = row.dec_pages;
             const dp = Array.isArray(dpRaw) ? dpRaw[0] : dpRaw;
             if (dp?.policy_id) policyIds.add(dp.policy_id);
         }
 
-        // Batch lookup: which policies have enrichments?
-        const enrichedSet = new Set<string>();
-        if (policyIds.size > 0) {
-            const { data: enrichRows } = await supabase
-                .from('property_enrichments')
-                .select('policy_id')
-                .in('policy_id', Array.from(policyIds))
-                .limit(500);
-            if (enrichRows) {
-                for (const e of enrichRows) enrichedSet.add(e.policy_id);
-            }
-        }
+        const policyIdList = Array.from(policyIds).slice(0, 100);
+        const [enrichRes, flagRes] = await Promise.all([
+            policyIdList.length > 0
+                ? supabase.from('property_enrichments').select('policy_id').in('policy_id', policyIdList)
+                : Promise.resolve({ data: [] }),
+            policyIdList.length > 0
+                ? supabase.from('policy_flags').select('policy_id').in('policy_id', policyIdList)
+                : Promise.resolve({ data: [] })
+        ]);
 
-        // Batch lookup: which policies have flags evaluated?
-        const flagsSet = new Set<string>();
-        if (policyIds.size > 0) {
-            const { data: flagRows } = await supabase
-                .from('policy_flags')
-                .select('policy_id')
-                .in('policy_id', Array.from(policyIds))
-                .limit(500);
-            if (flagRows) {
-                for (const f of flagRows) flagsSet.add(f.policy_id);
-            }
-        }
+        const enrichedSet = new Set<string>((enrichRes.data || []).map((e: any) => e.policy_id));
+        const flagsSet = new Set<string>((flagRes.data || []).map((f: any) => f.policy_id));
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const uploadItems: ActivityFeedItem[] = (decData || []).map((row: any) => {
+        const uploadItems: ActivityFeedItem[] = decData.map((row: any) => {
             const dpRaw = row.dec_pages;
-            const dp = Array.isArray(dpRaw)
-                ? (dpRaw.length > 0 ? dpRaw[0] : null)
-                : (dpRaw || null);
-
+            const dp = Array.isArray(dpRaw) ? (dpRaw.length > 0 ? dpRaw[0] : null) : (dpRaw || null);
             const acct = row.accounts;
             let uploaderName = 'System';
             if (acct) {
@@ -3213,87 +3245,44 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
             };
         });
 
-        // ── Source B: Platform Documents (RCEs, Quotes, DICs, etc.) ──
-        let platformDocItems: ActivityFeedItem[] = [];
-        try {
-            const { data: pDocs, error: pError } = await supabase
-                .from('platform_documents')
-                .select(`
-                    id,
-                    policy_id,
-                    doc_type,
-                    file_name,
-                    storage_path,
-                    parse_status,
-                    match_status,
-                    created_at,
-                    created_by,
-                    policies (
-                        id,
-                        policy_number,
-                        client_id,
-                        clients (
-                            id,
-                            named_insured
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false })
-                .limit(limit);
+        // ── Process Source B: Platform Documents ──
+        const platformDocItems: ActivityFeedItem[] = pDocs.map((p: any) => {
+            const pol = p.policies;
+            const client = pol?.clients;
+            const docType = p.doc_type || 'other';
 
-            if (pError) {
-                logger.warn('API', 'Error fetching platform_documents for activity feed', { message: pError.message });
-            }
+            let docLabel = 'Document';
+            if (docType === 'rce') docLabel = 'RCE Report';
+            else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
+            else if (docType === 'quote') docLabel = 'Carrier Quote';
+            else if (docType === 'dec_page') docLabel = 'Declaration Page';
+            else if (docType === 'es_doc') docLabel = 'E&S Document';
 
-            if (pDocs) {
-                platformDocItems = pDocs.map((p: any) => {
-                    const pol = p.policies;
-                    const client = pol?.clients;
-                    const docType = p.doc_type || 'other';
+            return {
+                id: p.id,
+                type: 'document' as const,
+                status: p.parse_status || 'done',
+                created_at: p.created_at,
+                file_path: p.storage_path,
+                storage_path: p.storage_path,
+                bucket: 'cfp-platform-documents',
+                file_name: p.file_name,
+                doc_type: docType,
+                document_id: p.id,
+                policy_id: p.policy_id || undefined,
+                client_id: pol?.client_id || client?.id || undefined,
+                insured_name: client?.named_insured || undefined,
+                policy_number: pol?.policy_number || undefined,
+                uploaded_by: p.created_by || 'System',
+                event_type: 'document.processed',
+                title: `${docLabel} Processed`,
+                detail: `A ${docLabel} was successfully uploaded and applied.`,
+                match_status: p.match_status || (p.policy_id ? 'manual' : undefined),
+            };
+        });
 
-                    let docLabel = 'Document';
-                    if (docType === 'rce') docLabel = 'RCE Report';
-                    else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
-                    else if (docType === 'quote') docLabel = 'Carrier Quote';
-                    else if (docType === 'dec_page') docLabel = 'Declaration Page';
-                    else if (docType === 'es_doc') docLabel = 'E&S Document';
-
-                    return {
-                        id: p.id,
-                        type: 'document' as const,
-                        status: p.parse_status || 'done',
-                        created_at: p.created_at,
-                        file_path: p.storage_path,
-                        storage_path: p.storage_path,
-                        bucket: 'cfp-platform-documents',
-                        file_name: p.file_name,
-                        doc_type: docType,
-                        document_id: p.id,
-                        policy_id: p.policy_id || undefined,
-                        client_id: pol?.client_id || client?.id || undefined,
-                        insured_name: client?.named_insured || undefined,
-                        policy_number: pol?.policy_number || undefined,
-                        uploaded_by: p.created_by || 'System',
-                        event_type: 'document.processed',
-                        title: `${docLabel} Processed`,
-                        detail: `A ${docLabel} was successfully uploaded and applied.`,
-                        match_status: p.match_status || (p.policy_id ? 'manual' : undefined),
-                    };
-                });
-            }
-        } catch (pErr) {
-            logger.warn('API', 'Failed fetching platform documents for activity feed', { error: pErr });
-        }
-
-        // ── Source C: Merge Events ──
-        const { data: mergeData } = await supabase
-            .from('activity_events')
-            .select('id, event_type, title, detail, client_id, policy_id, meta, created_at')
-            .in('event_type', ['merge.client', 'merge.policy'])
-            .order('created_at', { ascending: false })
-            .limit(limit);
-
-        const mergeItems: ActivityFeedItem[] = (mergeData || []).map((ev: any) => ({
+        // ── Process Source C: Merge Events ──
+        const mergeItems: ActivityFeedItem[] = mergeData.map((ev: any) => ({
             id: ev.id,
             type: 'merge' as const,
             status: 'done',
@@ -3310,152 +3299,133 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
             meta: ev.meta,
         }));
 
-        // ── Source D: Activity Events (for custom logs, needs_review, no_match, failed) ──
-        let activityEventDocItems: ActivityFeedItem[] = [];
-        try {
-            const { data: docEvents } = await supabase
-                .from('activity_events')
-                .select('*')
-                .or(
-                    'event_type.in.(document.processed,document.needs_review,document.no_match,document.failed),' +
-                    'event_type.like.doc.uploaded.%'
-                )
-                .order('created_at', { ascending: false })
-                .limit(limit);
+        // ── Process Source D: Activity Events ──
+        const platDocMap = new Map<string, any>();
+        for (const p of platformDocItems) {
+            if (p.document_id) platDocMap.set(p.document_id, p);
+            if (p.id) platDocMap.set(p.id, p);
+        }
 
-            if (docEvents && docEvents.length > 0) {
-                // Map of known platform documents for storage_path and policy resolution
-                const platDocMap = new Map<string, any>();
-                for (const p of platformDocItems) {
-                    if (p.document_id) platDocMap.set(p.document_id, p);
-                    if (p.id) platDocMap.set(p.id, p);
-                }
+        const missingDocIds = Array.from(new Set(
+            docEvents
+                .map((e: any) => e.meta?.document_id)
+                .filter((id: any) => id && !platDocMap.has(id))
+        ));
 
-                // Batch lookup any missing document IDs
-                const missingDocIds = Array.from(new Set(
-                    docEvents
-                        .map(e => e.meta?.document_id)
-                        .filter(id => id && !platDocMap.has(id))
-                ));
+        if (missingDocIds.length > 0) {
+            const { data: extraDocs } = await supabase
+                .from('platform_documents')
+                .select(`
+                    id,
+                    storage_path,
+                    file_name,
+                    doc_type,
+                    policy_id,
+                    match_status,
+                    policies (
+                        id,
+                        policy_number,
+                        client_id,
+                        clients ( id, named_insured )
+                    )
+                `)
+                .in('id', missingDocIds.slice(0, 100));
 
-                if (missingDocIds.length > 0) {
-                    const { data: extraDocs } = await supabase
-                        .from('platform_documents')
-                        .select(`
-                            id,
-                            storage_path,
-                            file_name,
-                            doc_type,
-                            policy_id,
-                            match_status,
-                            policies (
-                                id,
-                                policy_number,
-                                client_id,
-                                clients ( id, named_insured )
-                            )
-                        `)
-                        .in('id', missingDocIds);
-
-                    if (extraDocs) {
-                        for (const ed of extraDocs as any[]) {
-                            const pol = ed.policies;
-                            const cli = pol?.clients;
-                            platDocMap.set(ed.id, {
-                                id: ed.id,
-                                document_id: ed.id,
-                                storage_path: ed.storage_path,
-                                file_name: ed.file_name,
-                                doc_type: ed.doc_type,
-                                policy_id: ed.policy_id,
-                                match_status: ed.match_status || (ed.policy_id ? 'manual' : undefined),
-                                policy_number: pol?.policy_number,
-                                client_id: pol?.client_id || cli?.id,
-                                insured_name: cli?.named_insured,
-                                type: 'document' as const,
-                                status: 'done',
-                                created_at: '',
-                                uploaded_by: 'System',
-                                bucket: 'cfp-platform-documents',
-                            });
-                        }
-                    }
-                }
-
-                const existingPlatDocIds = new Set(platformDocItems.map(p => p.document_id).filter(Boolean));
-
-                for (const evt of docEvents) {
-                    const meta = evt.meta || {};
-                    const docId = meta.document_id || evt.id;
-                    const pDoc = platDocMap.get(docId) || (meta.document_id ? platDocMap.get(meta.document_id) : null);
-
-                    const policyId = evt.policy_id || pDoc?.policy_id || undefined;
-                    const clientId = evt.client_id || pDoc?.client_id || undefined;
-                    const isResolved = Boolean(policyId);
-
-                    // Skip duplicate if already present from platform_documents and successful/resolved
-                    if (existingPlatDocIds.has(meta.document_id) && (evt.event_type === 'document.processed' || isResolved)) {
-                        continue;
-                    }
-
-                    let docStatus = 'done';
-                    if (evt.event_type === 'document.failed') docStatus = 'failed';
-
-                    const storagePath = meta.storage_path || pDoc?.storage_path || null;
-                    const fileName = meta.file_name || pDoc?.file_name || undefined;
-                    const policyNum = meta.policy_number || pDoc?.policy_number || undefined;
-                    const insuredName = meta.owner_name || meta.named_insured || pDoc?.insured_name || undefined;
-
-                    let eventType = evt.event_type;
-                    let eventTitle = evt.title;
-                    let eventDetail = evt.detail;
-
-                    if (isResolved && (evt.event_type === 'document.needs_review' || evt.event_type === 'document.no_match')) {
-                        eventType = 'document.processed';
-                        const docType = meta.doc_type || pDoc?.doc_type;
-                        let docLabel = 'Document';
-                        if (docType === 'rce') docLabel = 'RCE Report';
-                        else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
-                        else if (docType === 'quote') docLabel = 'Carrier Quote';
-                        else if (docType === 'dec_page') docLabel = 'Declaration Page';
-                        else if (docType === 'es_doc') docLabel = 'E&S Document';
-
-                        eventTitle = `${docLabel} Processed`;
-                        eventDetail = `A ${docLabel} was successfully uploaded and applied.`;
-                    }
-
-                    const matchStatus = isResolved
-                        ? (pDoc?.match_status || meta.match_status || 'manual')
-                        : (meta.match_status || pDoc?.match_status || undefined);
-
-                    activityEventDocItems.push({
-                        id: evt.id,
+            if (extraDocs) {
+                for (const ed of extraDocs as any[]) {
+                    const pol = ed.policies;
+                    const cli = pol?.clients;
+                    platDocMap.set(ed.id, {
+                        id: ed.id,
+                        document_id: ed.id,
+                        storage_path: ed.storage_path,
+                        file_name: ed.file_name,
+                        doc_type: ed.doc_type,
+                        policy_id: ed.policy_id,
+                        match_status: ed.match_status || (ed.policy_id ? 'manual' : undefined),
+                        policy_number: pol?.policy_number,
+                        client_id: pol?.client_id || cli?.id,
+                        insured_name: cli?.named_insured,
                         type: 'document' as const,
-                        event_type: eventType,
-                        title: eventTitle,
-                        detail: eventDetail,
-                        policy_id: policyId,
-                        client_id: clientId,
-                        insured_name: insuredName,
-                        policy_number: policyNum,
-                        created_at: evt.created_at,
-                        meta: meta,
-                        status: docStatus,
-                        file_path: storagePath,
-                        storage_path: storagePath,
-                        bucket: meta.bucket || 'cfp-platform-documents',
-                        uploaded_by: meta.uploaded_by || 'System',
-                        doc_type: meta.doc_type || pDoc?.doc_type,
-                        document_id: meta.document_id || undefined,
-                        match_status: matchStatus,
-                        writeback_status: meta.writeback_status || undefined,
-                        match_confidence: meta.confidence || undefined,
-                        file_name: fileName,
+                        status: 'done',
+                        created_at: '',
+                        uploaded_by: 'System',
+                        bucket: 'cfp-platform-documents',
                     });
                 }
             }
-        } catch (e) {
-            logger.warn('api', 'Failed to fetch custom activity events:', { error: e instanceof Error ? e.message : String(e) });
+        }
+
+        const existingPlatDocIds = new Set(platformDocItems.map(p => p.document_id).filter(Boolean));
+        const activityEventDocItems: ActivityFeedItem[] = [];
+
+        for (const evt of docEvents as any[]) {
+            const meta = evt.meta || {};
+            const docId = meta.document_id || evt.id;
+            const pDoc = platDocMap.get(docId) || (meta.document_id ? platDocMap.get(meta.document_id) : null);
+
+            const policyId = evt.policy_id || pDoc?.policy_id || undefined;
+            const clientId = evt.client_id || pDoc?.client_id || undefined;
+            const isResolved = Boolean(policyId);
+
+            if (existingPlatDocIds.has(meta.document_id) && (evt.event_type === 'document.processed' || isResolved)) {
+                continue;
+            }
+
+            let docStatus = 'done';
+            if (evt.event_type === 'document.failed') docStatus = 'failed';
+
+            const storagePath = meta.storage_path || pDoc?.storage_path || null;
+            const fileName = meta.file_name || pDoc?.file_name || undefined;
+            const policyNum = meta.policy_number || pDoc?.policy_number || undefined;
+            const insuredName = meta.owner_name || meta.named_insured || pDoc?.insured_name || undefined;
+
+            let eventType = evt.event_type;
+            let eventTitle = evt.title;
+            let eventDetail = evt.detail;
+
+            if (isResolved && (evt.event_type === 'document.needs_review' || evt.event_type === 'document.no_match')) {
+                eventType = 'document.processed';
+                const docType = meta.doc_type || pDoc?.doc_type;
+                let docLabel = 'Document';
+                if (docType === 'rce') docLabel = 'RCE Report';
+                else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
+                else if (docType === 'quote') docLabel = 'Carrier Quote';
+                else if (docType === 'dec_page') docLabel = 'Declaration Page';
+                else if (docType === 'es_doc') docLabel = 'E&S Document';
+
+                eventTitle = `${docLabel} Processed`;
+                eventDetail = `A ${docLabel} was successfully uploaded and applied.`;
+            }
+
+            const matchStatus = isResolved
+                ? (pDoc?.match_status || meta.match_status || 'manual')
+                : (meta.match_status || pDoc?.match_status || undefined);
+
+            activityEventDocItems.push({
+                id: evt.id,
+                type: 'document' as const,
+                event_type: eventType,
+                title: eventTitle,
+                detail: eventDetail,
+                policy_id: policyId,
+                client_id: clientId,
+                insured_name: insuredName,
+                policy_number: policyNum,
+                created_at: evt.created_at,
+                meta: meta,
+                status: docStatus,
+                file_path: storagePath,
+                storage_path: storagePath,
+                bucket: meta.bucket || 'cfp-platform-documents',
+                uploaded_by: meta.uploaded_by || 'System',
+                doc_type: meta.doc_type || pDoc?.doc_type,
+                document_id: meta.document_id || undefined,
+                match_status: matchStatus,
+                writeback_status: meta.writeback_status || undefined,
+                match_confidence: meta.confidence || undefined,
+                file_name: fileName,
+            });
         }
 
         // Merge + Deduplicate by ID / storage_path
