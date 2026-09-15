@@ -154,7 +154,8 @@ function renderCarrierBadge(
     carrier: string | null | undefined,
     docName: 'RCE' | 'DIC',
     policyId?: string,
-    onPreview?: () => void
+    onPreview?: () => void,
+    rceAmount?: number | null
 ) {
     if (!carrier) {
         return (
@@ -178,6 +179,8 @@ function renderCarrierBadge(
     else if (cLower === 'psic') badgeClass = styles.psic;
 
     const displayLabel = carrier === 'AM' ? 'AM' : carrier;
+    const amountStr = rceAmount ? ` • Est: $${Math.round(Number(rceAmount)).toLocaleString()}` : '';
+    const tooltip = `Click to preview ${docName} (${displayLabel}${amountStr})`;
 
     return (
         <button
@@ -187,7 +190,7 @@ function renderCarrierBadge(
                 e.stopPropagation();
                 onPreview?.();
             }}
-            title={`Click to preview ${docName} (${displayLabel})`}
+            title={tooltip}
         >
             <Check size={12} /> {displayLabel}
         </button>
@@ -1420,7 +1423,8 @@ export function CFPSummaryTable({
                             fileName: term.rce_file_name || `${term.policy_number}_RCE.pdf`,
                             policyId: term.policy_id,
                         });
-                    }
+                    },
+                    term.rce_replacement_cost
                 );
                 return (
                     <div className={styles.cellWithComment}>

@@ -56,6 +56,9 @@ export interface CFPTermRow {
     rce_carrier: string | null;
     rce_storage_path?: string | null;
     rce_file_name?: string | null;
+    rce_replacement_cost?: number | null;
+    rce_sq_feet?: number | null;
+    rce_cost_per_sqft?: number | null;
     has_dic: boolean;
     dic_carrier: string | null;
     dic_storage_path?: string | null;
@@ -135,16 +138,32 @@ export function detectCarrierQuoteInfo(
         return null;
     }
 
+    const extractTotalPremium = (d: any): number | null => {
+        if (!d) return null;
+        if (d.total_charge !== null && d.total_charge !== undefined) {
+            return typeof d.total_charge === 'number' ? d.total_charge : parseFloat(String(d.total_charge).replace(/[^0-9.]/g, ''));
+        }
+        if (d.basic_premium !== null && d.basic_premium !== undefined) {
+            const basic = typeof d.basic_premium === 'number' ? d.basic_premium : parseFloat(String(d.basic_premium).replace(/[^0-9.]/g, '') || '0');
+            const optional = typeof d.optional_premium === 'number' ? d.optional_premium : parseFloat(String(d.optional_premium || 0).replace(/[^0-9.]/g, '') || '0');
+            const surcharges = typeof d.surcharges === 'number' ? d.surcharges : parseFloat(String(d.surcharges || 0).replace(/[^0-9.]/g, '') || '0');
+            const credits = typeof d.credits === 'number' ? d.credits : parseFloat(String(d.credits || 0).replace(/[^0-9.-]/g, '') || '0');
+            const sum = basic + optional + surcharges + credits;
+            return Math.round(sum * 100) / 100;
+        }
+        return null;
+    };
+
     // 1. Bamboo (Q100... or CASNH... or Bamboo)
     const matchBamboo = (fileName || '').match(/(Q100\d{6,}|CASNH\d+)/i) || (dic?.policy_number || '').match(/(Q100\d{6,}|CASNH\d+)/i);
     if (combined.includes('bamboo') || dicCarrier.includes('bamboo') || matchBamboo) {
         const isDic = (dic && dic.has_dic_endorsement === true) || combined.includes('does not cover the peril of fire') || (fn.includes('dic') && !fn.includes('ho3') && !fn.includes('home'));
-        const prem = dic?.total_charge || dic?.basic_premium || null;
+        const prem = extractTotalPremium(dic);
         return {
             carrier_key: 'bamboo',
             coverage_type: isDic ? 'DIC' : 'FULL',
             quote_number: matchBamboo ? matchBamboo[1] : (dic?.policy_number || null),
-            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            premium: prem,
             dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
             doc_file_name: fileName || null,
         };
@@ -154,12 +173,12 @@ export function detectCarrierQuoteInfo(
     const matchAegis = (fileName || '').match(/(Q5\d{5,}|Q\d{6,}|OBS\d+|AEG\d+)/i) || (dic?.policy_number || '').match(/(Q5\d{5,}|Q\d{6,}|OBS\d+|AEG\d+)/i);
     if (combined.includes('aegis') || combined.includes('obsidian') || dicCarrier.includes('aegis') || dicCarrier.includes('obsidian') || matchAegis) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('california dic quote') || combined.includes('difference in conditions selected') || combined.includes('difference in conditions') || fn.includes('dic');
-        const prem = dic?.total_charge || dic?.basic_premium || null;
+        const prem = extractTotalPremium(dic);
         return {
             carrier_key: 'aegis',
             coverage_type: isDic ? 'DIC' : 'FULL',
             quote_number: matchAegis ? matchAegis[1] : (dic?.policy_number || null),
-            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            premium: prem,
             dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
             doc_file_name: fileName || null,
         };
@@ -181,12 +200,12 @@ export function detectCarrierQuoteInfo(
         matchAm
     ) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('dic - fire') || combined.includes('dic -') || combined.includes('difference in conditions') || fn.includes('dic');
-        const prem = dic?.total_charge || dic?.basic_premium || null;
+        const prem = extractTotalPremium(dic);
         return {
             carrier_key: 'am',
             coverage_type: isDic ? 'DIC' : 'FULL',
             quote_number: matchAm ? matchAm[1] : (dic?.policy_number || null),
-            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            premium: prem,
             dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
             doc_file_name: fileName || null,
         };
@@ -196,12 +215,12 @@ export function detectCarrierQuoteInfo(
     const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i) || (dic?.policy_number || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
     if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || dicCarrier.includes('pacific') || combined.includes('psic') || matchPsic) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('difference in conditions included') || combined.includes('difference in conditions') || fn.includes('dic');
-        const prem = dic?.total_charge || dic?.basic_premium || null;
+        const prem = extractTotalPremium(dic);
         return {
             carrier_key: 'psic',
             coverage_type: isDic ? 'DIC' : 'FULL',
             quote_number: matchPsic ? matchPsic[1] : (dic?.policy_number || null),
-            premium: typeof prem === 'number' ? prem : (prem ? parseFloat(String(prem).replace(/[^0-9.]/g, '')) : null),
+            premium: prem,
             dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
             doc_file_name: fileName || null,
         };
@@ -460,9 +479,10 @@ export async function GET(req: NextRequest) {
             file_name?: string;
             storage_path?: string;
             doc_data_dic?: any;
+            doc_data_rce?: any;
         }>(
             'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, cov_a_dwelling)',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
             'policy_id',
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
@@ -527,13 +547,14 @@ export async function GET(req: NextRequest) {
     const termDocTypes: Record<string, Set<string>> = {};
     const termRceCarrier: Record<string, string> = {};
     const termDicCarrier: Record<string, string> = {};
-    const termRceDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
+    const termRceDoc: Record<string, { storage_path?: string; file_name?: string; replacement_cost?: number | null; sq_feet?: number | null; cost_per_sqft?: number | null }> = {};
     const termDicDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
     const termEsDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
 
     for (const doc of docs) {
         const fn = (doc.file_name || '').toLowerCase();
         const dic = Array.isArray(doc.doc_data_dic) ? doc.doc_data_dic[0] : doc.doc_data_dic;
+        const rce = Array.isArray(doc.doc_data_rce) ? doc.doc_data_rce[0] : doc.doc_data_rce;
         const dicType = (dic?.document_type || '').toLowerCase();
         const isQuoteDoc = fn.includes('quote') || dicType.includes('quote');
 
@@ -572,11 +593,19 @@ export async function GET(req: NextRequest) {
             }
             termDocTypes[t.id].add(doc.doc_type);
 
-            if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc)) {
+            if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || rce) {
                 const c = detectDocCarrier(doc.file_name, null, 'rce');
                 if (c) termRceCarrier[t.id] = c;
                 if (doc.storage_path && !termRceDoc[t.id]) {
-                    termRceDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+                    termRceDoc[t.id] = {
+                        storage_path: doc.storage_path,
+                        file_name: doc.file_name,
+                        replacement_cost: rce?.replacement_cost || null,
+                        sq_feet: rce?.sq_feet || null,
+                        cost_per_sqft: rce?.cost_per_sqft || null,
+                    };
+                } else if (termRceDoc[t.id] && !termRceDoc[t.id].replacement_cost && rce?.replacement_cost) {
+                    termRceDoc[t.id].replacement_cost = rce.replacement_cost;
                 }
             } else if (doc.doc_type === 'dic_dec_page' || fn.includes('dic')) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote
@@ -826,6 +855,9 @@ export async function GET(req: NextRequest) {
             rce_carrier: rceCarrier,
             rce_storage_path: termRceDoc[t.id]?.storage_path || null,
             rce_file_name: termRceDoc[t.id]?.file_name || null,
+            rce_replacement_cost: termRceDoc[t.id]?.replacement_cost || null,
+            rce_sq_feet: termRceDoc[t.id]?.sq_feet || null,
+            rce_cost_per_sqft: termRceDoc[t.id]?.cost_per_sqft || null,
             has_dic: hasDic,
             dic_carrier: dicCarrier,
             dic_storage_path: termDicDoc[t.id]?.storage_path || null,

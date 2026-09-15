@@ -69,14 +69,21 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-    // Compute all candidate attachments available for this policy term
+    // Compute all candidate attachments available for this policy term (deduplicated by storagePath)
     const availableAttachments = useMemo<AttachmentItem[]>(() => {
         if (!term) return [];
         const items: AttachmentItem[] = [];
+        const seenStoragePaths = new Set<string>();
+
+        const addCandidate = (item: AttachmentItem) => {
+            if (item.storagePath && seenStoragePaths.has(item.storagePath)) return;
+            if (item.storagePath) seenStoragePaths.add(item.storagePath);
+            items.push(item);
+        };
 
         // 1. Dec page
         if (term.has_dec && term.dec_storage_path) {
-            items.push({
+            addCandidate({
                 id: 'dec',
                 label: 'FAIR Plan Dec Page',
                 badge: 'DEC PAGE',
@@ -89,7 +96,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // 2. Renewal Dec
         if (term.has_renewal_dec && term.renewal_dec_storage_path) {
-            items.push({
+            addCandidate({
                 id: 'renewal_dec',
                 label: 'Renewal Offer Dec Page',
                 badge: 'RENEWAL DEC',
@@ -102,9 +109,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // 3. RCE Valuation
         if (term.has_rce && term.rce_storage_path) {
-            items.push({
+            const rceValuationStr = term.rce_replacement_cost ? ` - $${Math.round(Number(term.rce_replacement_cost)).toLocaleString()}` : '';
+            addCandidate({
                 id: 'rce',
-                label: `RCE Valuation (${term.rce_carrier || '360Value'})`,
+                label: `RCE Valuation (${term.rce_carrier || '360Value'}${rceValuationStr})`,
                 badge: 'RCE REPORT',
                 fileName: term.rce_file_name || 'RCE_Valuation_Report.pdf',
                 storagePath: term.rce_storage_path,
@@ -115,7 +123,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // 4. Bamboo Quote
         if (term.carrier_quotes?.bamboo?.storage_path) {
-            items.push({
+            addCandidate({
                 id: 'bamboo',
                 label: 'Bamboo Companion Quote',
                 badge: 'BAMBOO QUOTE',
@@ -128,7 +136,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // 5. Aegis Quote
         if (term.carrier_quotes?.aegis?.storage_path) {
-            items.push({
+            addCandidate({
                 id: 'aegis',
                 label: 'Aegis Security / General Quote',
                 badge: 'AEGIS QUOTE',
@@ -141,7 +149,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // 6. American Modern (AM) Quote
         if (term.carrier_quotes?.am?.storage_path) {
-            items.push({
+            addCandidate({
                 id: 'am',
                 label: 'American Modern Quote',
                 badge: 'AM QUOTE',
@@ -154,7 +162,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // 7. PSIC Quote
         if (term.carrier_quotes?.psic?.storage_path) {
-            items.push({
+            addCandidate({
                 id: 'psic',
                 label: 'Pacific Specialty (PSIC) Quote',
                 badge: 'PSIC QUOTE',
@@ -165,9 +173,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         }
 
-        // 8. In-force DIC Dec Page
+        // 8. In-force DIC Dec Page (if distinct from quotes)
         if (term.has_dic && term.dic_storage_path) {
-            items.push({
+            addCandidate({
                 id: 'dic',
                 label: `DIC Dec Page (${term.dic_carrier || 'DIC'})`,
                 badge: 'DIC DEC',
@@ -183,7 +191,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
     // Initialize subject, notes & pre-selected attachments when modal opens with term
     useEffect(() => {
-        if (!term) return;
+        if (!isOpen || !term) return;
         const polNum = term.policy_number || 'Policy';
         const addr = term.property_address || 'Address';
         setSubject(`CFP ${polNum.replace(/^CFP\s*/i, '')} - ${addr}`);
@@ -193,7 +201,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setSelectedRecipientIds(['nancy', 'olga']);
         // Guardrail: Pre-select all available detected attachments by default
         setSelectedAttachmentIds(availableAttachments.map(a => a.id));
-    }, [term, isOpen, availableAttachments]);
+    }, [isOpen, term?.policy_term_id, availableAttachments]);
 
     const toggleAttachment = (id: string) => {
         setSelectedAttachmentIds(prev =>
@@ -310,8 +318,12 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             : (term.has_renewal_dec ? (isRenewalAttached ? 'Renewal Offer (Attached)' : 'Renewal Offer (Not Attached)') : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'));
 
         const rceDetails = term.has_rce
-            ? (isRceAttached ? 'Valuation on file (Attached)' : 'Valuation on file (Not Attached)')
+            ? `${term.rce_carrier || '360Value'} Valuation ${isRceAttached ? '(Attached)' : '(Not Attached)'}`
             : 'No RCE uploaded';
+
+        const rceValueStr = term.rce_replacement_cost
+            ? `$${Math.round(Number(term.rce_replacement_cost)).toLocaleString()}`
+            : (term.has_rce ? (term.rce_carrier || 'Available') : '—');
 
         return [
             {
@@ -325,7 +337,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 name: 'RCE Valuation Report',
                 status: term.has_rce ? 'Available' : 'Missing',
                 statusType: term.has_rce ? ('available' as const) : ('missing' as const),
-                premium: term.rce_carrier || (term.has_rce ? '360Value' : '—'),
+                premium: rceValueStr,
                 details: rceDetails,
             },
             bamboo,
