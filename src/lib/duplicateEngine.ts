@@ -57,11 +57,41 @@ export interface DuplicateGroup {
  * Service to execute sweeping database inspections to identify possible duplicate records
  * in order to surface them on the DuplicateReview operations queue.
  */
+/** Address normalization for policy and client duplicate alignment */
+function normAddressForDuplicate(addr: string | null | undefined): string {
+    if (!addr) return '';
+    return addr
+        .toUpperCase()
+        .replace(/[^A-Z0-9\s]/g, '')
+        .replace(/\b(STREET|STR|ST|AVENUE|AVE|DRIVE|DR|ROAD|RD|LANE|LN|BOULEVARD|BLVD|COURT|CT|CIRCLE|CIR|WAY|PLACE|PL|TERRACE|TER|HIGHWAY|HWY|NORTH|SOUTH|EAST|WEST|N|S|E|W|APT|UNIT|SPC|SUITE|STE)\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function getStreetNumberAndZip(addr: string | null | undefined): { num: string; zip: string } | null {
+    if (!addr) return null;
+    const clean = addr.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const numMatch = clean.match(/^(\d+)\s+/);
+    const zipMatch = clean.match(/\b(\d{5})\b/);
+    if (!numMatch) return null;
+    return { num: numMatch[1], zip: zipMatch ? zipMatch[1] : '' };
+}
+
+function namePrefixMatches(bambooName: string | null | undefined, realName: string | null | undefined): boolean {
+    if (!bambooName || !realName) return false;
+    const b = bambooName.toLowerCase().replace(/[^a-z]/g, '');
+    const r = realName.toLowerCase().replace(/[^a-z\s]/g, '');
+    if (b.length < 2) return false;
+    const tokens = r.split(/\s+/);
+    return tokens.some(t => t.startsWith(b) || b.startsWith(t));
+}
+
 export class DuplicateEngine {
 
     /**
-     * Finds clustered duplicate policies by enforcing the Global Policy Invariant:
-     * Identifies multiple distinct `policies` rows that share the EXACT same Base Policy Normalization.
+     * Finds clustered duplicate policies by:
+     * 1. Global Policy Invariant: Base Policy Normalization match (100% confidence).
+     * 2. Address-Based Bamboo / Placeholder Policy overlap with verified policies (90-95% confidence).
      */
     static async findPolicyDuplicates(): Promise<DuplicateGroup[]> {
         const supabaseAdmin = getSupabaseAdmin();
@@ -74,7 +104,11 @@ export class DuplicateEngine {
             try {
                 const { data, error } = await supabaseAdmin
                     .from('policies')
-                    .select('id, policy_number, created_at, client_id, property_address_norm')
+                    .select(`
+                        id, policy_number, carrier_name, created_at, client_id, property_address_raw, property_address_norm,
+                        clients(id, named_insured),
+                        dec_pages(id, policy_number)
+                    `)
                     .order('id', { ascending: true })
                     .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -96,7 +130,7 @@ export class DuplicateEngine {
             }
         }
 
-        // Group by Normalized Base Policy
+        // ── Phase 1: Group by Normalized Base Policy ──
         const grouped = new Map<string, typeof policies>();
 
         for (const pol of policies) {
@@ -109,7 +143,8 @@ export class DuplicateEngine {
             grouped.get(basePolicy)!.push(pol);
         }
 
-        const exactDuplicates: DuplicateGroup[] = [];
+        const duplicates: DuplicateGroup[] = [];
+        const baseMatchedPolicyIds = new Set<string>();
 
         for (const [base, cluster] of grouped.entries()) {
             if (cluster.length > 1) {
@@ -130,7 +165,7 @@ export class DuplicateEngine {
                 const survivor = cluster[0];
                 const merges = cluster.slice(1);
 
-                exactDuplicates.push({
+                duplicates.push({
                     type: 'policy',
                     tier: 1,
                     survivor_id: survivor.id,
@@ -142,10 +177,94 @@ export class DuplicateEngine {
                         duplicates: merges
                     }
                 });
+
+                for (const p of cluster) baseMatchedPolicyIds.add(p.id);
             }
         }
 
-        return exactDuplicates;
+        // ── Phase 2: Bamboo / Placeholder Policy Address Overlap ──
+        const isPlaceholderPolicy = (p: any) =>
+            (p.policy_number && /^BAM-P-/i.test(p.policy_number)) ||
+            (p.carrier_name && /bamboo/i.test(p.carrier_name) && /^BAM-/i.test(p.policy_number || ''));
+
+        const bambooCandidates = policies.filter(p => isPlaceholderPolicy(p) && !baseMatchedPolicyIds.has(p.id));
+        const realPolicies = policies.filter(p => !isPlaceholderPolicy(p));
+
+        const realByExact = new Map<string, any[]>();
+        const realByNumZip = new Map<string, any[]>();
+
+        for (const p of realPolicies) {
+            for (const raw of [p.property_address_raw, p.property_address_norm]) {
+                const exact = normAddressForDuplicate(raw);
+                if (exact && exact.length > 5) {
+                    if (!realByExact.has(exact)) realByExact.set(exact, []);
+                    realByExact.get(exact)!.push(p);
+                }
+                const nz = getStreetNumberAndZip(raw);
+                if (nz && nz.num && nz.zip) {
+                    const key = `${nz.num}_${nz.zip}`;
+                    if (!realByNumZip.has(key)) realByNumZip.set(key, []);
+                    realByNumZip.get(key)!.push(p);
+                }
+            }
+        }
+
+        for (const b of bambooCandidates) {
+            const bExact1 = normAddressForDuplicate(b.property_address_raw);
+            const bExact2 = normAddressForDuplicate(b.property_address_norm);
+
+            let target: any = null;
+            let confidence = 90;
+            let reason = 'Shares Property Address with Bamboo Placeholder';
+
+            for (const a of [bExact1, bExact2]) {
+                if (a && realByExact.has(a)) {
+                    const candidates = realByExact.get(a)!;
+                    target = candidates.find(c => (c.dec_pages || []).length > 0) || candidates[0];
+                    const bClient = (b.clients as any)?.named_insured;
+                    const tClient = (target.clients as any)?.named_insured;
+                    if (namePrefixMatches(bClient, tClient)) {
+                        confidence = 95;
+                        reason = 'Shares Property Address + Insured Prefix Match with Bamboo Placeholder';
+                    }
+                    break;
+                }
+            }
+
+            if (!target) {
+                const bNz = getStreetNumberAndZip(b.property_address_raw) || getStreetNumberAndZip(b.property_address_norm);
+                if (bNz && bNz.num && bNz.zip) {
+                    const key = `${bNz.num}_${bNz.zip}`;
+                    if (realByNumZip.has(key)) {
+                        const candidates = realByNumZip.get(key)!;
+                        const bClient = (b.clients as any)?.named_insured;
+                        const nameMatch = candidates.find(c => namePrefixMatches(bClient, (c.clients as any)?.named_insured));
+                        if (nameMatch) {
+                            target = nameMatch;
+                            confidence = 90;
+                            reason = 'Shares Street Number, Zip Code & Insured Prefix with Bamboo Placeholder';
+                        }
+                    }
+                }
+            }
+
+            if (target && target.id !== b.id) {
+                duplicates.push({
+                    type: 'policy',
+                    tier: 1,
+                    survivor_id: target.id,
+                    merged_ids: [b.id],
+                    confidence,
+                    reason,
+                    details: {
+                        survivor: target,
+                        duplicates: [b]
+                    }
+                });
+            }
+        }
+
+        return duplicates;
     }
 
     /**
