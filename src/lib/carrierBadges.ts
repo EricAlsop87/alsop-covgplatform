@@ -66,7 +66,7 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
 export function normalizeCarrierDisplayName(raw: string | null | undefined): string {
     if (!raw) return '—';
     const lower = raw.trim().toLowerCase();
-    if (lower.includes('american modern') || lower.includes('americanmodern') || lower.includes('cotality') || lower === 'am') {
+    if (lower.includes('american modern') || lower.includes('americanmodern') || lower.includes('cotality') || lower.includes('rct express') || lower === 'am') {
         return 'American Modern';
     }
     if (lower.includes('pacific specialty') || lower.includes('pacificspecialty') || lower.includes('psic')) {
@@ -75,7 +75,7 @@ export function normalizeCarrierDisplayName(raw: string | null | undefined): str
     if (lower.includes('aegis') || lower.includes('obsidian')) {
         return 'Aegis';
     }
-    if (lower.includes('bamboo')) {
+    if (lower.includes('bamboo') || lower.includes('guidewire@bamboo')) {
         return 'Bamboo';
     }
     if (lower.includes('sagesure') || lower.includes('sage sure')) {
@@ -111,29 +111,13 @@ export function getCarrierBadge(
     const raw = (carrierOrSource || '').trim();
     const lower = raw.toLowerCase();
 
-    // 1. Bamboo
-    if (
-        lower.includes('bamboo') ||
-        lower.includes('guidewire@bamboo') ||
-        lower.includes('bamboo insurance') ||
-        lower.includes('casnh') ||
-        /(?:^|[^0-9])q100[0-9]{5,}/i.test(lower)
-    ) {
-        return {
-            label: 'Bamboo',
-            carrierKey: 'bamboo',
-            tooltip: `Bamboo Insurance (${docType.toUpperCase()})`,
-            ...CARRIER_STYLES.bamboo,
-            hasDoc: true,
-        };
-    }
-
-    // 2. American Modern
+    // 1. American Modern
     if (
         lower.includes('american modern') ||
         lower.includes('americanmodern') ||
         lower.includes('rce_american_modern') ||
         lower.includes('cotality') ||
+        lower.includes('rct express') ||
         lower.includes('am rce') ||
         lower.includes('rce am') ||
         lower.includes('rcm am') ||
@@ -153,7 +137,7 @@ export function getCarrierBadge(
         };
     }
 
-    // 3. PSIC (Pacific Specialty)
+    // 2. PSIC (Pacific Specialty)
     if (
         lower.includes('pacific specialty') ||
         lower.includes('pacificspecialty') ||
@@ -170,19 +154,38 @@ export function getCarrierBadge(
         };
     }
 
-    // 4. Aegis
+    // 3. Aegis
     if (
         lower.includes('aegis') ||
         lower.includes('aegis general') ||
         lower.includes('aegis security') ||
+        lower.includes('webservices@aegis') ||
         lower.includes('obsidian') ||
         /(?:^|[^0-9])q5[0-9]{5,}/i.test(lower)
     ) {
         return {
             label: 'Aegis',
             carrierKey: 'aegis',
-            tooltip: `Aegis Security Insurance Company (${docType.toUpperCase()})`,
+            tooltip: `Aegis Security / Aegis General (${docType.toUpperCase()})`,
             ...CARRIER_STYLES.aegis,
+            hasDoc: true,
+        };
+    }
+
+    // 4. Bamboo
+    if (
+        lower.includes('bamboo') ||
+        lower.includes('guidewire@bamboo') ||
+        lower.includes('bamboo insurance') ||
+        lower.includes('bamboo web services') ||
+        lower.includes('casnh') ||
+        /(?:^|[^0-9])q100[0-9]{5,}/i.test(lower)
+    ) {
+        return {
+            label: 'Bamboo',
+            carrierKey: 'bamboo',
+            tooltip: `Bamboo Insurance (${docType.toUpperCase()})`,
+            ...CARRIER_STYLES.bamboo,
             hasDoc: true,
         };
     }
@@ -231,30 +234,15 @@ export function detectDocumentCarrier(doc: {
     const combined = `${carrierName} ${source} ${createdBy} ${fileName}`.trim();
     const lower = combined.toLowerCase();
 
-    // 1. Bamboo (Q100... quotes, CASNH, 360Value, Bamboo DIC, guidewire@bamboo)
-    if (
-        lower.includes('bamboo') ||
-        lower.includes('guidewire@bamboo') ||
-        lower.includes('casnh') ||
-        /(?:^|[^0-9])Q100[0-9]{5,}/i.test(fileName) ||
-        lower.includes('360value') ||
-        lower.includes('rce_360value')
-    ) {
-        return {
-            label: 'Bamboo',
-            carrierKey: 'bamboo',
-            tooltip: 'Bamboo Insurance',
-            ...CARRIER_STYLES.bamboo,
-            hasDoc: true,
-        };
-    }
+    // Check specific carriers FIRST before any generic 360Value fallback
 
-    // 2. American Modern (AM, Cotality, Homeowners Flex, 005...)
+    // 1. American Modern (AM, Cotality, RCT Express, Homeowners Flex, 005...)
     if (
         lower.includes('american modern') ||
         lower.includes('americanmodern') ||
         lower.includes('rce_american_modern') ||
         lower.includes('cotality') ||
+        lower.includes('rct express') ||
         lower.includes('homeowners flex') ||
         lower.includes('manufactured home') ||
         lower.includes('rce am') ||
@@ -274,7 +262,7 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 3. PSIC (Pacific Specialty)
+    // 2. PSIC (Pacific Specialty)
     if (
         lower.includes('pacific specialty') ||
         lower.includes('pacificspecialty') ||
@@ -291,19 +279,38 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // 4. Aegis (Obsidian, Aegis Security, Aegis General, Q5... quotes)
+    // 3. Aegis (Obsidian, Aegis Security, Aegis General, webservices@aegis, Q5... quotes)
     if (
         lower.includes('aegis') ||
         lower.includes('aegis general') ||
         lower.includes('aegis security') ||
+        lower.includes('webservices@aegis') ||
         lower.includes('obsidian') ||
         /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName)
     ) {
         return {
             label: 'Aegis',
             carrierKey: 'aegis',
-            tooltip: 'Aegis Security / Obsidian Pacific',
+            tooltip: 'Aegis Security / Aegis General',
             ...CARRIER_STYLES.aegis,
+            hasDoc: true,
+        };
+    }
+
+    // 4. Bamboo (guidewire@bamboo, bamboo web services, bamboo insurance, Q100..., CASNH)
+    if (
+        lower.includes('bamboo') ||
+        lower.includes('guidewire@bamboo') ||
+        lower.includes('bamboo insurance') ||
+        lower.includes('bamboo web services') ||
+        lower.includes('casnh') ||
+        /(?:^|[^0-9])Q100[0-9]{5,}/i.test(fileName)
+    ) {
+        return {
+            label: 'Bamboo',
+            carrierKey: 'bamboo',
+            tooltip: 'Bamboo Insurance',
+            ...CARRIER_STYLES.bamboo,
             hasDoc: true,
         };
     }
@@ -322,7 +329,17 @@ export function detectDocumentCarrier(doc: {
         };
     }
 
-    // For RCE or DIC docs without explicit carrier name, default to Bamboo (360Value standard)
+    // For generic 360Value / Companion docs with no specific carrier found, default to Bamboo (360Value standard)
+    if (lower.includes('360value') || lower.includes('rce_360value')) {
+        return {
+            label: 'Bamboo',
+            carrierKey: 'bamboo',
+            tooltip: docType === 'rce' ? 'Bamboo 360Value RCE' : 'Bamboo DIC Policy',
+            ...CARRIER_STYLES.bamboo,
+            hasDoc: true,
+        };
+    }
+
     if (docType === 'rce' || docType === 'dic_dec_page') {
         return {
             label: 'Bamboo',
