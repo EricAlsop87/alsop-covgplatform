@@ -335,7 +335,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<DocumentU
         });
 
         // Activity Event for Dashboard Feed (fire-and-forget)
-        const docLabel = docType === 'rce' ? 'RCE Report' : docType === 'dic_dec_page' ? 'DIC Declaration' : docType.toUpperCase();
+        const docLabel = docType === 'rce' ? 'RCE Report' : (docType === 'dic_dec_page' || docType === 'quote') ? 'DIC / Full Quote' : docType.toUpperCase();
         Promise.resolve(
             supabaseAdmin.from('activity_events').insert({
                 actor_user_id: accountId,

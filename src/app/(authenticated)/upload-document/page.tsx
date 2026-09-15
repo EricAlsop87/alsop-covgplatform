@@ -52,9 +52,9 @@ const DOC_TYPES = [
     },
     {
         key: 'dic_dec_page',
-        label: 'DIC Dec Page',
-        fullLabel: 'DIC Carrier Declaration Page',
-        description: 'Declaration pages from PSIC, Bamboo, Aegis, or other DIC carriers',
+        label: 'DIC / Full Quote',
+        fullLabel: 'DIC / Full Quote (Bamboo, Aegis, AM, PSIC, SageSure)',
+        description: 'DIC quotes, full quotes, or companion carrier declarations',
         color: '#f97316',
         icon: '📄',
     },
@@ -536,7 +536,8 @@ export default function UploadDocumentPage() {
 
                 const formData = new FormData();
                 formData.set('file', item.file);
-                formData.set('doc_type', classifiedType);
+                const uploadDocType = (classifiedType as string) === 'quote' ? 'dic_dec_page' : classifiedType;
+                formData.set('doc_type', uploadDocType);
 
                 const res = await fetch('/api/documents/upload', {
                     method: 'POST',

@@ -111,7 +111,8 @@ function StatusIcon({ status, type, event_type }: { status: string; type?: strin
 const DOC_TYPE_LABELS: Record<string, string> = {
     dec_page: 'Declaration Page',
     rce: 'RCE Report',
-    dic_dec_page: 'DIC Declaration',
+    dic_dec_page: 'DIC / Full Quote',
+    quote: 'DIC / Full Quote',
     invoice: 'Invoice',
     inspection: 'Inspection Report',
     endorsement: 'Endorsement',
@@ -120,8 +121,16 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 };
 
 function getDocumentActionLabel(activity: ActivityFeedItem): string {
-    const isCfp = (activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('RENEWAL_EMAIL_ATTACHMENT') ||
-                  (activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('CFP');
+    const fn = (activity.file_path || activity.file_name || activity.meta?.file_name || '').toUpperCase();
+    const polNum = (activity.policy_number || '').toUpperCase();
+    const isCfp = fn.includes('RENEWAL_EMAIL_ATTACHMENT') ||
+                  fn.includes('CFP') ||
+                  polNum.startsWith('CFP') ||
+                  polNum.startsWith('010') ||
+                  polNum.startsWith('020') ||
+                  polNum.startsWith('011') ||
+                  polNum.startsWith('012') ||
+                  activity.bucket === 'cfp-raw-decpage';
     const docLabel = isCfp || activity.doc_type === 'dec_page'
         ? 'Declaration Page'
         : (DOC_TYPE_LABELS[activity.doc_type || ''] || (activity.doc_type && activity.doc_type !== 'other' ? activity.doc_type.toUpperCase() : 'Document'));
@@ -132,7 +141,7 @@ function getDocumentActionLabel(activity: ActivityFeedItem): string {
     if (activity.event_type === 'document.needs_review') return `${docLabel} Needs Review`;
     if (activity.event_type === 'document.no_match') return `${docLabel} — No Match`;
     if (activity.event_type === 'document.failed') return `${docLabel} Failed`;
-    return activity.title || 'Document Event';
+    return activity.title || `${docLabel} Event`;
 }
 
 export type ActivityFilterType = 'all' | 'dec' | 'rce' | 'dic' | 'other_docs' | 'merge' | 'issues';

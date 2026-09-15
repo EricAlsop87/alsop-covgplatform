@@ -260,8 +260,8 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                 if (curr === 'parsed') {
                     const docLabel = f.doc_type === 'rce'
                         ? 'RCE Report'
-                        : f.doc_type === 'dic_dec_page'
-                        ? 'DIC Declaration'
+                        : f.doc_type === 'dic_dec_page' || f.doc_type === 'quote'
+                        ? 'DIC / Full Quote'
                         : f.doc_type === 'es_doc'
                         ? 'E&S Document'
                         : 'Document';

@@ -59,19 +59,45 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Clean and assemble text pieces from PDF stream content, handling kerning TJ arrays and Tj strings.
+ */
+function cleanPdfStream(decompressed: string): string {
+    let out = '';
+    // Match TJ arrays: [ (str) num (str) ... ] TJ
+    const tjRegex = /\[(.*?)\]\s*TJ/gi;
+    let m;
+    while ((m = tjRegex.exec(decompressed)) !== null) {
+        const arrayContent = m[1];
+        const strParts: string[] = [];
+        const partRegex = /\((.*?)\)/g;
+        let pm;
+        while ((pm = partRegex.exec(arrayContent)) !== null) {
+            strParts.push(pm[1]);
+        }
+        out += ' ' + strParts.join('');
+    }
+    // Match Tj strings: (str) Tj
+    const singleTjRegex = /\((.*?)\)\s*Tj/gi;
+    while ((m = singleTjRegex.exec(decompressed)) !== null) {
+        out += ' ' + m[1];
+    }
+    return out;
+}
+
+/**
  * Extract readable text from a PDF buffer.
- * Decodes text from PDF content streams (handling FlateDecode compression) and literal strings.
+ * Decodes text from PDF content streams (handling FlateDecode compression, TJ/Tj operators) and literal strings.
  */
 function extractPdfText(buffer: Buffer): string {
     const text = buffer.toString('latin1');
     const chunks: string[] = [];
     
     // Extract text from PDF literal strings (parenthesized text)
-    const stringRegex = /\(([^)]{3,})\)/g;
+    const stringRegex = /\(([^)]{2,})\)/g;
     let match;
     while ((match = stringRegex.exec(text)) !== null) {
         const printable = match[1].replace(/[^\x20-\x7E]/g, '').trim();
-        if (printable.length > 2) {
+        if (printable.length > 1) {
             chunks.push(printable);
         }
     }
@@ -85,25 +111,32 @@ function extractPdfText(buffer: Buffer): string {
 
         try {
             const decompressed = zlib.inflateSync(rawStream).toString('latin1');
-            let m;
-            while ((m = stringRegex.exec(decompressed)) !== null) {
-                const p = m[1].replace(/[^\x20-\x7E]/g, '').trim();
-                if (p.length > 2) chunks.push(p);
+            const streamText = cleanPdfStream(decompressed);
+            if (streamText.length > 5) {
+                chunks.push(streamText);
             }
             const printable = decompressed.replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
             if (printable.length > 10) {
                 chunks.push(printable);
             }
         } catch {
-            // Uncompressed stream fallback
-            const printable = match[1].replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
-            if (printable.length > 10) {
-                chunks.push(printable);
+            try {
+                const decompressed = zlib.inflateRawSync(rawStream).toString('latin1');
+                const streamText = cleanPdfStream(decompressed);
+                if (streamText.length > 5) chunks.push(streamText);
+                const printable = decompressed.replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (printable.length > 10) chunks.push(printable);
+            } catch {
+                // Uncompressed stream fallback
+                const printable = match[1].replace(/[^\x20-\x7E\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (printable.length > 10) {
+                    chunks.push(printable);
+                }
             }
         }
     }
     
-    return chunks.join(' ').slice(0, 20000); // Cap at 20k chars
+    return chunks.join(' ').slice(0, 100000); // Cap at 100k chars
 }
 
 /**
