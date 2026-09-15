@@ -231,6 +231,189 @@
     }
 }
 
+.attachmentSectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+}
+
+.attachmentQuickActions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+}
+
+.quickActionBtn {
+    background: none;
+    border: none;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #2563eb;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: #eff6ff;
+        text-decoration: underline;
+    }
+}
+
+.divider {
+    color: #cbd5e1;
+    font-size: 0.7rem;
+}
+
+.guardrailNotice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-left: 3px solid #2563eb;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    color: #1e3a8a;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+.guardrailIcon {
+    color: #2563eb;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.noAttachmentsBox {
+    padding: 0.75rem;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+}
+
+.attachmentGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.attachmentCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.65rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+
+    &:hover {
+        border-color: #93c5fd;
+        background: #f8fafc;
+    }
+
+    &.checked {
+        border-color: #93c5fd;
+        background: #eff6ff;
+    }
+}
+
+.attachmentMain {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkboxIcon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.attachmentInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.attachmentLabelRow {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.attBadge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: #dbeafe;
+    color: #1e40af;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+}
+
+.attLabel {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attFileName {
+    font-size: 0.68rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.previewBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #1e40af;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: #dbeafe;
+        border-color: #93c5fd;
+        color: #1d4ed8;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
 .previewContainer {
     border: 1px solid var(--border-default, #e2e8f0);
     border-radius: 8px;

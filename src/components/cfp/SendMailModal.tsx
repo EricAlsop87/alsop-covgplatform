@@ -14,6 +14,10 @@ import {
     Eye,
     Edit3,
     Plus,
+    Paperclip,
+    ShieldCheck,
+    CheckSquare,
+    Square,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './SendMailModal.module.scss';
@@ -25,6 +29,16 @@ export interface TeamRecipient {
     email: string;
     avatarText: string;
     roleText?: string;
+}
+
+export interface AttachmentItem {
+    id: string;
+    label: string;
+    badge: string;
+    fileName: string;
+    storagePath: string;
+    bucket: 'cfp-platform-documents' | 'cfp-raw-decpage';
+    docCategory: 'dec' | 'renewal' | 'rce' | 'quote' | 'dic' | 'other';
 }
 
 export const TEAM_RECIPIENTS: TeamRecipient[] = [
@@ -49,12 +63,125 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [customCc, setCustomCc] = useState('');
     const [subject, setSubject] = useState('');
     const [customNotes, setCustomNotes] = useState('');
-    const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
+    const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
+    const [previewingId, setPreviewingId] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-    // Initialize subject & template when modal opens with term
+    // Compute all candidate attachments available for this policy term
+    const availableAttachments = useMemo<AttachmentItem[]>(() => {
+        if (!term) return [];
+        const items: AttachmentItem[] = [];
+
+        // 1. Dec page
+        if (term.has_dec && term.dec_storage_path) {
+            items.push({
+                id: 'dec',
+                label: 'FAIR Plan Dec Page',
+                badge: 'DEC PAGE',
+                fileName: term.dec_file_name || `FAIR_Plan_Dec_${term.policy_number}.pdf`,
+                storagePath: term.dec_storage_path,
+                bucket: term.dec_bucket || 'cfp-raw-decpage',
+                docCategory: 'dec',
+            });
+        }
+
+        // 2. Renewal Dec
+        if (term.has_renewal_dec && term.renewal_dec_storage_path) {
+            items.push({
+                id: 'renewal_dec',
+                label: 'Renewal Offer Dec Page',
+                badge: 'RENEWAL DEC',
+                fileName: term.renewal_dec_file_name || `Renewal_Offer_${term.policy_number}.pdf`,
+                storagePath: term.renewal_dec_storage_path,
+                bucket: term.renewal_dec_bucket || 'cfp-platform-documents',
+                docCategory: 'renewal',
+            });
+        }
+
+        // 3. RCE Valuation
+        if (term.has_rce && term.rce_storage_path) {
+            items.push({
+                id: 'rce',
+                label: `RCE Valuation (${term.rce_carrier || '360Value'})`,
+                badge: 'RCE REPORT',
+                fileName: term.rce_file_name || 'RCE_Valuation_Report.pdf',
+                storagePath: term.rce_storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'rce',
+            });
+        }
+
+        // 4. Bamboo Quote
+        if (term.carrier_quotes?.bamboo?.storage_path) {
+            items.push({
+                id: 'bamboo',
+                label: 'Bamboo Companion Quote',
+                badge: 'BAMBOO QUOTE',
+                fileName: term.carrier_quotes.bamboo.file_name || term.carrier_quotes.bamboo.doc_file_name || 'Bamboo_Quote.pdf',
+                storagePath: term.carrier_quotes.bamboo.storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'quote',
+            });
+        }
+
+        // 5. Aegis Quote
+        if (term.carrier_quotes?.aegis?.storage_path) {
+            items.push({
+                id: 'aegis',
+                label: 'Aegis Security / General Quote',
+                badge: 'AEGIS QUOTE',
+                fileName: term.carrier_quotes.aegis.file_name || term.carrier_quotes.aegis.doc_file_name || 'Aegis_Quote.pdf',
+                storagePath: term.carrier_quotes.aegis.storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'quote',
+            });
+        }
+
+        // 6. American Modern (AM) Quote
+        if (term.carrier_quotes?.am?.storage_path) {
+            items.push({
+                id: 'am',
+                label: 'American Modern Quote',
+                badge: 'AM QUOTE',
+                fileName: term.carrier_quotes.am.file_name || term.carrier_quotes.am.doc_file_name || 'American_Modern_Quote.pdf',
+                storagePath: term.carrier_quotes.am.storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'quote',
+            });
+        }
+
+        // 7. PSIC Quote
+        if (term.carrier_quotes?.psic?.storage_path) {
+            items.push({
+                id: 'psic',
+                label: 'Pacific Specialty (PSIC) Quote',
+                badge: 'PSIC QUOTE',
+                fileName: term.carrier_quotes.psic.file_name || term.carrier_quotes.psic.doc_file_name || 'PSIC_Quote.pdf',
+                storagePath: term.carrier_quotes.psic.storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'quote',
+            });
+        }
+
+        // 8. In-force DIC Dec Page
+        if (term.has_dic && term.dic_storage_path) {
+            items.push({
+                id: 'dic',
+                label: `DIC Dec Page (${term.dic_carrier || 'DIC'})`,
+                badge: 'DIC DEC',
+                fileName: term.dic_file_name || 'DIC_Dec_Page.pdf',
+                storagePath: term.dic_storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'dic',
+            });
+        }
+
+        return items;
+    }, [term]);
+
+    // Initialize subject, notes & pre-selected attachments when modal opens with term
     useEffect(() => {
         if (!term) return;
         const polNum = term.policy_number || 'Policy';
@@ -64,13 +191,58 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setError(null);
         setSuccessMsg(null);
         setSelectedRecipientIds(['nancy', 'olga']);
-    }, [term, isOpen]);
+        // Guardrail: Pre-select all available detected attachments by default
+        setSelectedAttachmentIds(availableAttachments.map(a => a.id));
+    }, [term, isOpen, availableAttachments]);
+
+    const toggleAttachment = (id: string) => {
+        setSelectedAttachmentIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllAttachments = () => {
+        setSelectedAttachmentIds(availableAttachments.map(a => a.id));
+    };
+
+    const handleDeselectAllAttachments = () => {
+        setSelectedAttachmentIds([]);
+    };
+
+    // Helper to preview PDF in a new tab via signed URL
+    const handlePreviewPdf = async (att: AttachmentItem) => {
+        setPreviewingId(att.id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/documents/signed-url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+                },
+                body: JSON.stringify({
+                    storagePath: att.storagePath,
+                    bucket: att.bucket,
+                }),
+            });
+            const data = await res.json();
+            if (data.signedUrl) {
+                window.open(data.signedUrl, '_blank');
+            } else {
+                setError(data.error || 'Could not generate preview link for this document.');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Error opening PDF preview.');
+        } finally {
+            setPreviewingId(null);
+        }
+    };
 
     // Build structured document items covering all 4 companion carriers + Dec + RCE + Title
     const docItems = useMemo(() => {
         if (!term) return [];
 
-        const formatQuote = (carrierName: string, q: any) => {
+        const formatQuote = (carrierName: string, carrierKey: string, q: any) => {
             if (!q) {
                 return {
                     name: `${carrierName} Quote`,
@@ -91,11 +263,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 };
             }
 
+            const isAttached = selectedAttachmentIds.includes(carrierKey);
             const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : (q.coverage_type || 'Quoted');
             const details = [
                 q.coverage_type ? `Type: ${q.coverage_type}` : null,
                 q.notes ? `Note: ${q.notes}` : null,
-            ].filter(Boolean).join(' | ') || 'Quote on file (Attached)';
+                isAttached ? '(Attached)' : '(Not Attached)',
+            ].filter(Boolean).join(' | ');
 
             return {
                 name: `${carrierName} Quote`,
@@ -106,10 +280,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             };
         };
 
-        const bamboo = formatQuote('Bamboo', term.carrier_quotes?.bamboo);
-        const aegis = formatQuote('Aegis', term.carrier_quotes?.aegis);
-        const am = formatQuote('American Modern (AM)', term.carrier_quotes?.am);
-        const psic = formatQuote('PSIC', term.carrier_quotes?.psic);
+        const bamboo = formatQuote('Bamboo', 'bamboo', term.carrier_quotes?.bamboo);
+        const aegis = formatQuote('Aegis', 'aegis', term.carrier_quotes?.aegis);
+        const am = formatQuote('American Modern (AM)', 'am', term.carrier_quotes?.am);
+        const psic = formatQuote('PSIC', 'psic', term.carrier_quotes?.psic);
 
         const titleStatus = term.title_pro
             ? (term.title_pro.match_status === 'matched' ? 'Verified' : term.title_pro.match_status === 'partial' ? 'Trust / LLC' : 'Mismatch')
@@ -123,13 +297,21 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             ? `${term.title_pro.title_name || 'Verified'}${term.title_pro.notes ? ` (${term.title_pro.notes})` : ''}`
             : 'Pending title record match';
 
+        const isDecAttached = selectedAttachmentIds.includes('dec');
+        const isRenewalAttached = selectedAttachmentIds.includes('renewal_dec');
+        const isRceAttached = selectedAttachmentIds.includes('rce');
+
         const decStatus = term.has_dec
             ? 'Available'
             : (term.has_renewal_dec ? 'Renewal Available' : 'Missing');
         const decStatusType = (term.has_dec || term.has_renewal_dec) ? ('available' as const) : ('missing' as const);
         const decDetails = term.has_dec
-            ? (term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : 'Attached')
-            : (term.has_renewal_dec ? 'Renewal Offer (Attached)' : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'));
+            ? (term.expiration_date ? `Exp: ${term.expiration_date} ${isDecAttached ? '(Attached)' : '(Not Attached)'}` : (isDecAttached ? '(Attached)' : '(Not Attached)'))
+            : (term.has_renewal_dec ? (isRenewalAttached ? 'Renewal Offer (Attached)' : 'Renewal Offer (Not Attached)') : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'));
+
+        const rceDetails = term.has_rce
+            ? (isRceAttached ? 'Valuation on file (Attached)' : 'Valuation on file (Not Attached)')
+            : 'No RCE uploaded';
 
         return [
             {
@@ -144,7 +326,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 status: term.has_rce ? 'Available' : 'Missing',
                 statusType: term.has_rce ? ('available' as const) : ('missing' as const),
                 premium: term.rce_carrier || (term.has_rce ? '360Value' : '—'),
-                details: term.has_rce ? 'Valuation on file (Attached)' : 'No RCE uploaded',
+                details: rceDetails,
             },
             bamboo,
             aegis,
@@ -158,7 +340,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 details: titleDetails,
             },
         ];
-    }, [term]);
+    }, [term, selectedAttachmentIds]);
 
     // Build the executive HTML Email Body with professional blue theme
     const htmlBody = useMemo(() => {
@@ -169,6 +351,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const addr = term.property_address || 'Address on file';
         const exp = term.expiration_date || '—';
         const prem = term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—';
+
+        const attachedFilesList = availableAttachments
+            .filter(a => selectedAttachmentIds.includes(a.id))
+            .map(a => `${a.label} (${a.fileName})`);
 
         const rowsHtml = docItems.map(item => {
             let badgeHtml = '';
@@ -197,6 +383,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                  <p style="margin:6px 0 0 0;color:#334155;font-size:13px;line-height:1.5;">${customNotes.replace(/\n/g, '<br/>')}</p>
                </div>`
             : '';
+
+        const attachmentNoticeHtml = attachedFilesList.length > 0
+            ? `<div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:4px;font-size:12.5px;color:#1e293b;">
+                 <strong>Attached Files (${attachedFilesList.length}):</strong> ${attachedFilesList.join(', ')}
+               </div>`
+            : `<div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #64748b;border-radius:4px;font-size:12.5px;color:#475569;">
+                 <strong>Notice:</strong> No documents attached (Status Summary Only).
+               </div>`;
 
         return `
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;max-width:680px;margin:0 auto;padding:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
@@ -240,9 +434,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             </tbody>
           </table>
 
-          <div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:4px;font-size:12.5px;color:#1e293b;">
-            <strong>Attached Files:</strong> Available policy documents (Dec Page, RCE Valuation, and Companion Quotes) are attached for your reference.
-          </div>
+          ${attachmentNoticeHtml}
 
           ${notesBlock}
 
@@ -251,7 +443,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           </p>
         </div>
         `;
-    }, [term, docItems, customNotes]);
+    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds]);
 
     if (!isOpen || !term) return null;
 
@@ -279,6 +471,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const recipientEmails = selectedRecipients.map(r => r.email);
         const recipientNames = selectedRecipients.map(r => r.name.split(' ')[0]);
 
+        const selectedAttachmentsPayload = availableAttachments
+            .filter(a => selectedAttachmentIds.includes(a.id))
+            .map(a => ({
+                storagePath: a.storagePath,
+                fileName: a.fileName,
+                bucket: a.bucket,
+            }));
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.access_token) {
@@ -301,13 +501,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     customCc: customCc.trim() || undefined,
                     subject,
                     htmlBody,
+                    selectedAttachments: selectedAttachmentsPayload,
                 }),
             });
 
             const json = await res.json();
 
             if (res.ok && json.success) {
-                setSuccessMsg(`✓ Email successfully sent to ${recipientNames.join(', ')}!`);
+                setSuccessMsg(`✓ Email successfully sent to ${recipientNames.join(', ')} (${selectedAttachmentsPayload.length} files attached)!`);
                 onSentSuccess(term.policy_id, recipientNames);
                 setTimeout(() => {
                     onClose();
@@ -432,6 +633,92 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         />
                     </div>
 
+                    {/* Guardrail: Attachment Pre-Selection & PDF Verification */}
+                    <div className={styles.formSection}>
+                        <div className={styles.attachmentSectionHeader}>
+                            <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                <Paperclip size={14} /> Attachments &amp; PDF Guardrail (Pre-Select Files)
+                            </label>
+                            {availableAttachments.length > 0 && (
+                                <div className={styles.attachmentQuickActions}>
+                                    <button
+                                        type="button"
+                                        className={styles.quickActionBtn}
+                                        onClick={handleSelectAllAttachments}
+                                    >
+                                        Select All ({availableAttachments.length})
+                                    </button>
+                                    <span className={styles.divider}>&bull;</span>
+                                    <button
+                                        type="button"
+                                        className={styles.quickActionBtn}
+                                        onClick={handleDeselectAllAttachments}
+                                    >
+                                        Clear All
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={styles.guardrailNotice}>
+                            <ShieldCheck size={14} className={styles.guardrailIcon} />
+                            <span>
+                                <strong>Accuracy Guardrail:</strong> Check the exact documents to attach. Click <strong>Preview</strong> to inspect any PDF before sending so no incorrect Dec page or quote is attached.
+                            </span>
+                        </div>
+
+                        {availableAttachments.length === 0 ? (
+                            <div className={styles.noAttachmentsBox}>
+                                No uploaded PDF documents found for this term. (Email will be sent as status summary only).
+                            </div>
+                        ) : (
+                            <div className={styles.attachmentGrid}>
+                                {availableAttachments.map(att => {
+                                    const isChecked = selectedAttachmentIds.includes(att.id);
+                                    const isPreviewing = previewingId === att.id;
+                                    return (
+                                        <div
+                                            key={att.id}
+                                            className={`${styles.attachmentCard} ${isChecked ? styles.checked : ''}`}
+                                        >
+                                            <div
+                                                className={styles.attachmentMain}
+                                                onClick={() => toggleAttachment(att.id)}
+                                            >
+                                                <span className={styles.checkboxIcon}>
+                                                    {isChecked ? <CheckSquare size={16} color="#1d4ed8" /> : <Square size={16} color="#94a3b8" />}
+                                                </span>
+                                                <div className={styles.attachmentInfo}>
+                                                    <div className={styles.attachmentLabelRow}>
+                                                        <span className={styles.attBadge}>{att.badge}</span>
+                                                        <span className={styles.attLabel}>{att.label}</span>
+                                                    </div>
+                                                    <span className={styles.attFileName} title={att.fileName}>
+                                                        {att.fileName}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className={styles.previewBtn}
+                                                onClick={() => handlePreviewPdf(att)}
+                                                disabled={isPreviewing}
+                                                title="Preview PDF in new tab"
+                                            >
+                                                {isPreviewing ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <Eye size={12} />
+                                                )}
+                                                <span>Preview</span>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
                     {/* Document Status Table Preview */}
                     <div className={styles.previewContainer}>
                         <div className={styles.previewHeader}>
@@ -504,7 +791,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         type="button"
                         className={styles.sendBtn}
                         onClick={handleSend}
-                        disabled={sending || selectedRecipientIds.length === 0 && !customCc.trim()}
+                        disabled={sending || (selectedRecipientIds.length === 0 && !customCc.trim())}
                     >
                         {sending ? (
                             <>
@@ -514,7 +801,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         ) : (
                             <>
                                 <Send size={15} />
-                                <span>Send Mail ({selectedRecipientIds.length + (customCc.trim() ? 1 : 0)})</span>
+                                <span>
+                                    Send Mail ({selectedRecipientIds.length + (customCc.trim() ? 1 : 0)} To &bull; {selectedAttachmentIds.length} Attached)
+                                </span>
                             </>
                         )}
                     </button>

@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
             subject,
             htmlBody,
             textBody,
+            selectedAttachments,
         } = body;
 
         if (!policyId || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -55,75 +56,20 @@ export async function POST(req: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
-        // ── Fetch & Attach Available Policy Documents (Dec Page, RCE, Quotes) ──
+        // ── Fetch & Attach Policy Documents (Dec Page, RCE, Quotes) ──
         const attachments: Array<{ name: string; content: string; contentType: string }> = [];
         const attachedNames: string[] = [];
 
         try {
-            // A. Fetch Dec Page PDF from dec_page_submissions / dec_pages
-            let decStoragePath: string | null = null;
-            let decFileName: string | null = null;
-
-            const { data: decPageRecord } = await adminClient
-                .from('dec_pages')
-                .select('id, submission_id, dec_page_submissions(storage_path, file_name)')
-                .eq('policy_id', policyId)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            if (decPageRecord) {
-                const sub = Array.isArray(decPageRecord.dec_page_submissions)
-                    ? decPageRecord.dec_page_submissions[0]
-                    : decPageRecord.dec_page_submissions;
-                if (sub?.storage_path) {
-                    decStoragePath = sub.storage_path;
-                    decFileName = sub.file_name;
-                } else if (decPageRecord.submission_id) {
-                    const { data: subDirect } = await adminClient
-                        .from('dec_page_submissions')
-                        .select('storage_path, file_name')
-                        .eq('id', decPageRecord.submission_id)
-                        .maybeSingle();
-                    if (subDirect?.storage_path) {
-                        decStoragePath = subDirect.storage_path;
-                        decFileName = subDirect.file_name;
-                    }
-                }
-            }
-
-            if (decStoragePath) {
-                const cleanPath = decStoragePath.replace(/^\/+/, '');
-                const buckets = ['cfp-raw-decpage', 'cfp-platform-documents'];
-                for (const b of buckets) {
-                    const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
-                    if (fileBlob) {
-                        const buffer = Buffer.from(await fileBlob.arrayBuffer());
-                        const safeName = decFileName || `FAIR_Plan_DecPage_${policyNumber || 'Policy'}.pdf`;
-                        attachments.push({
-                            name: safeName,
-                            content: buffer.toString('base64'),
-                            contentType: 'application/pdf',
-                        });
-                        attachedNames.push(safeName);
-                        break;
-                    }
-                }
-            }
-
-            // B. Fetch other policy documents (RCE, Quotes, Decs) from platform_documents
-            const { data: platformDocs } = await adminClient
-                .from('platform_documents')
-                .select('id, file_name, storage_path, doc_type')
-                .eq('policy_id', policyId)
-                .order('created_at', { ascending: false });
-
-            if (platformDocs && platformDocs.length > 0) {
-                const buckets = ['cfp-platform-documents', 'cfp-raw-decpage'];
-                for (const doc of platformDocs) {
-                    if (!doc.storage_path) continue;
-                    const cleanPath = doc.storage_path.replace(/^\/+/, '');
-                    const safeName = doc.file_name || `${doc.doc_type || 'Document'}.pdf`;
+            // If the VA explicitly pre-selected specific attachments via the guardrail checklist:
+            if (Array.isArray(selectedAttachments)) {
+                for (const item of selectedAttachments) {
+                    if (!item.storagePath) continue;
+                    const cleanPath = item.storagePath.replace(/^\/+/, '');
+                    const buckets = item.bucket
+                        ? [item.bucket, 'cfp-raw-decpage', 'cfp-platform-documents']
+                        : ['cfp-platform-documents', 'cfp-raw-decpage'];
+                    const safeName = item.fileName || 'Document.pdf';
 
                     if (attachedNames.includes(safeName)) continue;
 
@@ -138,6 +84,90 @@ export async function POST(req: NextRequest) {
                             });
                             attachedNames.push(safeName);
                             break;
+                        }
+                    }
+                }
+            } else {
+                // Fallback: auto-detect all available documents for this policy
+                // A. Fetch Dec Page PDF from dec_page_submissions / dec_pages
+                let decStoragePath: string | null = null;
+                let decFileName: string | null = null;
+
+                const { data: decPageRecord } = await adminClient
+                    .from('dec_pages')
+                    .select('id, submission_id, dec_page_submissions(storage_path, file_name)')
+                    .eq('policy_id', policyId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (decPageRecord) {
+                    const sub = Array.isArray(decPageRecord.dec_page_submissions)
+                        ? decPageRecord.dec_page_submissions[0]
+                        : decPageRecord.dec_page_submissions;
+                    if (sub?.storage_path) {
+                        decStoragePath = sub.storage_path;
+                        decFileName = sub.file_name;
+                    } else if (decPageRecord.submission_id) {
+                        const { data: subDirect } = await adminClient
+                            .from('dec_page_submissions')
+                            .select('storage_path, file_name')
+                            .eq('id', decPageRecord.submission_id)
+                            .maybeSingle();
+                        if (subDirect?.storage_path) {
+                            decStoragePath = subDirect.storage_path;
+                            decFileName = subDirect.file_name;
+                        }
+                    }
+                }
+
+                if (decStoragePath) {
+                    const cleanPath = decStoragePath.replace(/^\/+/, '');
+                    const buckets = ['cfp-raw-decpage', 'cfp-platform-documents'];
+                    for (const b of buckets) {
+                        const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
+                        if (fileBlob) {
+                            const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                            const safeName = decFileName || `FAIR_Plan_DecPage_${policyNumber || 'Policy'}.pdf`;
+                            attachments.push({
+                                name: safeName,
+                                content: buffer.toString('base64'),
+                                contentType: 'application/pdf',
+                            });
+                            attachedNames.push(safeName);
+                            break;
+                        }
+                    }
+                }
+
+                // B. Fetch other policy documents (RCE, Quotes, Decs) from platform_documents
+                const { data: platformDocs } = await adminClient
+                    .from('platform_documents')
+                    .select('id, file_name, storage_path, doc_type')
+                    .eq('policy_id', policyId)
+                    .order('created_at', { ascending: false });
+
+                if (platformDocs && platformDocs.length > 0) {
+                    const buckets = ['cfp-platform-documents', 'cfp-raw-decpage'];
+                    for (const doc of platformDocs) {
+                        if (!doc.storage_path) continue;
+                        const cleanPath = doc.storage_path.replace(/^\/+/, '');
+                        const safeName = doc.file_name || `${doc.doc_type || 'Document'}.pdf`;
+
+                        if (attachedNames.includes(safeName)) continue;
+
+                        for (const b of buckets) {
+                            const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
+                            if (fileBlob) {
+                                const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                                attachments.push({
+                                    name: safeName,
+                                    content: buffer.toString('base64'),
+                                    contentType: 'application/pdf',
+                                });
+                                attachedNames.push(safeName);
+                                break;
+                            }
                         }
                     }
                 }
