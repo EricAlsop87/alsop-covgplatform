@@ -37,7 +37,7 @@ const policyTabs = [
     { id: 'overview', label: 'OVERVIEW' },
     { id: 'terms', label: 'TERMS' },
     { id: 'cfp', label: 'POLICY' },
-    { id: 'dic', label: 'DIC POLICY' },
+    { id: 'dic', label: 'DIC/Full Quote' },
     { id: 'rce', label: 'RCE DATA' },
     { id: 'flags', label: 'FLAGS' },
     { id: 'notes', label: 'NOTES' },

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Declaration, PolicyDetail, DicDocData } from '@/lib/api';
 import { Card } from '@/components/ui/Card/Card';
 import { ShieldCheck, AlertCircle, FileText, User, DollarSign, Home, HomeIcon, Layers, Calendar, Copy } from 'lucide-react';
+import { normalizeCarrierDisplayName, detectDocumentCarrier } from '@/lib/carrierBadges';
 import fallbackStyles from '../PolicyDashboard.module.css';
 import styles from './PolicyDicDetailsTab.module.css';
 
@@ -89,11 +90,11 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
                         <ShieldCheck size={28} />
                     </div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                        No DIC Policy Linked
+                        No DIC / Quote Linked
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: 1.5, margin: 0 }}>
-                        No DIC (Difference in Conditions) carrier policy has been uploaded or linked to this policy yet.
-                        You can upload a DIC dec page from the action bar above, or toggle &quot;DIC Exists&quot; in the Edit Policy panel.
+                        No DIC or Companion Quote document has been uploaded or linked to this policy yet.
+                        You can upload a DIC dec page or Quote from the action bar above, or toggle &quot;DIC Exists&quot; in the Edit Policy panel.
                     </p>
                 </div>
             </div>
@@ -106,25 +107,25 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
             <div className={fallbackStyles.container}>
                 <h2 className={fallbackStyles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <ShieldCheck size={20} style={{ color: '#10b981' }} />
-                    DIC Policy Details
+                    DIC / Quote Details
                 </h2>
 
                 <div className={fallbackStyles.grid}>
                     {/* DIC Policy Info */}
                     <Card className={fallbackStyles.card}>
-                        <h3>DIC Policy Information</h3>
+                        <h3>DIC / Quote Information</h3>
                         <div className={fallbackStyles.field}>
-                            <label>DIC Company:</label>
-                            <span>{declaration.dic_company || '—'}</span>
+                            <label>Carrier / Company:</label>
+                            <span>{normalizeCarrierDisplayName(declaration.dic_company) || '—'}</span>
                         </div>
                         <div className={fallbackStyles.field}>
-                            <label>DIC Policy Number:</label>
+                            <label>Policy / Quote Number:</label>
                             <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
                                 {declaration.dic_policy_number || policyDetail?.dic_policy_number || '—'}
                             </span>
                         </div>
                         <div className={fallbackStyles.field}>
-                            <label>DIC Coverage Exists:</label>
+                            <label>Coverage Exists:</label>
                             <span style={{
                                 color: '#10b981',
                                 fontWeight: 600,
@@ -139,7 +140,7 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
 
                     {/* DIC Coverage Limits */}
                     <Card className={fallbackStyles.card}>
-                        <h3>DIC Coverage Limits</h3>
+                        <h3>Coverage Limits</h3>
                         <div className={fallbackStyles.field}>
                             <label>Cov A — Dwelling:</label>
                             <span>{declaration.dic_limit_dwelling || '—'}</span>
@@ -164,7 +165,7 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
 
                     {/* DIC Premium */}
                     <Card className={fallbackStyles.card}>
-                        <h3>DIC Premium</h3>
+                        <h3>Premium</h3>
                         <div className={fallbackStyles.field}>
                             <label>Annual Premium:</label>
                             <span className={fallbackStyles.premium}>
@@ -182,13 +183,13 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                 <AlertCircle size={14} style={{ color: '#3b82f6', flexShrink: 0, marginTop: '2px' }} />
                                 <span>
-                                    DIC coverage data is extracted automatically from uploaded DIC carrier declaration pages
-                                    (PSIC, Bamboo, Aegis) using AI extraction.
+                                    DIC and Quote coverage data is extracted automatically from uploaded companion carrier documents
+                                    (American Modern, Aegis, Bamboo, PSIC, SageSure) using AI extraction.
                                     Values may be manually adjusted via the Edit Policy panel.
                                 </span>
                             </div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                DIC data is stored separately and never overwrites CFP / FAIR Plan policy data.
+                                DIC / Quote data is stored separately and never overwrites CFP / FAIR Plan policy data.
                             </div>
                         </div>
                     </Card>
@@ -203,7 +204,7 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
         <div className={styles.wrapper}>
             <div className={styles.pageHeader}>
                 <ShieldCheck size={20} />
-                <h2>DIC Policy Details</h2>
+                <h2>DIC / Quote Details</h2>
             </div>
 
             {dicDocData.length > 1 && (
@@ -214,7 +215,7 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
                             className={`${styles.docPill} ${i === activeIndex && !showCompare ? styles.active : ''}`}
                             onClick={() => { setActiveIndex(i); setShowCompare(false); }}
                         >
-                            {d.carrier_name || 'Unknown Carrier'} • {d.file_name}
+                            {normalizeCarrierDisplayName(d.carrier_name) || detectDocumentCarrier(d)?.label || 'Unknown Carrier'} • {d.file_name}
                         </div>
                     ))}
                     <div
@@ -233,7 +234,7 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
                             <tr>
                                 <th>Field</th>
                                 {dicDocData.map((d, i) => (
-                                    <th key={i}>{d.carrier_name || `Doc ${i + 1}`}</th>
+                                    <th key={i}>{normalizeCarrierDisplayName(d.carrier_name) || detectDocumentCarrier(d)?.label || `Doc ${i + 1}`}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -279,10 +280,10 @@ export function PolicyDicDetailsTab({ declaration, policyDetail, dicDocData = []
                         {/* ── Policy Information ── */}
                         <SectionCard
                             icon={<FileText size={15} style={{ color: '#3b82f6' }} />}
-                            title="Policy Information"
+                            title="Policy / Quote Information"
                         >
-                            <Field label="Carrier Name" value={doc.carrier_name} />
-                            <Field label="Policy Number" value={doc.policy_number} mono />
+                            <Field label="Carrier Name" value={normalizeCarrierDisplayName(doc.carrier_name) || detectDocumentCarrier(doc)?.label || doc.carrier_name} />
+                            <Field label="Policy / Quote #" value={doc.policy_number} mono />
                             <Field label="Policy Form" value={doc.policy_form} />
                             <Field label="Effective Date" value={doc.effective_date} mono />
                             <Field label="Expiration Date" value={doc.expiration_date} mono />

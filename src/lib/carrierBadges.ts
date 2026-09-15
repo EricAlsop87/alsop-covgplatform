@@ -5,7 +5,7 @@
 
 export interface CarrierBadgeInfo {
     label: string;
-    carrierKey: 'bamboo' | 'american_modern' | 'psic' | 'aegis' | 'none';
+    carrierKey: 'bamboo' | 'american_modern' | 'psic' | 'aegis' | 'sagesure' | 'none';
     tooltip: string;
     textColor: string;
     bgColor: string;
@@ -14,7 +14,7 @@ export interface CarrierBadgeInfo {
 }
 
 /**
- * Palette definitions for the 4 primary companion carriers + missing
+ * Palette definitions for companion carriers + missing
  */
 export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
     textColor: string;
@@ -45,6 +45,12 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
         bgColor: 'rgba(71, 85, 105, 0.12)',
         borderColor: 'rgba(71, 85, 105, 0.30)',
     },
+    // 5. SageSure - Violet / Purple
+    sagesure: {
+        textColor: '#7c3aed',
+        bgColor: 'rgba(124, 58, 237, 0.12)',
+        borderColor: 'rgba(124, 58, 237, 0.30)',
+    },
     // None
     none: {
         textColor: '#94a3b8',
@@ -52,6 +58,34 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
         borderColor: 'rgba(148, 163, 184, 0.30)',
     },
 };
+
+/**
+ * Normalizes long or verbose carrier names to short clean brand names
+ * (e.g. "American Modern Property and Casualty Insurance Company" -> "American Modern")
+ */
+export function normalizeCarrierDisplayName(raw: string | null | undefined): string {
+    if (!raw) return '—';
+    const lower = raw.trim().toLowerCase();
+    if (lower.includes('american modern') || lower.includes('americanmodern') || lower.includes('cotality') || lower === 'am') {
+        return 'American Modern';
+    }
+    if (lower.includes('pacific specialty') || lower.includes('pacificspecialty') || lower.includes('psic')) {
+        return 'PSIC';
+    }
+    if (lower.includes('aegis') || lower.includes('obsidian')) {
+        return 'Aegis';
+    }
+    if (lower.includes('bamboo')) {
+        return 'Bamboo';
+    }
+    if (lower.includes('sagesure') || lower.includes('sage sure')) {
+        return 'SageSure';
+    }
+    if (lower.includes('fair plan') || lower.includes('california fair') || lower.includes('cfp')) {
+        return 'California FAIR Plan';
+    }
+    return raw.trim();
+}
 
 /**
  * Normalizes any carrier name, source string, or raw text into a standardized CarrierBadgeInfo.
@@ -153,6 +187,20 @@ export function getCarrierBadge(
         };
     }
 
+    // 5. SageSure
+    if (
+        lower.includes('sagesure') ||
+        lower.includes('sage sure')
+    ) {
+        return {
+            label: 'SageSure',
+            carrierKey: 'sagesure',
+            tooltip: `SageSure Insurance (${docType.toUpperCase()})`,
+            ...CARRIER_STYLES.sagesure,
+            hasDoc: true,
+        };
+    }
+
     // Default to Bamboo for standard 360Value / Companion docs
     return {
         label: 'Bamboo',
@@ -165,7 +213,7 @@ export function getCarrierBadge(
 
 /**
  * Detect carrier info directly from a document object (file_name, carrier_name, doc_type, source, created_by).
- * Resolves strictly to one of the 4 supported companion carriers: Bamboo, American Modern, PSIC, Aegis.
+ * Resolves strictly to one of the supported companion carriers: Bamboo, American Modern, PSIC, Aegis, SageSure.
  */
 export function detectDocumentCarrier(doc: {
     file_name?: string | null;
@@ -256,6 +304,20 @@ export function detectDocumentCarrier(doc: {
             carrierKey: 'aegis',
             tooltip: 'Aegis Security / Obsidian Pacific',
             ...CARRIER_STYLES.aegis,
+            hasDoc: true,
+        };
+    }
+
+    // 5. SageSure
+    if (
+        lower.includes('sagesure') ||
+        lower.includes('sage sure')
+    ) {
+        return {
+            label: 'SageSure',
+            carrierKey: 'sagesure',
+            tooltip: 'SageSure Insurance',
+            ...CARRIER_STYLES.sagesure,
             hasDoc: true,
         };
     }

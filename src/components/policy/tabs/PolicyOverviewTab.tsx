@@ -28,6 +28,7 @@ import {
     TrendingUp,
     Pencil,
 } from 'lucide-react';
+import { normalizeCarrierDisplayName } from '@/lib/carrierBadges';
 import { Button } from '@/components/ui/Button/Button';
 import styles from './PolicyOverviewTab.module.css';
 import { logger } from '@/lib/logger';
@@ -277,7 +278,7 @@ export function PolicyOverviewTab({ declaration, policyDetail, enrichments = [],
                             <h3>Companion Coverage</h3>
                         </div>
                         <span className={hasDic ? styles.dicChip : styles.planChip} style={!hasDic ? { background: 'rgba(107, 114, 128, 0.1)', color: 'var(--text-muted)' } : undefined}>
-                            {hasDic ? 'DIC POLICY' : 'NO DIC LINKED'}
+                            {hasDic ? 'DIC / QUOTE' : 'NO DIC / QUOTE LINKED'}
                         </span>
                     </div>
                     <div className={styles.cardBody}>
@@ -287,7 +288,7 @@ export function PolicyOverviewTab({ declaration, policyDetail, enrichments = [],
                                     <div className={styles.field} style={{ background: 'transparent', paddingBottom: '0.2rem' }}>
                                         <span className={styles.fieldLabel}>Carrier / Policy</span>
                                         <span className={styles.carrierSubtext}>
-                                            <strong style={{ color: 'var(--text-high)' }}>{declaration.dic_company}</strong>
+                                            <strong style={{ color: 'var(--text-high)' }}>{normalizeCarrierDisplayName(declaration.dic_company)}</strong>
                                             {declaration.dic_policy_number && <> · #{declaration.dic_policy_number}</>}
                                         </span>
                                     </div>
