@@ -1817,6 +1817,21 @@ export function CFPSummaryTable({
                             </select>
                         </div>
 
+                        {/* Quick shortcut to Current Month (Today) */}
+                        <button
+                            type="button"
+                            className={`${styles.filterPill} ${year === String(new Date().getFullYear()) && month === String(new Date().getMonth() + 1) ? styles.active : ''}`}
+                            onClick={() => {
+                                onYearChange(String(new Date().getFullYear()));
+                                onMonthChange(String(new Date().getMonth() + 1));
+                                setCurrentPage(1);
+                            }}
+                            title="Filter to current month covering today's date"
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', fontWeight: 600 }}
+                        >
+                            📅 This Month
+                        </button>
+
                         {/* Search Input with Instant Button & Refresh Arrow */}
                         <div className={styles.searchContainer}>
                             <div className={styles.searchBox}>

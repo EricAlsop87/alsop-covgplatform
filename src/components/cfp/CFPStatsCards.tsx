@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FileText, CalendarClock, AlertCircle, ShieldAlert, ShieldOff, FileQuestion } from 'lucide-react';
+import { FileText, CalendarClock, AlertCircle, ShieldAlert, ShieldOff, FileQuestion, FileCheck } from 'lucide-react';
 import type { CFPSummaryStats } from '@/app/api/cfp-summary/route';
 import styles from './CFPStatsCards.module.css';
 
@@ -31,13 +31,15 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
     const rceUploaded = stats.uploaded_rce ?? Math.max(0, stats.total_policies - stats.missing_rce);
     const dicUploaded = stats.uploaded_dic ?? Math.max(0, stats.total_policies - stats.missing_dic);
     const esUploaded = stats.uploaded_es ?? Math.max(0, stats.total_policies - stats.missing_es);
+    const totalDecOverall = stats.total_dec_uploaded_overall ?? decUploaded;
+    const totalDecSubmissions = stats.total_dec_submissions ?? totalDecOverall;
 
     const cards = [
         {
             title: 'CFP Policies',
             value: stats.total_policies.toLocaleString(),
             sublabel: stats.total_bamboo_pending ? `+ ${stats.total_bamboo_pending.toLocaleString()} Bamboo in-force pending` : 'Total tracked policies',
-            uploaded: undefined,
+            uploaded: undefined as string | number | undefined,
             color: '#2243B6',
             bg: 'rgba(34, 67, 182, 0.1)',
             icon: FileText,
@@ -46,19 +48,19 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             title: 'Expiring This Month',
             value: stats.expiring_this_month.toLocaleString(),
             sublabel: 'Current terms up for renewal',
-            uploaded: undefined,
+            uploaded: undefined as string | number | undefined,
             color: '#06b6d4',
             bg: 'rgba(6, 182, 212, 0.1)',
             icon: CalendarClock,
         },
         {
-            title: 'Missing DEC',
-            value: stats.missing_dec.toLocaleString(),
-            sublabel: 'Awaiting DEC page document',
-            uploaded: decUploaded,
-            color: '#f59e0b',
-            bg: 'rgba(245, 158, 11, 0.1)',
-            icon: AlertCircle,
+            title: 'Total DEC Uploads',
+            value: totalDecOverall.toLocaleString(),
+            sublabel: `${stats.missing_dec.toLocaleString()} missing on active CFP`,
+            uploaded: totalDecSubmissions > totalDecOverall ? `${totalDecSubmissions.toLocaleString()} total submitted` : `${totalDecOverall.toLocaleString()} on file`,
+            color: '#10b981',
+            bg: 'rgba(16, 185, 129, 0.1)',
+            icon: FileCheck,
         },
         {
             title: 'Missing RCE',
@@ -113,10 +115,10 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
                             {card.uploaded !== undefined && (
                                 <span
                                     className={styles.uploadedBadge}
-                                    title={`${card.uploaded.toLocaleString()} documents uploaded on file`}
+                                    title={`${typeof card.uploaded === 'number' ? card.uploaded.toLocaleString() : card.uploaded}`}
                                 >
                                     <span className={styles.uploadedDot}>●</span>
-                                    {card.uploaded.toLocaleString()} uploaded
+                                    {typeof card.uploaded === 'number' ? `${card.uploaded.toLocaleString()} uploaded` : card.uploaded}
                                 </span>
                             )}
                         </div>

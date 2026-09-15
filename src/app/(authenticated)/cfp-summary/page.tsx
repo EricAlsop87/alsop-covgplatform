@@ -45,11 +45,11 @@ function CFPSummaryContent() {
     const abortControllerRef = useRef<AbortController | null>(null);
     const requestIdRef = useRef(0);
 
-    // Filters with localStorage memory persistence and current month/year defaults
+    // Filters with current month/year defaults covering today's date
     const [year, setYearState] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_year');
-            if (saved && saved !== 'all') return saved;
+            if (saved && saved !== 'all' && saved !== '' && saved !== 'undefined') return saved;
         }
         return currentYearStr;
     });
@@ -57,7 +57,7 @@ function CFPSummaryContent() {
     const [month, setMonthState] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_month');
-            if (saved && saved !== 'all' && saved !== '') return saved;
+            if (saved && saved !== 'all' && saved !== '' && saved !== 'undefined') return saved;
         }
         return currentMonthStr;
     });

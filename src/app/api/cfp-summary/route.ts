@@ -277,6 +277,8 @@ export interface CFPSummaryStats {
     expiring_this_month: number;
     missing_dec: number;
     uploaded_dec?: number;
+    total_dec_uploaded_overall?: number;
+    total_dec_submissions?: number;
     missing_rce: number;
     uploaded_rce?: number;
     missing_dic: number;
@@ -943,15 +945,19 @@ async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise
         .ilike('policies.policy_number', 'CFP %')
         .neq('policies.status', 'pending_dec');
 
-    // Document counts via exact joins
-    const [decRes, rceRes, dicRes, esRes] = await Promise.all([
+    // Document counts via exact joins and overall totals
+    const [decRes, decSubmissionsRes, decPagesOverallRes, rceRes, dicRes, esRes] = await Promise.all([
         admin.from('dec_pages').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
+        admin.from('dec_page_submissions').select('id', { count: 'exact', head: true }),
+        admin.from('dec_pages').select('id', { count: 'exact', head: true }),
         admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'rce').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
         admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'dic_dec_page').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
         admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'es_doc').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
     ]);
 
     const hasDec = decRes.count || 0;
+    const totalDecOverall = decPagesOverallRes.count || 0;
+    const totalDecSubmissions = decSubmissionsRes.count || 0;
     const hasRce = rceRes.count || 0;
     const hasDic = dicRes.count || 0;
     const hasEs = esRes.count || 0;
@@ -963,6 +969,8 @@ async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise
         expiring_this_month: expiring_this_month || 0,
         missing_dec: Math.max(0, total - hasDec),
         uploaded_dec: hasDec,
+        total_dec_uploaded_overall: totalDecOverall,
+        total_dec_submissions: totalDecSubmissions,
         missing_rce: Math.max(0, total - hasRce),
         uploaded_rce: hasRce,
         missing_dic: Math.max(0, total - hasDic),
