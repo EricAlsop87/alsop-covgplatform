@@ -125,7 +125,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 isAvailable: term.has_dec,
                 isUnavailable: false,
                 premium: term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—',
-                details: term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : '—',
+                details: term.has_dec
+                    ? (term.expiration_date ? `Exp: ${term.expiration_date} (Attached)` : 'Attached')
+                    : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'),
             },
             {
                 name: 'RCE Valuation Report',
