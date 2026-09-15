@@ -128,12 +128,12 @@ DIC ENDORSEMENT / FIRE EXCLUSION:
   - dic_form_number = the exclusion line description or form code (e.g., "DIC - Fire, Extended Coverage, Vandalism Excl" or "PO39-CA-DP3")
 
 PREMIUMS & FEES:
-- Look for "POLICY PREMIUM SUMMARY" or "Total Policy Premium" section
-- basic_premium: "Total Premium:" or "Basic Premium:" (numeric, e.g. 1673.00)
+- Look for "POLICY PREMIUM SUMMARY", "TOTAL POLICY PREMIUM", or the summary section at the bottom of the quote coverage table:
+- total_charge: CRITICAL: Extract the final bottom-line annual policy total (e.g., "TOTAL POLICY PREMIUM: $721", "TOTAL COST:", "TOTAL POLICY CHARGE:", "ANNUAL POLICY PREMIUM:"). This must include all mandatory fees (e.g., Policy Fee $40, Inspection Fee $55). Numeric (e.g., 721.00).
+- basic_premium: "TOTAL PREMIUM:" (e.g. $626) or "Basic Premium:". IMPORTANT: DO NOT extract single line items like "Coverage A - Dwelling $525" as basic_premium or total_charge.
 - optional_premium: "Optional Coverage Premium:" (numeric)
 - credits: Look for DIC credit discount like "DIC - Fire, Extended Coverage, Vandalism Excl $-25613.00" or "Credits:" → credits (numeric, negative e.g. -25613.00)
-- surcharges: Look for "Temporary Supplemental Fee", "Inspection Fee", or "Surcharges" → surcharges (numeric sum, e.g. 23.17)
-- total_charge: "Total Cost:" or "Total Charge:" or "Total Policy Charge" (numeric, e.g. 1696.17)
+- surcharges: Look for "Inspection Fee", "Policy Fee", "Temporary Supplemental Fee", or "Surcharges" → surcharges (numeric sum, e.g. 95.00)
 
 EMBEDDED 360VALUE / RCE DATA:
 - Some DIC dec pages embed 360Value replacement cost estimates

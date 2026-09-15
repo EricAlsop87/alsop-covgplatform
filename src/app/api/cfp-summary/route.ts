@@ -139,7 +139,7 @@ export function detectCarrierQuoteInfo(
     const matchBamboo = (fileName || '').match(/(Q100\d{6,}|CASNH\d+)/i) || (dic?.policy_number || '').match(/(Q100\d{6,}|CASNH\d+)/i);
     if (combined.includes('bamboo') || dicCarrier.includes('bamboo') || matchBamboo) {
         const isDic = (dic && dic.has_dic_endorsement === true) || combined.includes('does not cover the peril of fire') || (fn.includes('dic') && !fn.includes('ho3') && !fn.includes('home'));
-        const prem = dic?.basic_premium || dic?.total_charge || null;
+        const prem = dic?.total_charge || dic?.basic_premium || null;
         return {
             carrier_key: 'bamboo',
             coverage_type: isDic ? 'DIC' : 'FULL',
@@ -154,7 +154,7 @@ export function detectCarrierQuoteInfo(
     const matchAegis = (fileName || '').match(/(Q5\d{5,}|Q\d{6,}|OBS\d+|AEG\d+)/i) || (dic?.policy_number || '').match(/(Q5\d{5,}|Q\d{6,}|OBS\d+|AEG\d+)/i);
     if (combined.includes('aegis') || combined.includes('obsidian') || dicCarrier.includes('aegis') || dicCarrier.includes('obsidian') || matchAegis) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('california dic quote') || combined.includes('difference in conditions selected') || combined.includes('difference in conditions') || fn.includes('dic');
-        const prem = dic?.basic_premium || dic?.total_charge || null;
+        const prem = dic?.total_charge || dic?.basic_premium || null;
         return {
             carrier_key: 'aegis',
             coverage_type: isDic ? 'DIC' : 'FULL',
@@ -181,7 +181,7 @@ export function detectCarrierQuoteInfo(
         matchAm
     ) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('dic - fire') || combined.includes('dic -') || combined.includes('difference in conditions') || fn.includes('dic');
-        const prem = dic?.basic_premium || dic?.total_charge || null;
+        const prem = dic?.total_charge || dic?.basic_premium || null;
         return {
             carrier_key: 'am',
             coverage_type: isDic ? 'DIC' : 'FULL',
@@ -196,7 +196,7 @@ export function detectCarrierQuoteInfo(
     const matchPsic = (fileName || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i) || (dic?.policy_number || '').match(/(HO\d{7,}[A-Z0-9]*|PS\d{6,}|PSIC\d{5,})/i);
     if (combined.includes('pacific specialty') || combined.includes('pacificspecialty') || dicCarrier.includes('pacific') || combined.includes('psic') || matchPsic) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('difference in conditions included') || combined.includes('difference in conditions') || fn.includes('dic');
-        const prem = dic?.basic_premium || dic?.total_charge || null;
+        const prem = dic?.total_charge || dic?.basic_premium || null;
         return {
             carrier_key: 'psic',
             coverage_type: isDic ? 'DIC' : 'FULL',
