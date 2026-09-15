@@ -330,7 +330,7 @@ export async function GET(req: NextRequest) {
     const year = searchParams.get('year');
     const month = searchParams.get('month'); // optional, 1-12
     const search = searchParams.get('search')?.trim() || '';
-    const view = searchParams.get('view') || 'active_cfp'; // 'active_cfp' | 'bamboo_pipeline' | 'all'
+    const view = searchParams.get('view') || 'active_cfp'; // 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all'
     const statsOnly = searchParams.get('stats_only') === 'true';
 
     const admin = getSupabaseAdmin();
@@ -358,6 +358,7 @@ export async function GET(req: NextRequest) {
             es_exists,
             carrier_policy_number,
             source_dec_page_id,
+            import_batch_id,
             policies!inner (
                 id,
                 policy_number,
@@ -372,35 +373,39 @@ export async function GET(req: NextRequest) {
             )
         `);
 
-    if (view === 'bamboo_pipeline') {
+    if (view === 'campaign_91_address' || view === 'campaign_92_address') {
+        termsQuery = termsQuery.eq('import_batch_id', 'c9200000-0000-0000-0000-000000000092');
+    } else if (view === 'bamboo_pipeline') {
         termsQuery = termsQuery.eq('policies.status', 'pending_dec');
     } else if (view === 'all') {
-        termsQuery = termsQuery.or('policy_number.ilike.CFP %,status.eq.pending_dec', { foreignTable: 'policies' });
+        termsQuery = termsQuery.or('policy_number.ilike.CFP %,policy_number.ilike.CEA %,status.eq.pending_dec', { foreignTable: 'policies' });
     } else {
         // active_cfp (default)
         termsQuery = termsQuery
-            .ilike('policies.policy_number', 'CFP %')
+            .or('policy_number.ilike.CFP %,policy_number.ilike.CEA %', { foreignTable: 'policies' })
             .neq('policies.status', 'pending_dec');
     }
 
     // Date range filter
-    if (year && month) {
-        const y = parseInt(year, 10);
-        const m = parseInt(month, 10);
-        const monthNum = m.toString().padStart(2, '0');
-        const lastDay = new Date(y, m, 0).getDate();
-        const startDate = `${y}-${monthNum}-01`;
-        const endDate = `${y}-${monthNum}-${lastDay.toString().padStart(2, '0')}`;
-        termsQuery = termsQuery
-            .gte('expiration_date', startDate)
-            .lte('expiration_date', endDate);
-    } else if (year) {
-        const yearNum = parseInt(year, 10);
-        const startDate = `${yearNum}-01-01`;
-        const endDate = `${yearNum}-12-31`;
-        termsQuery = termsQuery
-            .gte('expiration_date', startDate)
-            .lte('expiration_date', endDate);
+    if ((view !== 'campaign_91_address' && view !== 'campaign_92_address') || (year && year !== 'all' && year !== '')) {
+        if (year && month && year !== 'all' && month !== 'all' && month !== '') {
+            const y = parseInt(year, 10);
+            const m = parseInt(month, 10);
+            const monthNum = m.toString().padStart(2, '0');
+            const lastDay = new Date(y, m, 0).getDate();
+            const startDate = `${y}-${monthNum}-01`;
+            const endDate = `${y}-${monthNum}-${lastDay.toString().padStart(2, '0')}`;
+            termsQuery = termsQuery
+                .gte('expiration_date', startDate)
+                .lte('expiration_date', endDate);
+        } else if (year && year !== 'all' && year !== '') {
+            const yearNum = parseInt(year, 10);
+            const startDate = `${yearNum}-01-01`;
+            const endDate = `${yearNum}-12-31`;
+            termsQuery = termsQuery
+                .gte('expiration_date', startDate)
+                .lte('expiration_date', endDate);
+        }
     }
 
     termsQuery = termsQuery.order('expiration_date', { ascending: true });

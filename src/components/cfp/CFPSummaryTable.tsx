@@ -122,11 +122,11 @@ interface CFPSummaryTableProps {
     year: string;
     month: string;
     search: string;
-    view?: 'active_cfp' | 'bamboo_pipeline' | 'all';
+    view?: 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all';
     onYearChange: (y: string) => void;
     onMonthChange: (m: string) => void;
     onSearchChange: (s: string) => void;
-    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'all') => void;
+    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all') => void;
     onRefresh: () => void;
     totalTerms: number;
     totalFamilies: number;
@@ -1777,7 +1777,7 @@ export function CFPSummaryTable({
     return (
         <div className={styles.tableContainer}>
             {/* ── View Switcher Tabs ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                 <button
                     type="button"
                     onClick={() => {
@@ -1799,6 +1799,26 @@ export function CFPSummaryTable({
                     style={{ fontSize: '0.8125rem', padding: '0.35rem 0.85rem', fontWeight: 600 }}
                 >
                     🌿 Bamboo In-Force Pipeline (Pending DEC)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        onViewChange?.('campaign_91_address');
+                        onYearChange('');
+                        onMonthChange('');
+                        setCurrentPage(1);
+                    }}
+                    className={`${styles.filterPill} ${view === 'campaign_91_address' || view === 'campaign_92_address' ? styles.active : ''}`}
+                    style={{
+                        fontSize: '0.8125rem',
+                        padding: '0.35rem 0.85rem',
+                        fontWeight: 600,
+                        background: (view === 'campaign_91_address' || view === 'campaign_92_address') ? 'var(--color-primary, #2243B6)' : undefined,
+                        color: (view === 'campaign_91_address' || view === 'campaign_92_address') ? '#ffffff' : undefined,
+                        borderColor: (view === 'campaign_91_address' || view === 'campaign_92_address') ? 'var(--color-primary, #2243B6)' : undefined,
+                    }}
+                >
+                    🎯 91 Address Campaign
                 </button>
                 <button
                     type="button"
