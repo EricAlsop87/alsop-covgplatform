@@ -17,12 +17,17 @@ import {
 import styles from './ActivityTab.module.css';
 import { logger } from '@/lib/logger';
 
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+
 interface PreviewDocState {
     title: string;
     subtitle?: string;
     url?: string | null;
     loading: boolean;
     error?: string | null;
+    policyId?: string;
+    docType?: string;
 }
 
 const MONTH_NAMES = [
@@ -183,7 +188,7 @@ export function ActivityTab() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [previewDoc]);
 
-    // Handle document preview loading
+    // Handle document preview loading with multi-tier storage path resolution
     const handlePreviewDoc = async (activity: ActivityFeedItem) => {
         const title = activity.file_name ||
             (activity.type === 'upload' ? 'California FAIR Plan Dec Page' : activity.title || 'Document');
@@ -198,17 +203,94 @@ export function ActivityTab() {
             url: null,
             loading: true,
             error: null,
+            policyId: activity.policy_id,
+            docType: activity.doc_type,
         });
 
         try {
-            const storagePath = activity.storage_path || activity.file_path;
-            const bucket = activity.bucket || (activity.type === 'upload' ? 'cfp-raw-decpage' : 'cfp-platform-documents');
+            let storagePath = activity.storage_path || activity.file_path;
+            let bucket = activity.bucket || (activity.type === 'upload' ? 'cfp-raw-decpage' : 'cfp-platform-documents');
+            let resolvedFileName = activity.file_name;
+
+            // Tier 1: Try document_id lookup in platform_documents
+            if (!storagePath && activity.document_id) {
+                const { data: pDoc } = await supabase
+                    .from('platform_documents')
+                    .select('storage_path, file_name, doc_type')
+                    .eq('id', activity.document_id)
+                    .maybeSingle();
+                if (pDoc?.storage_path) {
+                    storagePath = pDoc.storage_path;
+                    bucket = 'cfp-platform-documents';
+                    if (!resolvedFileName && pDoc.file_name) resolvedFileName = pDoc.file_name;
+                }
+            }
+
+            // Tier 2: Try activity.id lookup in platform_documents & dec_page_submissions
+            if (!storagePath && activity.id) {
+                const { data: pDoc } = await supabase
+                    .from('platform_documents')
+                    .select('storage_path, file_name, doc_type')
+                    .eq('id', activity.id)
+                    .maybeSingle();
+                if (pDoc?.storage_path) {
+                    storagePath = pDoc.storage_path;
+                    bucket = 'cfp-platform-documents';
+                    if (!resolvedFileName && pDoc.file_name) resolvedFileName = pDoc.file_name;
+                } else {
+                    const { data: dSub } = await supabase
+                        .from('dec_page_submissions')
+                        .select('storage_path, file_path, file_name')
+                        .eq('id', activity.id)
+                        .maybeSingle();
+                    if (dSub?.storage_path || dSub?.file_path) {
+                        storagePath = dSub.storage_path || dSub.file_path;
+                        bucket = 'cfp-raw-decpage';
+                        if (!resolvedFileName && dSub.file_name) resolvedFileName = dSub.file_name;
+                    }
+                }
+            }
+
+            // Tier 3: Try policy_id lookup for matching platform documents or dec page
+            if (!storagePath && activity.policy_id) {
+                const { data: pDocs } = await supabase
+                    .from('platform_documents')
+                    .select('storage_path, file_name, doc_type')
+                    .eq('policy_id', activity.policy_id)
+                    .not('storage_path', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                if (pDocs && pDocs.length > 0) {
+                    const matchingDoc = (activity.doc_type ? pDocs.find(d => d.doc_type === activity.doc_type) : null) || pDocs[0];
+                    if (matchingDoc?.storage_path) {
+                        storagePath = matchingDoc.storage_path;
+                        bucket = 'cfp-platform-documents';
+                        if (!resolvedFileName && matchingDoc.file_name) resolvedFileName = matchingDoc.file_name;
+                    }
+                }
+
+                if (!storagePath) {
+                    const { data: dSubs } = await supabase
+                        .from('dec_pages')
+                        .select('submission_id, dec_page_submissions(storage_path, file_path, file_name)')
+                        .eq('policy_id', activity.policy_id)
+                        .limit(1)
+                        .maybeSingle();
+                    const dSub = Array.isArray((dSubs as any)?.dec_page_submissions) ? (dSubs as any)?.dec_page_submissions[0] : (dSubs as any)?.dec_page_submissions;
+                    if (dSub?.storage_path || dSub?.file_path) {
+                        storagePath = dSub.storage_path || dSub.file_path;
+                        bucket = 'cfp-raw-decpage';
+                        if (!resolvedFileName && dSub.file_name) resolvedFileName = dSub.file_name;
+                    }
+                }
+            }
 
             if (!storagePath) {
                 setPreviewDoc(prev => prev ? {
                     ...prev,
                     loading: false,
-                    error: 'Document record is logged, but the storage path is not available.',
+                    error: 'Document record is logged in the system, but the file has not been uploaded to cloud storage yet.',
                 } : null);
                 return;
             }
@@ -231,6 +313,7 @@ export function ActivityTab() {
 
             setPreviewDoc(prev => prev ? {
                 ...prev,
+                title: resolvedFileName || prev.title,
                 url,
                 loading: false,
                 error: null,
@@ -873,6 +956,16 @@ export function ActivityTab() {
                                     <AlertCircle size={36} style={{ color: '#ef4444' }} />
                                     <span className={styles.previewErrorTitle}>Unable to load document preview</span>
                                     <span className={styles.previewErrorMessage}>{previewDoc.error}</span>
+                                    {previewDoc.policyId && (
+                                        <Link
+                                            href={`/upload-document?policy_id=${previewDoc.policyId}&doc_type=${previewDoc.docType || 'rce'}`}
+                                            className={styles.previewRetryBtn}
+                                            onClick={() => setPreviewDoc(null)}
+                                        >
+                                            <Upload size={13} />
+                                            Upload / Attach Document
+                                        </Link>
+                                    )}
                                 </div>
                             ) : previewDoc.url ? (
                                 <iframe

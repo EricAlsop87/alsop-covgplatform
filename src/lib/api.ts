@@ -3193,12 +3193,68 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                 .limit(limit);
 
             if (docEvents && docEvents.length > 0) {
-                // Existing platform doc IDs set for deduplication
+                // Map of known platform documents for storage_path and policy resolution
+                const platDocMap = new Map<string, any>();
+                for (const p of platformDocItems) {
+                    if (p.document_id) platDocMap.set(p.document_id, p);
+                    if (p.id) platDocMap.set(p.id, p);
+                }
+
+                // Batch lookup any missing document IDs
+                const missingDocIds = Array.from(new Set(
+                    docEvents
+                        .map(e => e.meta?.document_id)
+                        .filter(id => id && !platDocMap.has(id))
+                ));
+
+                if (missingDocIds.length > 0) {
+                    const { data: extraDocs } = await supabase
+                        .from('platform_documents')
+                        .select(`
+                            id,
+                            storage_path,
+                            file_name,
+                            doc_type,
+                            policy_id,
+                            policies (
+                                id,
+                                policy_number,
+                                client_id,
+                                clients ( id, named_insured )
+                            )
+                        `)
+                        .in('id', missingDocIds);
+
+                    if (extraDocs) {
+                        for (const ed of extraDocs as any[]) {
+                            const pol = ed.policies;
+                            const cli = pol?.clients;
+                            platDocMap.set(ed.id, {
+                                id: ed.id,
+                                document_id: ed.id,
+                                storage_path: ed.storage_path,
+                                file_name: ed.file_name,
+                                doc_type: ed.doc_type,
+                                policy_id: ed.policy_id,
+                                policy_number: pol?.policy_number,
+                                client_id: pol?.client_id || cli?.id,
+                                insured_name: cli?.named_insured,
+                                type: 'document' as const,
+                                status: 'done',
+                                created_at: '',
+                                uploaded_by: 'System',
+                                bucket: 'cfp-platform-documents',
+                            });
+                        }
+                    }
+                }
+
                 const existingPlatDocIds = new Set(platformDocItems.map(p => p.document_id).filter(Boolean));
 
                 for (const evt of docEvents) {
                     const meta = evt.meta || {};
                     const docId = meta.document_id || evt.id;
+                    const pDoc = platDocMap.get(docId) || (meta.document_id ? platDocMap.get(meta.document_id) : null);
 
                     // Skip duplicate if already present from platform_documents and successful
                     if (existingPlatDocIds.has(meta.document_id) && evt.event_type === 'document.processed') {
@@ -3208,29 +3264,36 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                     let docStatus = 'done';
                     if (evt.event_type === 'document.failed') docStatus = 'failed';
 
+                    const storagePath = meta.storage_path || pDoc?.storage_path || null;
+                    const fileName = meta.file_name || pDoc?.file_name || undefined;
+                    const policyNum = meta.policy_number || pDoc?.policy_number || undefined;
+                    const insuredName = meta.owner_name || meta.named_insured || pDoc?.insured_name || undefined;
+                    const policyId = evt.policy_id || pDoc?.policy_id || undefined;
+                    const clientId = evt.client_id || pDoc?.client_id || undefined;
+
                     activityEventDocItems.push({
                         id: evt.id,
                         type: 'document' as const,
                         event_type: evt.event_type,
                         title: evt.title,
                         detail: evt.detail,
-                        policy_id: evt.policy_id || undefined,
-                        client_id: evt.client_id || undefined,
-                        insured_name: meta.owner_name || meta.named_insured || undefined,
-                        policy_number: meta.policy_number || undefined,
+                        policy_id: policyId,
+                        client_id: clientId,
+                        insured_name: insuredName,
+                        policy_number: policyNum,
                         created_at: evt.created_at,
                         meta: meta,
                         status: docStatus,
-                        file_path: meta.storage_path || null,
-                        storage_path: meta.storage_path || null,
+                        file_path: storagePath,
+                        storage_path: storagePath,
                         bucket: meta.bucket || 'cfp-platform-documents',
                         uploaded_by: meta.uploaded_by || 'System',
-                        doc_type: meta.doc_type,
+                        doc_type: meta.doc_type || pDoc?.doc_type,
                         document_id: meta.document_id || undefined,
                         match_status: meta.match_status || undefined,
                         writeback_status: meta.writeback_status || undefined,
                         match_confidence: meta.confidence || undefined,
-                        file_name: meta.file_name || undefined,
+                        file_name: fileName,
                     });
                 }
             }
