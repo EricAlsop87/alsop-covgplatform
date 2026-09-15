@@ -116,8 +116,9 @@ function StatusIcon({ status, type, event_type, isResolved }: { status: string; 
 const DOC_TYPE_LABELS: Record<string, string> = {
     dec_page: 'Declaration Page',
     rce: 'RCE Report',
-    dic_dec_page: 'DIC / Full Quote',
-    quote: 'DIC / Full Quote',
+    dic_dec_page: 'DIC Quote',
+    quote: 'Carrier Quote',
+    es_doc: 'Full / E&S Quote',
     invoice: 'Invoice',
     inspection: 'Inspection Report',
     endorsement: 'Endorsement',
@@ -125,20 +126,76 @@ const DOC_TYPE_LABELS: Record<string, string> = {
     other: 'Document',
 };
 
+export function categorizeActivityItem(a: ActivityFeedItem): ActivityFilterType {
+    if (a.type === 'merge') return 'merge';
+
+    const fn = (a.file_name || a.file_path || a.meta?.file_name || '').toUpperCase();
+    const docType = (a.doc_type || '').toLowerCase();
+
+    // 1. Declaration Pages (CFP Dec Pages)
+    const isDecPage = a.type === 'upload' ||
+        a.bucket === 'cfp-raw-decpage' ||
+        docType === 'dec_page' ||
+        docType === 'dec' ||
+        fn.includes('RENEWAL_EMAIL_ATTACHMENT') ||
+        (fn.includes('CFP') && (fn.includes('DEC') || fn.includes('DECLARATION')) && !fn.includes('DIC') && !fn.includes('QUOTE') && !fn.includes('BAMBOO') && !fn.includes('AEGIS') && !fn.includes('AMERICAN MODERN') && !fn.includes('PSIC') && !fn.includes('SAGESURE'));
+
+    if (isDecPage) return 'dec';
+
+    // 2. RCE Reports
+    const isRce = docType === 'rce' ||
+        ((fn.includes('RCE') || fn.includes('360VALUE') || fn.includes('360 VALUE') || fn.includes('REPLACEMENT COST') || fn.includes('RCM AM') || fn.includes('VALUATION')) && !fn.includes('QUOTE'));
+
+    if (isRce) return 'rce';
+
+    // 3. Quotes & DICs (Companion Carrier Quotes, DIC Quotes, Full Quotes, E&S Quotes)
+    const isQuoteOrDic = docType === 'dic_dec_page' ||
+        docType === 'quote' ||
+        docType === 'es_doc' ||
+        fn.includes('QUOTE') ||
+        fn.includes('DIC') ||
+        fn.includes('FULL') ||
+        fn.includes('E&S') ||
+        fn.includes('SAGESURE') ||
+        fn.includes('BAMBOO') ||
+        fn.includes('AEGIS') ||
+        fn.includes('PSIC') ||
+        fn.includes('AMERICAN MODERN') ||
+        fn.includes('OBSIDIAN');
+
+    if (isQuoteOrDic) return 'dic';
+
+    // 4. Other Documents (invoices, inspections, endorsements, questionnaires, etc.)
+    return 'other_docs';
+}
+
 function getDocumentActionLabel(activity: ActivityFeedItem): string {
-    const fn = (activity.file_path || activity.file_name || activity.meta?.file_name || '').toUpperCase();
-    const polNum = (activity.policy_number || '').toUpperCase();
-    const isCfp = fn.includes('RENEWAL_EMAIL_ATTACHMENT') ||
-                  fn.includes('CFP') ||
-                  polNum.startsWith('CFP') ||
-                  polNum.startsWith('010') ||
-                  polNum.startsWith('020') ||
-                  polNum.startsWith('011') ||
-                  polNum.startsWith('012') ||
-                  activity.bucket === 'cfp-raw-decpage';
-    const docLabel = isCfp || activity.doc_type === 'dec_page'
-        ? 'Declaration Page'
-        : (DOC_TYPE_LABELS[activity.doc_type || ''] || (activity.doc_type && activity.doc_type !== 'other' ? activity.doc_type.toUpperCase() : 'Document'));
+    const cat = categorizeActivityItem(activity);
+    const fn = (activity.file_name || activity.file_path || activity.meta?.file_name || '').toUpperCase();
+    const docType = (activity.doc_type || '').toLowerCase();
+
+    let docLabel = 'Document';
+    if (cat === 'dec') {
+        docLabel = 'Declaration Page';
+    } else if (cat === 'rce') {
+        docLabel = 'RCE Report';
+    } else if (cat === 'dic') {
+        if (docType === 'es_doc' || fn.includes('E&S') || fn.includes('FULL') || fn.includes('SAGESURE')) {
+            docLabel = 'Full / E&S Quote';
+        } else if (fn.includes('DIC') || docType === 'dic_dec_page') {
+            docLabel = 'DIC Quote';
+        } else {
+            docLabel = 'Carrier Quote';
+        }
+    } else if (docType === 'invoice') {
+        docLabel = 'Invoice';
+    } else if (docType === 'inspection') {
+        docLabel = 'Inspection Report';
+    } else if (docType === 'endorsement') {
+        docLabel = 'Endorsement';
+    } else if (docType === 'questionnaire') {
+        docLabel = 'Questionnaire';
+    }
 
     if (activity.policy_id || activity.policy_number) {
         if (activity.event_type === 'document.needs_review' || activity.event_type === 'document.no_match') {
@@ -153,6 +210,36 @@ function getDocumentActionLabel(activity: ActivityFeedItem): string {
     if (activity.event_type === 'document.no_match') return `${docLabel} — No Match`;
     if (activity.event_type === 'document.failed') return `${docLabel} Failed`;
     return activity.title || `${docLabel} Event`;
+}
+
+function getDocumentDetailText(activity: ActivityFeedItem): string {
+    const cat = categorizeActivityItem(activity);
+    const fn = (activity.file_name || activity.file_path || activity.meta?.file_name || '').toUpperCase();
+    const docType = (activity.doc_type || '').toLowerCase();
+
+    if (cat === 'dec') {
+        return 'A California FAIR Plan Declaration Page was successfully uploaded and applied.';
+    }
+    if (cat === 'rce') {
+        return 'An RCE Report was successfully uploaded and applied.';
+    }
+    if (cat === 'dic') {
+        if (docType === 'es_doc' || fn.includes('E&S') || fn.includes('FULL') || fn.includes('SAGESURE')) {
+            return 'A Full / E&S Quote was successfully uploaded and applied.';
+        }
+        if (fn.includes('DIC') || docType === 'dic_dec_page') {
+            return 'A DIC Quote was successfully uploaded and applied.';
+        }
+        return 'A Companion Carrier Quote was successfully uploaded and applied.';
+    }
+    if (docType === 'invoice') return 'An Invoice was successfully uploaded.';
+    if (docType === 'inspection') return 'An Inspection Report was successfully uploaded.';
+    if (docType === 'endorsement') return 'An Endorsement was successfully uploaded.';
+    if (docType === 'questionnaire') return 'A Questionnaire was successfully uploaded.';
+    if (activity.detail && !activity.detail.toUpperCase().includes('ES_DOC') && !activity.detail.includes('DIC Carrier')) {
+        return activity.detail;
+    }
+    return 'A document was successfully uploaded.';
 }
 
 export type ActivityFilterType = 'all' | 'dec' | 'rce' | 'dic' | 'other_docs' | 'merge' | 'issues';
@@ -481,11 +568,11 @@ export function ActivityTab() {
     const counts = useMemo(() => {
         return {
             all: dateFilteredActivities.length,
-            dec: dateFilteredActivities.filter(a => a.type === 'upload').length,
-            rce: dateFilteredActivities.filter(a => a.type === 'document' && a.doc_type === 'rce').length,
-            dic: dateFilteredActivities.filter(a => a.type === 'document' && (a.doc_type === 'dic_dec_page' || a.doc_type === 'quote')).length,
-            other_docs: dateFilteredActivities.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page' && a.doc_type !== 'quote').length,
-            merge: dateFilteredActivities.filter(a => a.type === 'merge').length,
+            dec: dateFilteredActivities.filter(a => categorizeActivityItem(a) === 'dec').length,
+            rce: dateFilteredActivities.filter(a => categorizeActivityItem(a) === 'rce').length,
+            dic: dateFilteredActivities.filter(a => categorizeActivityItem(a) === 'dic').length,
+            other_docs: dateFilteredActivities.filter(a => categorizeActivityItem(a) === 'other_docs').length,
+            merge: dateFilteredActivities.filter(a => categorizeActivityItem(a) === 'merge').length,
             issues: dateFilteredActivities.filter(a => {
                 if (a.status === 'failed' || (a.event_type || '').includes('failed')) return true;
                 const isAssigned = Boolean(a.policy_id || a.policy_number);
@@ -503,11 +590,11 @@ export function ActivityTab() {
     // Final filtered activities list with category filter and search query
     const filteredActivities = useMemo(() => {
         let list = dateFilteredActivities;
-        if (selectedFilter === 'dec') list = list.filter(a => a.type === 'upload');
-        else if (selectedFilter === 'rce') list = list.filter(a => a.type === 'document' && a.doc_type === 'rce');
-        else if (selectedFilter === 'dic') list = list.filter(a => a.type === 'document' && (a.doc_type === 'dic_dec_page' || a.doc_type === 'quote'));
-        else if (selectedFilter === 'other_docs') list = list.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page' && a.doc_type !== 'quote');
-        else if (selectedFilter === 'merge') list = list.filter(a => a.type === 'merge');
+        if (selectedFilter === 'dec') list = list.filter(a => categorizeActivityItem(a) === 'dec');
+        else if (selectedFilter === 'rce') list = list.filter(a => categorizeActivityItem(a) === 'rce');
+        else if (selectedFilter === 'dic') list = list.filter(a => categorizeActivityItem(a) === 'dic');
+        else if (selectedFilter === 'other_docs') list = list.filter(a => categorizeActivityItem(a) === 'other_docs');
+        else if (selectedFilter === 'merge') list = list.filter(a => categorizeActivityItem(a) === 'merge');
         else if (selectedFilter === 'issues') {
             list = list.filter(a => {
                 if (a.status === 'failed' || (a.event_type || '').includes('failed')) return true;
@@ -897,11 +984,9 @@ export function ActivityTab() {
                                         )}
 
                                         {/* Detail text for document events */}
-                                        {isDoc && activity.detail && (
+                                        {isDoc && (
                                             <div className={styles.detailText}>
-                                                {((activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('RENEWAL_EMAIL_ATTACHMENT') || (activity.file_path || activity.meta?.file_name || '').toUpperCase().includes('CFP') || activity.doc_type === 'dec_page') && activity.detail.includes('DIC Carrier')
-                                                    ? 'A California FAIR Plan Declaration Page was successfully uploaded and applied.'
-                                                    : activity.detail}
+                                                {getDocumentDetailText(activity)}
                                             </div>
                                         )}
 

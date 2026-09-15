@@ -3252,11 +3252,18 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
             const docType = p.doc_type || 'other';
 
             let docLabel = 'Document';
-            if (docType === 'rce') docLabel = 'RCE Report';
-            else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
-            else if (docType === 'quote') docLabel = 'Carrier Quote';
-            else if (docType === 'dec_page') docLabel = 'Declaration Page';
-            else if (docType === 'es_doc') docLabel = 'E&S Document';
+            const fn = (p.file_name || '').toUpperCase();
+            if (docType === 'rce') {
+                docLabel = 'RCE Report';
+            } else if (docType === 'es_doc' || fn.includes('FULL') || fn.includes('E&S') || fn.includes('SAGESURE')) {
+                docLabel = 'Full / E&S Quote';
+            } else if (docType === 'dic_dec_page' || fn.includes('DIC')) {
+                docLabel = 'DIC Quote';
+            } else if (docType === 'quote' || fn.includes('QUOTE')) {
+                docLabel = 'Carrier Quote';
+            } else if (docType === 'dec_page' || fn.includes('RENEWAL_EMAIL_ATTACHMENT') || fn.includes('CFP DEC')) {
+                docLabel = 'Declaration Page';
+            }
 
             return {
                 id: p.id,
@@ -3388,11 +3395,18 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
                 eventType = 'document.processed';
                 const docType = meta.doc_type || pDoc?.doc_type;
                 let docLabel = 'Document';
-                if (docType === 'rce') docLabel = 'RCE Report';
-                else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
-                else if (docType === 'quote') docLabel = 'Carrier Quote';
-                else if (docType === 'dec_page') docLabel = 'Declaration Page';
-                else if (docType === 'es_doc') docLabel = 'E&S Document';
+                const fn = (fileName || '').toUpperCase();
+                if (docType === 'rce') {
+                    docLabel = 'RCE Report';
+                } else if (docType === 'es_doc' || fn.includes('FULL') || fn.includes('E&S') || fn.includes('SAGESURE')) {
+                    docLabel = 'Full / E&S Quote';
+                } else if (docType === 'dic_dec_page' || fn.includes('DIC')) {
+                    docLabel = 'DIC Quote';
+                } else if (docType === 'quote' || fn.includes('QUOTE')) {
+                    docLabel = 'Carrier Quote';
+                } else if (docType === 'dec_page' || fn.includes('RENEWAL_EMAIL_ATTACHMENT') || fn.includes('CFP DEC')) {
+                    docLabel = 'Declaration Page';
+                }
 
                 eventTitle = `${docLabel} Processed`;
                 eventDetail = `A ${docLabel} was successfully uploaded and applied.`;
