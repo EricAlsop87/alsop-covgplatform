@@ -22,27 +22,34 @@ export default function CFPSummaryPage() {
     );
 }
 
-function CFPSummaryContent() {
-    const [stats, setStats] = useState<CFPSummaryStats | null>(null);
-    const [statsLoading, setStatsLoading] = useState(true);
+// Dynamic current date defaults
+const currentYearStr = String(new Date().getFullYear());
+const currentMonthStr = String(new Date().getMonth() + 1);
 
-    const [families, setFamilies] = useState<CFPFamily[]>([]);
-    const [dataLoading, setDataLoading] = useState(true);
-    const [totalTerms, setTotalTerms] = useState(0);
-    const [totalFamilies, setTotalFamilies] = useState(0);
+// In-memory cache for 0ms instantaneous page transitions & SWR revalidation
+interface CacheEntry {
+    families: CFPFamily[];
+    total_terms: number;
+    total_families: number;
+    timestamp: number;
+}
+const globalCFPCache = new Map<string, CacheEntry>();
+let globalCFPStats: CFPSummaryStats | null = null;
+let globalCFPStatsTime = 0;
+const CACHE_TTL_MS = 45_000; // 45s cache
+
+function CFPSummaryContent() {
+    const [stats, setStats] = useState<CFPSummaryStats | null>(() => globalCFPStats);
+    const [statsLoading, setStatsLoading] = useState(() => !globalCFPStats);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const requestIdRef = useRef(0);
-
-    // Dynamic current date defaults
-    const currentYearStr = String(new Date().getFullYear());
-    const currentMonthStr = String(new Date().getMonth() + 1);
 
     // Filters with localStorage memory persistence and current month/year defaults
     const [year, setYearState] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_year');
-            if (saved !== null) return saved;
+            if (saved && saved !== 'all') return saved;
         }
         return currentYearStr;
     });
@@ -50,7 +57,7 @@ function CFPSummaryContent() {
     const [month, setMonthState] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_month');
-            if (saved !== null) return saved;
+            if (saved && saved !== 'all' && saved !== '') return saved;
         }
         return currentMonthStr;
     });
@@ -63,6 +70,14 @@ function CFPSummaryContent() {
         }
         return 'active_cfp';
     });
+
+    const initialCacheKey = `${year || currentYearStr}_${month || currentMonthStr}__${view}`;
+    const initialCached = globalCFPCache.get(initialCacheKey);
+
+    const [families, setFamilies] = useState<CFPFamily[]>(() => initialCached?.families || []);
+    const [dataLoading, setDataLoading] = useState(() => !initialCached);
+    const [totalTerms, setTotalTerms] = useState(() => initialCached?.total_terms || 0);
+    const [totalFamilies, setTotalFamilies] = useState(() => initialCached?.total_families || 0);
 
     const setYear = useCallback((newYear: string) => {
         setYearState(newYear);
@@ -85,9 +100,15 @@ function CFPSummaryContent() {
         }
     }, []);
 
-    // Fetch Stats
+    // Fetch Stats with caching
     const fetchStats = useCallback(async () => {
-        setStatsLoading(true);
+        if (globalCFPStats && Date.now() - globalCFPStatsTime < CACHE_TTL_MS) {
+            setStats(globalCFPStats);
+            setStatsLoading(false);
+            return;
+        }
+
+        if (!globalCFPStats) setStatsLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
@@ -100,6 +121,8 @@ function CFPSummaryContent() {
 
             const json = await res.json();
             if (json.success) {
+                globalCFPStats = json.stats;
+                globalCFPStatsTime = Date.now();
                 setStats(json.stats);
             }
         } catch (err) {
@@ -109,8 +132,24 @@ function CFPSummaryContent() {
         }
     }, []);
 
-    // Fetch Data with cancellation and sequence tracking
+    // Fetch Data with cancellation, SWR cache, and sequence tracking
     const fetchData = useCallback(async () => {
+        const cacheKey = `${year}_${month}_${search}_${view}`;
+        const cached = globalCFPCache.get(cacheKey);
+
+        if (cached) {
+            setFamilies(cached.families);
+            setTotalTerms(cached.total_terms);
+            setTotalFamilies(cached.total_families);
+            setDataLoading(false);
+            // If cache is fresh, skip background fetch
+            if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                return;
+            }
+        } else {
+            setDataLoading(true);
+        }
+
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -118,7 +157,6 @@ function CFPSummaryContent() {
         abortControllerRef.current = controller;
         const currentRequestId = ++requestIdRef.current;
 
-        setDataLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
@@ -138,9 +176,20 @@ function CFPSummaryContent() {
 
             const json = await res.json();
             if (currentRequestId === requestIdRef.current && json.success) {
-                setFamilies(json.families || []);
-                setTotalTerms(json.total_terms || 0);
-                setTotalFamilies(json.total_families || 0);
+                const fams = json.families || [];
+                const totTerms = json.total_terms || 0;
+                const totFams = json.total_families || 0;
+
+                globalCFPCache.set(cacheKey, {
+                    families: fams,
+                    total_terms: totTerms,
+                    total_families: totFams,
+                    timestamp: Date.now(),
+                });
+
+                setFamilies(fams);
+                setTotalTerms(totTerms);
+                setTotalFamilies(totFams);
             }
         } catch (err: any) {
             if (err?.name === 'AbortError') return; // Cancelled normally
@@ -159,7 +208,7 @@ function CFPSummaryContent() {
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
-        }, 150);
+        }, 100);
         return () => clearTimeout(timer);
     }, [fetchData]);
 

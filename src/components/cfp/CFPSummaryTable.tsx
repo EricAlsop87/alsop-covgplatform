@@ -223,6 +223,17 @@ export function CFPSummaryTable({
         setLocalSearch(search);
     }, [search]);
 
+    // Smooth 300ms search debouncing to prevent typing lag and network flooding
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (localSearch !== search) {
+                onSearchChange(localSearch);
+                setCurrentPage(1);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [localSearch, search, onSearchChange]);
+
     const handleExecuteSearch = (valToSearch?: string) => {
         const query = valToSearch !== undefined ? valToSearch : localSearch;
         onSearchChange(query);
@@ -1816,10 +1827,7 @@ export function CFPSummaryTable({
                                     placeholder="Search policy #, insured, address..."
                                     value={localSearch}
                                     onChange={e => {
-                                        const v = e.target.value;
-                                        setLocalSearch(v);
-                                        onSearchChange(v);
-                                        setCurrentPage(1);
+                                        setLocalSearch(e.target.value);
                                     }}
                                     onKeyDown={e => {
                                         if (e.key === 'Enter') {
