@@ -2929,6 +2929,8 @@ export interface ActivityFeedItem {
     status: string;
     created_at: string;
     file_path: string | null;
+    storage_path?: string | null;
+    bucket?: 'cfp-platform-documents' | 'cfp-raw-decpage' | string;
     error_message?: string | null;
     // From dec_pages (joined)
     insured_name?: string;
@@ -2957,16 +2959,19 @@ export interface ActivityFeedItem {
 }
 
 /**
- * Fetch recent uploads + merge events for the dashboard activity feed.
+ * Fetch recent uploads + platform documents + merge events for the dashboard activity feed.
  */
-export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]> {
+export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]> {
     try {
-        const { data, error } = await supabase
+        // ── Source A: California FAIR Plan Dec Page Submissions ──
+        const { data: decData, error: decError } = await supabase
             .from('dec_page_submissions')
             .select(`
                 id,
                 status,
                 file_path,
+                storage_path,
+                file_name,
                 error_message,
                 created_at,
                 updated_at,
@@ -2986,17 +2991,14 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
             .order('created_at', { ascending: false })
             .limit(limit);
 
-        if (error) {
-            logger.error('API', 'Error fetching activity feed', { message: error.message });
-            return [];
+        if (decError) {
+            logger.error('API', 'Error fetching dec_page_submissions for activity feed', { message: decError.message });
         }
-
-        if (!data) return [];
 
         // Collect unique policy IDs for batch enrichment/flags lookup
         const policyIds = new Set<string>();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for (const row of data) {
+        for (const row of (decData || [])) {
             const dpRaw = row.dec_pages;
             const dp = Array.isArray(dpRaw) ? dpRaw[0] : dpRaw;
             if (dp?.policy_id) policyIds.add(dp.policy_id);
@@ -3029,14 +3031,14 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const uploadItems = data.map((row: any) => {
+        const uploadItems: ActivityFeedItem[] = (decData || []).map((row: any) => {
             const dpRaw = row.dec_pages;
             const dp = Array.isArray(dpRaw)
                 ? (dpRaw.length > 0 ? dpRaw[0] : null)
                 : (dpRaw || null);
 
             const acct = row.accounts;
-            let uploaderName = 'Unknown';
+            let uploaderName = 'System';
             if (acct) {
                 const first = acct.first_name || '';
                 const last = acct.last_name || '';
@@ -3057,6 +3059,8 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
             }
 
             const pid = dp?.policy_id;
+            const storagePath = row.storage_path || row.file_path || null;
+            const fileName = row.file_name || (row.file_path ? row.file_path.split('/').pop() : undefined);
 
             return {
                 id: row.id,
@@ -3064,6 +3068,10 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                 status: row.status,
                 created_at: row.created_at,
                 file_path: row.file_path,
+                storage_path: storagePath,
+                bucket: 'cfp-raw-decpage',
+                file_name: fileName,
+                doc_type: 'dec_page',
                 error_message: row.error_message,
                 insured_name: dp?.insured_name || undefined,
                 policy_number: dp?.policy_number || undefined,
@@ -3076,7 +3084,77 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
             };
         });
 
-        // ── Source B: Merge events only ──
+        // ── Source B: Platform Documents (RCEs, Quotes, DICs, etc.) ──
+        let platformDocItems: ActivityFeedItem[] = [];
+        try {
+            const { data: pDocs, error: pError } = await supabase
+                .from('platform_documents')
+                .select(`
+                    id,
+                    policy_id,
+                    doc_type,
+                    file_name,
+                    storage_path,
+                    parse_status,
+                    created_at,
+                    created_by,
+                    policies (
+                        id,
+                        policy_number,
+                        client_id,
+                        clients (
+                            id,
+                            named_insured
+                        )
+                    )
+                `)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (pError) {
+                logger.warn('API', 'Error fetching platform_documents for activity feed', { message: pError.message });
+            }
+
+            if (pDocs) {
+                platformDocItems = pDocs.map((p: any) => {
+                    const pol = p.policies;
+                    const client = pol?.clients;
+                    const docType = p.doc_type || 'other';
+
+                    let docLabel = 'Document';
+                    if (docType === 'rce') docLabel = 'RCE Report';
+                    else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
+                    else if (docType === 'quote') docLabel = 'Carrier Quote';
+                    else if (docType === 'dec_page') docLabel = 'Declaration Page';
+                    else if (docType === 'es_doc') docLabel = 'E&S Document';
+
+                    return {
+                        id: p.id,
+                        type: 'document' as const,
+                        status: p.parse_status || 'done',
+                        created_at: p.created_at,
+                        file_path: p.storage_path,
+                        storage_path: p.storage_path,
+                        bucket: 'cfp-platform-documents',
+                        file_name: p.file_name,
+                        doc_type: docType,
+                        document_id: p.id,
+                        policy_id: p.policy_id || undefined,
+                        client_id: pol?.client_id || client?.id || undefined,
+                        insured_name: client?.named_insured || undefined,
+                        policy_number: pol?.policy_number || undefined,
+                        uploaded_by: p.created_by || 'System',
+                        event_type: 'document.processed',
+                        title: `${docLabel} Processed`,
+                        detail: `A ${docLabel} was successfully uploaded and applied.`,
+                    };
+                });
+            }
+        } catch (pErr) {
+            logger.warn('API', 'Failed fetching platform documents for activity feed', { error: pErr });
+        }
+
+        // ── Source C: Merge Events ──
         const { data: mergeData } = await supabase
             .from('activity_events')
             .select('id, event_type, title, detail, client_id, policy_id, meta, created_at')
@@ -3101,8 +3179,8 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
             meta: ev.meta,
         }));
 
-        // Source C — Document upload + processing events (including RCE, DIC, etc.)
-        let docItems: ActivityFeedItem[] = [];
+        // ── Source D: Activity Events (for custom logs, needs_review, no_match, failed) ──
+        let activityEventDocItems: ActivityFeedItem[] = [];
         try {
             const { data: docEvents } = await supabase
                 .from('activity_events')
@@ -3113,128 +3191,24 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                 )
                 .order('created_at', { ascending: false })
                 .limit(limit);
+
             if (docEvents && docEvents.length > 0) {
-                // Batch lookup: get policy_number for linked policies
-                const docPolicyIds = new Set<string>();
-                const docClientIds = new Set<string>();
-                const actorUserIds = new Set<string>();
-                for (const evt of docEvents) {
-                    if (evt.policy_id) docPolicyIds.add(evt.policy_id);
-                    if (evt.client_id) docClientIds.add(evt.client_id);
-                    if (evt.actor_user_id) actorUserIds.add(evt.actor_user_id);
-                }
-
-                const policyNumberMap = new Map<string, string>();
-                if (docPolicyIds.size > 0) {
-                    const { data: policyRows } = await supabase
-                        .from('policies')
-                        .select('id, policy_number')
-                        .in('id', Array.from(docPolicyIds))
-                        .limit(200);
-                    if (policyRows) {
-                        for (const p of policyRows) {
-                            if (p.policy_number) policyNumberMap.set(p.id, p.policy_number);
-                        }
-                    }
-                }
-
-                const clientNameMap = new Map<string, string>();
-                if (docClientIds.size > 0) {
-                    const { data: clientRows } = await supabase
-                        .from('clients')
-                        .select('id, named_insured')
-                        .in('id', Array.from(docClientIds))
-                        .limit(200);
-                    if (clientRows) {
-                        for (const c of clientRows) {
-                            if (c.named_insured) clientNameMap.set(c.id, c.named_insured);
-                        }
-                    }
-                }
-
-                // Batch lookup: resolve agent names from actor_user_id
-                const actorNameMap = new Map<string, string>();
-                if (actorUserIds.size > 0) {
-                    const { data: actorRows } = await supabase
-                        .from('accounts')
-                        .select('id, first_name, last_name, role')
-                        .in('id', Array.from(actorUserIds))
-                        .limit(200);
-                    if (actorRows) {
-                        for (const a of actorRows) {
-                            const fullName = `${a.first_name || ''} ${a.last_name || ''}`.trim();
-                            actorNameMap.set(a.id, fullName || (a.role === 'agent' ? 'Agent' : 'User'));
-                        }
-                    }
-                }
-
-                // Batch lookup: platform_documents for metadata & staleness check
-                const docMetaIds = new Set<string>();
-                const processedDocIds = new Set<string>();
-                for (const evt of docEvents) {
-                    if (evt.meta?.document_id) {
-                        docMetaIds.add(evt.meta.document_id);
-                        if (!evt.event_type?.startsWith('doc.uploaded.')) {
-                            processedDocIds.add(evt.meta.document_id);
-                        }
-                    }
-                }
-                const platDocMap = new Map<string, { id: string; doc_type: string; match_status: string; policy_id: string | null; file_name: string }>();
-                if (docMetaIds.size > 0) {
-                    const { data: platDocs } = await supabase
-                        .from('platform_documents')
-                        .select('id, doc_type, match_status, policy_id, file_name')
-                        .in('id', Array.from(docMetaIds))
-                        .limit(200);
-                    if (platDocs) {
-                        for (const pd of platDocs) {
-                            platDocMap.set(pd.id, pd);
-                        }
-                    }
-                }
+                // Existing platform doc IDs set for deduplication
+                const existingPlatDocIds = new Set(platformDocItems.map(p => p.document_id).filter(Boolean));
 
                 for (const evt of docEvents) {
                     const meta = evt.meta || {};
+                    const docId = meta.document_id || evt.id;
 
-                    // If this event points to a specific document_id that was deleted or converted, skip it
-                    if (meta.document_id && !platDocMap.has(meta.document_id)) {
+                    // Skip duplicate if already present from platform_documents and successful
+                    if (existingPlatDocIds.has(meta.document_id) && evt.event_type === 'document.processed') {
                         continue;
                     }
 
-                    const isUploadEvent = (evt.event_type || '').startsWith('doc.uploaded.');
-
-                    // Deduplicate: If document has been processed/needs_review/failed, skip the raw initial upload event
-                    if (isUploadEvent && meta.document_id && processedDocIds.has(meta.document_id)) {
-                        continue;
-                    }
-
-                    const platDoc = meta.document_id ? platDocMap.get(meta.document_id) : undefined;
-
-                    // If this was a "needs_review" event, but the document has already been matched/assigned, skip the obsolete prompt
-                    if (evt.event_type === 'document.needs_review' && platDoc && (platDoc.policy_id || platDoc.match_status === 'matched' || platDoc.match_status === 'manual')) {
-                        continue;
-                    }
-
-                    const docType = platDoc?.doc_type || meta.doc_type || (isUploadEvent ? evt.event_type.replace('doc.uploaded.', '') : undefined);
-
-                    // Resolve insured_name: client table → meta.owner_name → null
-                    const resolvedInsuredName = (evt.client_id && clientNameMap.get(evt.client_id))
-                        || meta.owner_name || undefined;
-
-                    // Resolve policy_number from policies table
-                    const resolvedPolicyNumber = (evt.policy_id && policyNumberMap.get(evt.policy_id)) || undefined;
-
-                    // Resolve agent name from actor_user_id
-                    const uploaderName = (evt.actor_user_id && actorNameMap.get(evt.actor_user_id)) || 'System';
-
-                    // Determine display status
                     let docStatus = 'done';
                     if (evt.event_type === 'document.failed') docStatus = 'failed';
-                    else if (evt.event_type === 'document.needs_review') docStatus = 'done';
-                    else if (evt.event_type === 'document.no_match') docStatus = 'done';
-                    else if (isUploadEvent) docStatus = 'done';
 
-                    docItems.push({
+                    activityEventDocItems.push({
                         id: evt.id,
                         type: 'document' as const,
                         event_type: evt.event_type,
@@ -3242,15 +3216,16 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                         detail: evt.detail,
                         policy_id: evt.policy_id || undefined,
                         client_id: evt.client_id || undefined,
-                        insured_name: resolvedInsuredName,
-                        policy_number: resolvedPolicyNumber,
+                        insured_name: meta.owner_name || meta.named_insured || undefined,
+                        policy_number: meta.policy_number || undefined,
                         created_at: evt.created_at,
                         meta: meta,
                         status: docStatus,
-                        file_path: null,
-                        uploaded_by: uploaderName,
-                        // Document-specific fields
-                        doc_type: docType,
+                        file_path: meta.storage_path || null,
+                        storage_path: meta.storage_path || null,
+                        bucket: meta.bucket || 'cfp-platform-documents',
+                        uploaded_by: meta.uploaded_by || 'System',
+                        doc_type: meta.doc_type,
                         document_id: meta.document_id || undefined,
                         match_status: meta.match_status || undefined,
                         writeback_status: meta.writeback_status || undefined,
@@ -3260,15 +3235,23 @@ export async function fetchActivityFeed(limit = 20): Promise<ActivityFeedItem[]>
                 }
             }
         } catch (e) {
-            logger.warn('api', 'Failed to fetch document events:', { error: e instanceof Error ? e.message : String(e) })
+            logger.warn('api', 'Failed to fetch custom activity events:', { error: e instanceof Error ? e.message : String(e) });
         }
 
-        // Merge + sort chronologically
-        const combined = [...uploadItems, ...mergeItems, ...docItems]
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, limit);
+        // Merge + Deduplicate by ID / storage_path
+        const seenKeys = new Set<string>();
+        const combined: ActivityFeedItem[] = [];
 
-        return combined;
+        for (const item of [...uploadItems, ...platformDocItems, ...activityEventDocItems, ...mergeItems]) {
+            const key = item.storage_path ? `${item.type}_${item.storage_path}` : `${item.type}_${item.id}`;
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                combined.push(item);
+            }
+        }
+
+        combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return combined.slice(0, limit);
     } catch (err) {
         logger.error('API', 'Unexpected error fetching activity feed', {
             error: err instanceof Error ? err.message : String(err),

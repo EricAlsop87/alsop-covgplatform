@@ -5,11 +5,40 @@ import { useRouter } from 'next/navigation';
 import {
     FileText, Upload, Loader2, CheckCircle, CheckCircle2, Clock, AlertTriangle,
     XCircle, RefreshCw, Sparkles, Shield, Timer, Merge, ExternalLink,
-    Layers, FileUp, Files, Filter, RotateCcw, ArrowRight, FileSearch, Search, X
+    Layers, FileUp, Files, Filter, RotateCcw, ArrowRight, FileSearch, Search, X,
+    Eye, Download, Calendar, AlertCircle
 } from 'lucide-react';
-import { fetchActivityFeed, ActivityFeedItem } from '@/lib/api';
+import {
+    fetchActivityFeed,
+    ActivityFeedItem,
+    getDecPageFileDownloadUrl,
+    getPlatformDocDownloadUrl
+} from '@/lib/api';
 import styles from './ActivityTab.module.css';
 import { logger } from '@/lib/logger';
+
+interface PreviewDocState {
+    title: string;
+    subtitle?: string;
+    url?: string | null;
+    loading: boolean;
+    error?: string | null;
+}
+
+const MONTH_NAMES = [
+    { value: '1', label: 'Jan', fullName: 'January' },
+    { value: '2', label: 'Feb', fullName: 'February' },
+    { value: '3', label: 'Mar', fullName: 'March' },
+    { value: '4', label: 'Apr', fullName: 'April' },
+    { value: '5', label: 'May', fullName: 'May' },
+    { value: '6', label: 'Jun', fullName: 'June' },
+    { value: '7', label: 'Jul', fullName: 'July' },
+    { value: '8', label: 'Aug', fullName: 'August' },
+    { value: '9', label: 'Sep', fullName: 'September' },
+    { value: '10', label: 'Oct', fullName: 'October' },
+    { value: '11', label: 'Nov', fullName: 'November' },
+    { value: '12', label: 'Dec', fullName: 'December' },
+];
 
 function formatTimeAgo(dateStr: string): string {
     const date = new Date(dateStr);
@@ -120,15 +149,19 @@ export function ActivityTab() {
     const [showAll, setShowAll] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState<ActivityFilterType>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedYear, setSelectedYear] = useState<string>('all');
+    const [selectedMonth, setSelectedMonth] = useState<string>('all');
+    const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
 
     const loadActivities = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
-            const data = await fetchActivityFeed(100);
+            // Fetch up to 1500 events to ensure all historical uploads from Operations and Platform are available
+            const data = await fetchActivityFeed(1500);
             setActivities(data);
         } catch (err) {
-            logger.error('ActivityTab', 'Activity feed error:', { error: err instanceof Error ? err.message : String(err) })
+            logger.error('ActivityTab', 'Activity feed error:', { error: err instanceof Error ? err.message : String(err) });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -139,16 +172,139 @@ export function ActivityTab() {
         loadActivities();
     }, []);
 
-    // Filter counts (based on raw activities)
+    // Close preview modal on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && previewDoc) {
+                setPreviewDoc(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [previewDoc]);
+
+    // Handle document preview loading
+    const handlePreviewDoc = async (activity: ActivityFeedItem) => {
+        const title = activity.file_name ||
+            (activity.type === 'upload' ? 'California FAIR Plan Dec Page' : activity.title || 'Document');
+        const subtitle = [
+            activity.policy_number ? `Policy: ${activity.policy_number}` : '',
+            activity.insured_name ? `(${activity.insured_name})` : ''
+        ].filter(Boolean).join(' ');
+
+        setPreviewDoc({
+            title,
+            subtitle,
+            url: null,
+            loading: true,
+            error: null,
+        });
+
+        try {
+            const storagePath = activity.storage_path || activity.file_path;
+            const bucket = activity.bucket || (activity.type === 'upload' ? 'cfp-raw-decpage' : 'cfp-platform-documents');
+
+            if (!storagePath) {
+                setPreviewDoc(prev => prev ? {
+                    ...prev,
+                    loading: false,
+                    error: 'Document record is logged, but the storage path is not available.',
+                } : null);
+                return;
+            }
+
+            let url: string | null = null;
+            if (bucket === 'cfp-raw-decpage' || activity.type === 'upload') {
+                url = await getDecPageFileDownloadUrl(storagePath);
+            } else {
+                url = await getPlatformDocDownloadUrl(storagePath, bucket);
+            }
+
+            if (!url) {
+                setPreviewDoc(prev => prev ? {
+                    ...prev,
+                    loading: false,
+                    error: 'Could not generate a secure preview URL for this document.',
+                } : null);
+                return;
+            }
+
+            setPreviewDoc(prev => prev ? {
+                ...prev,
+                url,
+                loading: false,
+                error: null,
+            } : null);
+        } catch (err) {
+            setPreviewDoc(prev => prev ? {
+                ...prev,
+                loading: false,
+                error: err instanceof Error ? err.message : 'An error occurred while loading the preview.',
+            } : null);
+        }
+    };
+
+    // Extract available years dynamically from activity dates
+    const availableYears = useMemo(() => {
+        const yearsSet = new Set<string>();
+        activities.forEach(a => {
+            if (a.created_at) {
+                const yr = new Date(a.created_at).getFullYear().toString();
+                if (yr && !isNaN(Number(yr))) yearsSet.add(yr);
+            }
+        });
+        const arr = Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
+        if (arr.length === 0) {
+            arr.push(new Date().getFullYear().toString());
+        }
+        return arr;
+    }, [activities]);
+
+    // Compute month counts for the selected year (or all years)
+    const monthCounts = useMemo(() => {
+        const countsMap: Record<string, number> = {};
+        for (let m = 1; m <= 12; m++) {
+            countsMap[String(m)] = 0;
+        }
+
+        activities.forEach(a => {
+            if (!a.created_at) return;
+            const d = new Date(a.created_at);
+            const yr = d.getFullYear().toString();
+            const mo = String(d.getMonth() + 1);
+
+            if (selectedYear === 'all' || selectedYear === yr) {
+                countsMap[mo] = (countsMap[mo] || 0) + 1;
+            }
+        });
+
+        return countsMap;
+    }, [activities, selectedYear]);
+
+    // Activities filtered by date (Year + Month) first
+    const dateFilteredActivities = useMemo(() => {
+        return activities.filter(a => {
+            if (!a.created_at) return true;
+            const d = new Date(a.created_at);
+            const yr = d.getFullYear().toString();
+            const mo = String(d.getMonth() + 1);
+
+            if (selectedYear !== 'all' && yr !== selectedYear) return false;
+            if (selectedMonth !== 'all' && mo !== selectedMonth) return false;
+            return true;
+        });
+    }, [activities, selectedYear, selectedMonth]);
+
+    // Filter counts (based on date-filtered activities)
     const counts = useMemo(() => {
         return {
-            all: activities.length,
-            dec: activities.filter(a => a.type === 'upload').length,
-            rce: activities.filter(a => a.type === 'document' && a.doc_type === 'rce').length,
-            dic: activities.filter(a => a.type === 'document' && a.doc_type === 'dic_dec_page').length,
-            other_docs: activities.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page').length,
-            merge: activities.filter(a => a.type === 'merge').length,
-            issues: activities.filter(a =>
+            all: dateFilteredActivities.length,
+            dec: dateFilteredActivities.filter(a => a.type === 'upload').length,
+            rce: dateFilteredActivities.filter(a => a.type === 'document' && a.doc_type === 'rce').length,
+            dic: dateFilteredActivities.filter(a => a.type === 'document' && (a.doc_type === 'dic_dec_page' || a.doc_type === 'quote')).length,
+            other_docs: dateFilteredActivities.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page' && a.doc_type !== 'quote').length,
+            merge: dateFilteredActivities.filter(a => a.type === 'merge').length,
+            issues: dateFilteredActivities.filter(a =>
                 a.status === 'failed' ||
                 (a.event_type || '').includes('failed') ||
                 (a.event_type || '').includes('needs_review') ||
@@ -157,15 +313,15 @@ export function ActivityTab() {
                 a.match_status === 'no_match'
             ).length,
         };
-    }, [activities]);
+    }, [dateFilteredActivities]);
 
-    // Filtered activities list with type filter and search query
+    // Final filtered activities list with category filter and search query
     const filteredActivities = useMemo(() => {
-        let list = activities;
+        let list = dateFilteredActivities;
         if (selectedFilter === 'dec') list = list.filter(a => a.type === 'upload');
         else if (selectedFilter === 'rce') list = list.filter(a => a.type === 'document' && a.doc_type === 'rce');
-        else if (selectedFilter === 'dic') list = list.filter(a => a.type === 'document' && a.doc_type === 'dic_dec_page');
-        else if (selectedFilter === 'other_docs') list = list.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page');
+        else if (selectedFilter === 'dic') list = list.filter(a => a.type === 'document' && (a.doc_type === 'dic_dec_page' || a.doc_type === 'quote'));
+        else if (selectedFilter === 'other_docs') list = list.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page' && a.doc_type !== 'quote');
         else if (selectedFilter === 'merge') list = list.filter(a => a.type === 'merge');
         else if (selectedFilter === 'issues') {
             list = list.filter(a =>
@@ -197,7 +353,7 @@ export function ActivityTab() {
         }
 
         return list;
-    }, [activities, selectedFilter, searchQuery]);
+    }, [dateFilteredActivities, selectedFilter, searchQuery]);
 
     const visibleActivities = showAll ? filteredActivities : filteredActivities.slice(0, MAX_VISIBLE);
     const hasMore = filteredActivities.length > MAX_VISIBLE;
@@ -206,17 +362,24 @@ export function ActivityTab() {
         { id: 'all', label: 'All', icon: <Layers size={12} /> },
         { id: 'dec', label: 'Dec Pages', icon: <FileText size={12} /> },
         { id: 'rce', label: 'RCE Reports', icon: <FileUp size={12} /> },
-        { id: 'dic', label: 'DIC Decs', icon: <Shield size={12} /> },
-        ...(counts.other_docs > 0 ? [{ id: 'other_docs' as const, label: 'Other Documents', icon: <Files size={12} /> }] : []),
+        { id: 'dic', label: 'Quotes & DICs', icon: <Shield size={12} /> },
+        ...(counts.other_docs > 0 ? [{ id: 'other_docs' as const, label: 'Other Docs', icon: <Files size={12} /> }] : []),
         ...(counts.merge > 0 ? [{ id: 'merge' as const, label: 'Consolidations', icon: <Merge size={12} /> }] : []),
         ...(counts.issues > 0 ? [{ id: 'issues' as const, label: 'Needs Review', icon: <AlertTriangle size={12} />, isIssues: true }] : []),
     ];
+
+    const hasActiveDateFilter = selectedYear !== 'all' || selectedMonth !== 'all';
 
     return (
         <div className={styles.container}>
             {/* Header */}
             <div className={styles.header}>
-                <h2 className={styles.title}>Recent Activity</h2>
+                <div>
+                    <h2 className={styles.title}>Recent Activity & Document History</h2>
+                    <span className={styles.subtitle}>
+                        Complete log of uploaded Declaration Pages, RCEs, Quotes, and platform operations.
+                    </span>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <button
                         className={styles.refreshButton}
@@ -228,12 +391,68 @@ export function ActivityTab() {
                         {refreshing ? 'Refreshing…' : 'Refresh'}
                     </button>
                     <span className={styles.count}>
-                        {selectedFilter === 'all' && !searchQuery.trim()
-                            ? `${activities.length} events`
+                        {selectedFilter === 'all' && !searchQuery.trim() && !hasActiveDateFilter
+                            ? `${activities.length} total events`
                             : `${filteredActivities.length} of ${activities.length} events`}
                     </span>
                 </div>
             </div>
+
+            {/* Date Filtering Bar (Year + Month) */}
+            {!loading && activities.length > 0 && (
+                <div className={styles.dateFilterContainer}>
+                    <div className={styles.dateFilterHeader}>
+                        <div className={styles.dateFilterTitle}>
+                            <Calendar size={14} className={styles.calendarIcon} />
+                            <span>Filter by Upload Period:</span>
+                        </div>
+                        <div className={styles.yearSelectorWrapper}>
+                            <span className={styles.filterLabel}>Year:</span>
+                            <select
+                                className={styles.yearSelect}
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                            >
+                                <option value="all">All Years</option>
+                                {availableYears.map(yr => (
+                                    <option key={yr} value={yr}>{yr}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className={styles.monthPillsScroll}>
+                        <button
+                            type="button"
+                            className={`${styles.monthPill} ${selectedMonth === 'all' ? styles.monthPillActive : ''}`}
+                            onClick={() => setSelectedMonth('all')}
+                        >
+                            All Months
+                            <span className={styles.monthPillBadge}>
+                                {selectedYear === 'all'
+                                    ? activities.length
+                                    : activities.filter(a => a.created_at && new Date(a.created_at).getFullYear().toString() === selectedYear).length}
+                            </span>
+                        </button>
+                        {MONTH_NAMES.map(m => {
+                            const count = monthCounts[m.value] || 0;
+                            const isActive = selectedMonth === m.value;
+                            return (
+                                <button
+                                    key={m.value}
+                                    type="button"
+                                    className={`${styles.monthPill} ${isActive ? styles.monthPillActive : ''} ${count === 0 ? styles.monthPillEmpty : ''}`}
+                                    onClick={() => setSelectedMonth(m.value)}
+                                    title={`${m.fullName} ${selectedYear !== 'all' ? selectedYear : ''} (${count} uploads)`}
+                                >
+                                    {m.label}
+                                    <span className={styles.monthPillBadge}>{count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Search Bar & Quick Filter Pill Bar */}
             {!loading && activities.length > 0 && (
@@ -243,7 +462,7 @@ export function ActivityTab() {
                         <input
                             type="text"
                             className={styles.searchInput}
-                            placeholder="Search by CFP #, insured name, or file..."
+                            placeholder="Search by CFP #, insured name, or file name..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -289,12 +508,12 @@ export function ActivityTab() {
             {loading ? (
                 <div className={styles.loadingState}>
                     <Loader2 className={styles.spinner} />
-                    <span>Loading activity...</span>
+                    <span>Loading activity and upload history...</span>
                 </div>
             ) : activities.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Upload className={styles.emptyIcon} />
-                    <p>No recent uploads. Submit a declaration or document to see activity here.</p>
+                    <p>No recent uploads found. Submit a declaration or document to see activity here.</p>
                 </div>
             ) : filteredActivities.length === 0 ? (
                 <div className={styles.emptyFilterState}>
@@ -302,17 +521,19 @@ export function ActivityTab() {
                     <p>
                         {searchQuery.trim()
                             ? `No activity found matching "${searchQuery}"${selectedFilter !== 'all' ? ` in ${filterOptions.find(o => o.id === selectedFilter)?.label}` : ''}.`
-                            : `No activity found matching the "${filterOptions.find(o => o.id === selectedFilter)?.label}" filter.`}
+                            : `No activity found for the selected filters.`}
                     </p>
                     <button
                         className={styles.clearFilterBtn}
                         onClick={() => {
                             setSelectedFilter('all');
+                            setSelectedYear('all');
+                            setSelectedMonth('all');
                             setSearchQuery('');
                         }}
                     >
                         <RotateCcw size={12} style={{ marginRight: 4 }} />
-                        Show All Activities ({activities.length})
+                        Reset All Filters (Show All {activities.length} Events)
                     </button>
                 </div>
             ) : (
@@ -325,6 +546,8 @@ export function ActivityTab() {
 
                             const isMerge = activity.type === 'merge';
                             const isDoc = activity.type === 'document';
+                            const isUpload = activity.type === 'upload';
+                            const hasViewableDoc = isUpload || isDoc || !!activity.storage_path || !!activity.file_path;
                             const isDocUpload = isDoc && (activity.event_type || '').startsWith('doc.uploaded.');
                             const isDocProcessed = isDoc && activity.event_type === 'document.processed';
                             const isDocNeedsAction = isDoc && (activity.event_type === 'document.needs_review' || activity.event_type === 'document.no_match');
@@ -386,6 +609,25 @@ export function ActivityTab() {
                                                 >
                                                     {activity.policy_number}
                                                 </span>
+                                            </>
+                                        )}
+
+                                        {/* View Document Button */}
+                                        {hasViewableDoc && (
+                                            <>
+                                                <span className={styles.divider}>·</span>
+                                                <button
+                                                    type="button"
+                                                    className={styles.viewDocBtn}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handlePreviewDoc(activity);
+                                                    }}
+                                                    title="View and preview uploaded document"
+                                                >
+                                                    <Eye size={12} />
+                                                    <span>View</span>
+                                                </button>
                                             </>
                                         )}
 
@@ -485,9 +727,9 @@ export function ActivityTab() {
                                         )}
 
                                         {/* File name hint for document uploads */}
-                                        {isDoc && activity.file_name && (
-                                            <div className={styles.detailText} style={{ opacity: 0.7 }}>
-                                                {activity.file_name}
+                                        {activity.file_name && (
+                                            <div className={styles.detailText} style={{ opacity: 0.75 }}>
+                                                📄 {activity.file_name}
                                             </div>
                                         )}
                                     </div>
@@ -561,6 +803,87 @@ export function ActivityTab() {
                         </div>
                     )}
                 </>
+            )}
+
+            {/* ── Document Preview Modal ── */}
+            {previewDoc && (
+                <div
+                    className={styles.previewModalBackdrop}
+                    onClick={() => setPreviewDoc(null)}
+                >
+                    <div
+                        className={styles.previewModalContainer}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className={styles.previewModalHeader}>
+                            <div className={styles.previewModalTitleCol}>
+                                <div className={styles.previewModalTitleRow}>
+                                    <FileText size={18} className={styles.previewModalIcon} />
+                                    <h3 className={styles.previewModalTitle}>{previewDoc.title}</h3>
+                                </div>
+                                {previewDoc.subtitle && (
+                                    <span className={styles.previewModalSubtitle}>{previewDoc.subtitle}</span>
+                                )}
+                            </div>
+                            <div className={styles.previewModalActions}>
+                                {previewDoc.url && (
+                                    <>
+                                        <a
+                                            href={previewDoc.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={styles.previewModalBtn}
+                                            title="Open full document in new browser tab"
+                                        >
+                                            <ExternalLink size={14} />
+                                            <span>Open</span>
+                                        </a>
+                                        <a
+                                            href={previewDoc.url}
+                                            download
+                                            className={styles.previewModalBtn}
+                                            title="Download document file"
+                                        >
+                                            <Download size={14} />
+                                            <span>Download</span>
+                                        </a>
+                                    </>
+                                )}
+                                <button
+                                    type="button"
+                                    className={styles.previewModalCloseBtn}
+                                    onClick={() => setPreviewDoc(null)}
+                                    title="Close preview (Esc)"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className={styles.previewModalBody}>
+                            {previewDoc.loading ? (
+                                <div className={styles.previewLoading}>
+                                    <Loader2 size={36} className={styles.spinSlow} />
+                                    <span>Generating secure document preview...</span>
+                                </div>
+                            ) : previewDoc.error ? (
+                                <div className={styles.previewError}>
+                                    <AlertCircle size={36} style={{ color: '#ef4444' }} />
+                                    <span className={styles.previewErrorTitle}>Unable to load document preview</span>
+                                    <span className={styles.previewErrorMessage}>{previewDoc.error}</span>
+                                </div>
+                            ) : previewDoc.url ? (
+                                <iframe
+                                    src={previewDoc.url}
+                                    className={styles.previewIframe}
+                                    title={previewDoc.title}
+                                />
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

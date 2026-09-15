@@ -21,6 +21,13 @@
     margin: 0;
 }
 
+.subtitle {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
 .count {
     font-size: 0.875rem;
     color: var(--text-muted);
@@ -50,6 +57,137 @@
 .refreshButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ── Date Filtering Section ── */
+.dateFilterContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--bg-surface-raised, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-md, 8px);
+}
+
+.dateFilterHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.dateFilterTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.calendarIcon {
+    color: var(--accent-primary, #6366f1);
+}
+
+.yearSelectorWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.filterLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.yearSelect {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-high);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.yearSelect:focus {
+    border-color: var(--accent-primary);
+}
+
+.monthPillsScroll {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+}
+
+.monthPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.22rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.monthPill:hover {
+    color: var(--text-high);
+    border-color: var(--border-strong, #4b5563);
+    background: var(--bg-surface-raised);
+}
+
+.monthPillActive {
+    color: #ffffff;
+    background: var(--accent-primary, #4f46e5);
+    border-color: var(--accent-primary, #4f46e5);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25);
+}
+
+.monthPillActive:hover {
+    color: #ffffff;
+    background: var(--accent-primary, #4f46e5);
+    border-color: var(--accent-primary, #4f46e5);
+}
+
+.monthPillEmpty {
+    opacity: 0.55;
+}
+
+.monthPillBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.02rem 0.35rem;
+    border-radius: 9999px;
+    background: var(--border-subtle, rgba(255, 255, 255, 0.1));
+    color: var(--text-muted);
+}
+
+.monthPillActive .monthPillBadge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
 }
 
 .controlsRow {
@@ -414,6 +552,31 @@
     transform: translateY(-1px);
 }
 
+/* ── View Document Button ── */
+.viewDocBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0284c7;
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    padding: 0.12rem 0.5rem;
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.viewDocBtn:hover {
+    background: rgba(14, 165, 233, 0.2);
+    border-color: rgba(14, 165, 233, 0.6);
+    color: #0369a1;
+    transform: translateY(-1px);
+    box-shadow: 0 1px 4px rgba(14, 165, 233, 0.2);
+}
+
 .statusLabel {
     font-size: 0.7rem;
     font-weight: 600;
@@ -591,6 +754,195 @@
     opacity: 0.4;
 }
 
+/* ── Document Preview Modal ── */
+.previewModalBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.previewModalContainer {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    height: 88vh;
+    background: var(--bg-surface, #1e293b);
+    border: 1px solid var(--border-default, #334155);
+    border-radius: var(--radius-lg, 12px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.previewModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border-default, #334155);
+    background: var(--bg-surface-raised, #0f172a);
+    gap: 1rem;
+}
+
+.previewModalTitleCol {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.previewModalTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.previewModalIcon {
+    color: var(--accent-primary, #6366f1);
+    flex-shrink: 0;
+}
+
+.previewModalTitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-high, #f8fafc);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.previewModalSubtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted, #94a3b8);
+    margin-top: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.previewModalActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.previewModalBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-mid, #cbd5e1);
+    background: var(--bg-surface, #1e293b);
+    border: 1px solid var(--border-default, #334155);
+    border-radius: var(--radius-md, 6px);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.previewModalBtn:hover {
+    color: var(--text-high, #ffffff);
+    border-color: var(--accent-primary, #6366f1);
+    background: var(--bg-surface-raised, #0f172a);
+}
+
+.previewModalCloseBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+    color: var(--text-muted, #94a3b8);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md, 6px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.previewModalCloseBtn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.previewModalBody {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    background: #0b1120;
+}
+
+.previewIframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #ffffff;
+}
+
+.previewLoading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--text-muted, #94a3b8);
+    font-size: 0.875rem;
+}
+
+.previewError {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.previewErrorTitle {
+    font-weight: 600;
+    color: var(--text-high, #f8fafc);
+    font-size: 1rem;
+}
+
+.previewErrorMessage {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #94a3b8);
+    max-width: 450px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 /* ── Mobile responsive ── */
 @media (max-width: 640px) {
     .container {
@@ -632,5 +984,10 @@
         grid-column: 2;
         font-size: 0.75rem;
         text-align: left;
+    }
+
+    .previewModalContainer {
+        max-width: 100%;
+        height: 95vh;
     }
 }
