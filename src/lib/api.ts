@@ -3225,6 +3225,7 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                     file_name,
                     storage_path,
                     parse_status,
+                    match_status,
                     created_at,
                     created_by,
                     policies (
@@ -3276,6 +3277,7 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                         event_type: 'document.processed',
                         title: `${docLabel} Processed`,
                         detail: `A ${docLabel} was successfully uploaded and applied.`,
+                        match_status: p.match_status || (p.policy_id ? 'manual' : undefined),
                     };
                 });
             }
@@ -3345,6 +3347,7 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                             file_name,
                             doc_type,
                             policy_id,
+                            match_status,
                             policies (
                                 id,
                                 policy_number,
@@ -3365,6 +3368,7 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                                 file_name: ed.file_name,
                                 doc_type: ed.doc_type,
                                 policy_id: ed.policy_id,
+                                match_status: ed.match_status || (ed.policy_id ? 'manual' : undefined),
                                 policy_number: pol?.policy_number,
                                 client_id: pol?.client_id || cli?.id,
                                 insured_name: cli?.named_insured,
@@ -3385,8 +3389,12 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                     const docId = meta.document_id || evt.id;
                     const pDoc = platDocMap.get(docId) || (meta.document_id ? platDocMap.get(meta.document_id) : null);
 
-                    // Skip duplicate if already present from platform_documents and successful
-                    if (existingPlatDocIds.has(meta.document_id) && evt.event_type === 'document.processed') {
+                    const policyId = evt.policy_id || pDoc?.policy_id || undefined;
+                    const clientId = evt.client_id || pDoc?.client_id || undefined;
+                    const isResolved = Boolean(policyId);
+
+                    // Skip duplicate if already present from platform_documents and successful/resolved
+                    if (existingPlatDocIds.has(meta.document_id) && (evt.event_type === 'document.processed' || isResolved)) {
                         continue;
                     }
 
@@ -3397,15 +3405,35 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                     const fileName = meta.file_name || pDoc?.file_name || undefined;
                     const policyNum = meta.policy_number || pDoc?.policy_number || undefined;
                     const insuredName = meta.owner_name || meta.named_insured || pDoc?.insured_name || undefined;
-                    const policyId = evt.policy_id || pDoc?.policy_id || undefined;
-                    const clientId = evt.client_id || pDoc?.client_id || undefined;
+
+                    let eventType = evt.event_type;
+                    let eventTitle = evt.title;
+                    let eventDetail = evt.detail;
+
+                    if (isResolved && (evt.event_type === 'document.needs_review' || evt.event_type === 'document.no_match')) {
+                        eventType = 'document.processed';
+                        const docType = meta.doc_type || pDoc?.doc_type;
+                        let docLabel = 'Document';
+                        if (docType === 'rce') docLabel = 'RCE Report';
+                        else if (docType === 'dic_dec_page') docLabel = 'DIC Quote';
+                        else if (docType === 'quote') docLabel = 'Carrier Quote';
+                        else if (docType === 'dec_page') docLabel = 'Declaration Page';
+                        else if (docType === 'es_doc') docLabel = 'E&S Document';
+
+                        eventTitle = `${docLabel} Processed`;
+                        eventDetail = `A ${docLabel} was successfully uploaded and applied.`;
+                    }
+
+                    const matchStatus = isResolved
+                        ? (pDoc?.match_status || meta.match_status || 'manual')
+                        : (meta.match_status || pDoc?.match_status || undefined);
 
                     activityEventDocItems.push({
                         id: evt.id,
                         type: 'document' as const,
-                        event_type: evt.event_type,
-                        title: evt.title,
-                        detail: evt.detail,
+                        event_type: eventType,
+                        title: eventTitle,
+                        detail: eventDetail,
                         policy_id: policyId,
                         client_id: clientId,
                         insured_name: insuredName,
@@ -3419,7 +3447,7 @@ export async function fetchActivityFeed(limit = 500): Promise<ActivityFeedItem[]
                         uploaded_by: meta.uploaded_by || 'System',
                         doc_type: meta.doc_type || pDoc?.doc_type,
                         document_id: meta.document_id || undefined,
-                        match_status: meta.match_status || undefined,
+                        match_status: matchStatus,
                         writeback_status: meta.writeback_status || undefined,
                         match_confidence: meta.confidence || undefined,
                         file_name: fileName,

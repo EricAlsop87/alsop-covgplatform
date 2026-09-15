@@ -78,11 +78,11 @@ function getStatusConfig(status: string): { label: string; cssKey: string } {
     }
 }
 
-function StatusIcon({ status, type, event_type }: { status: string; type?: string; event_type?: string }) {
+function StatusIcon({ status, type, event_type, isResolved }: { status: string; type?: string; event_type?: string; isResolved?: boolean }) {
     if (type === 'document') {
         const isUpload = (event_type || '').startsWith('doc.uploaded.');
         if (isUpload) return <FileText size={14} className={styles.statusIconDoc} />;
-        if (event_type === 'document.processed') return <CheckCircle size={14} style={{ color: '#10b981' }} />;
+        if (event_type === 'document.processed' || isResolved) return <CheckCircle size={14} style={{ color: '#10b981' }} />;
         if (event_type === 'document.failed') return <XCircle size={14} style={{ color: '#ef4444' }} />;
         if (event_type === 'document.needs_review') return <AlertTriangle size={14} style={{ color: '#f59e0b' }} />;
         if (event_type === 'document.no_match') return <AlertTriangle size={14} style={{ color: '#f97316' }} />;
@@ -134,6 +134,12 @@ function getDocumentActionLabel(activity: ActivityFeedItem): string {
     const docLabel = isCfp || activity.doc_type === 'dec_page'
         ? 'Declaration Page'
         : (DOC_TYPE_LABELS[activity.doc_type || ''] || (activity.doc_type && activity.doc_type !== 'other' ? activity.doc_type.toUpperCase() : 'Document'));
+
+    if (activity.policy_id || activity.policy_number) {
+        if (activity.event_type === 'document.needs_review' || activity.event_type === 'document.no_match') {
+            return `${docLabel} Processed`;
+        }
+    }
 
     const isUpload = (activity.event_type || '').startsWith('doc.uploaded.');
     if (isUpload) return `${docLabel} Uploaded`;
@@ -219,8 +225,8 @@ export function ActivityTab() {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
-            // Fetch up to 1500 events to ensure all historical uploads from Operations and Platform are available
-            const data = await fetchActivityFeed(1500);
+            // Fetch recent activities (350 items provides comprehensive coverage with fast load times)
+            const data = await fetchActivityFeed(350);
             setActivities(data);
         } catch (err) {
             logger.error('ActivityTab', 'Activity feed error:', { error: err instanceof Error ? err.message : String(err) });
@@ -467,14 +473,17 @@ export function ActivityTab() {
             dic: dateFilteredActivities.filter(a => a.type === 'document' && (a.doc_type === 'dic_dec_page' || a.doc_type === 'quote')).length,
             other_docs: dateFilteredActivities.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page' && a.doc_type !== 'quote').length,
             merge: dateFilteredActivities.filter(a => a.type === 'merge').length,
-            issues: dateFilteredActivities.filter(a =>
-                a.status === 'failed' ||
-                (a.event_type || '').includes('failed') ||
-                (a.event_type || '').includes('needs_review') ||
-                (a.event_type || '').includes('no_match') ||
-                a.match_status === 'needs_review' ||
-                a.match_status === 'no_match'
-            ).length,
+            issues: dateFilteredActivities.filter(a => {
+                if (a.status === 'failed' || (a.event_type || '').includes('failed')) return true;
+                const isAssigned = Boolean(a.policy_id || a.policy_number);
+                if (!isAssigned && (
+                    (a.event_type || '').includes('needs_review') ||
+                    (a.event_type || '').includes('no_match') ||
+                    a.match_status === 'needs_review' ||
+                    a.match_status === 'no_match'
+                )) return true;
+                return false;
+            }).length,
         };
     }, [dateFilteredActivities]);
 
@@ -487,14 +496,17 @@ export function ActivityTab() {
         else if (selectedFilter === 'other_docs') list = list.filter(a => a.type === 'document' && a.doc_type !== 'rce' && a.doc_type !== 'dic_dec_page' && a.doc_type !== 'quote');
         else if (selectedFilter === 'merge') list = list.filter(a => a.type === 'merge');
         else if (selectedFilter === 'issues') {
-            list = list.filter(a =>
-                a.status === 'failed' ||
-                (a.event_type || '').includes('failed') ||
-                (a.event_type || '').includes('needs_review') ||
-                (a.event_type || '').includes('no_match') ||
-                a.match_status === 'needs_review' ||
-                a.match_status === 'no_match'
-            );
+            list = list.filter(a => {
+                if (a.status === 'failed' || (a.event_type || '').includes('failed')) return true;
+                const isAssigned = Boolean(a.policy_id || a.policy_number);
+                if (!isAssigned && (
+                    (a.event_type || '').includes('needs_review') ||
+                    (a.event_type || '').includes('no_match') ||
+                    a.match_status === 'needs_review' ||
+                    a.match_status === 'no_match'
+                )) return true;
+                return false;
+            });
         }
 
         const q = searchQuery.trim().toLowerCase();
@@ -699,10 +711,11 @@ export function ActivityTab() {
                             const isMerge = activity.type === 'merge';
                             const isDoc = activity.type === 'document';
                             const isUpload = activity.type === 'upload';
+                            const isAssigned = Boolean(activity.policy_id || activity.policy_number);
                             const hasViewableDoc = isUpload || isDoc || !!activity.storage_path || !!activity.file_path;
                             const isDocUpload = isDoc && (activity.event_type || '').startsWith('doc.uploaded.');
-                            const isDocProcessed = isDoc && activity.event_type === 'document.processed';
-                            const isDocNeedsAction = isDoc && (activity.event_type === 'document.needs_review' || activity.event_type === 'document.no_match');
+                            const isDocProcessed = isDoc && (activity.event_type === 'document.processed' || isAssigned);
+                            const isDocNeedsAction = isDoc && !isAssigned && (activity.event_type === 'document.needs_review' || activity.event_type === 'document.no_match' || activity.match_status === 'needs_review' || activity.match_status === 'no_match');
                             const isDocFailed = isDoc && activity.event_type === 'document.failed';
                             const rowClass = [
                                 styles.row,
@@ -714,7 +727,7 @@ export function ActivityTab() {
                                 <div key={`${activity.id}-${idx}`} className={rowClass}>
                                     {/* Status icon */}
                                     <div className={styles.statusCol}>
-                                        <StatusIcon status={activity.status} type={activity.type} event_type={activity.event_type} />
+                                        <StatusIcon status={activity.status} type={activity.type} event_type={activity.event_type} isResolved={isAssigned} />
                                     </div>
 
                                     {/* Main info */}
@@ -783,8 +796,8 @@ export function ActivityTab() {
                                             </>
                                         )}
 
-                                        {/* "Review & Assign" button for all document types needing attention or assignment */}
-                                        {isDoc && (isDocNeedsAction || activity.match_status === 'needs_review' || activity.match_status === 'no_match' || (activity.event_type || '').includes('needs_review') || (activity.event_type || '').includes('no_match')) && (
+                                        {/* "Review & Assign" button for unassigned document types needing attention */}
+                                        {isDoc && !isAssigned && (isDocNeedsAction || activity.match_status === 'needs_review' || activity.match_status === 'no_match' || (activity.event_type || '').includes('needs_review') || (activity.event_type || '').includes('no_match')) && (
                                             <>
                                                 <span className={styles.divider}>·</span>
                                                 <button
