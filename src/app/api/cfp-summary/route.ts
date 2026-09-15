@@ -439,10 +439,12 @@ export async function GET(req: NextRequest) {
             policy_id: string;
             policy_term_id?: string;
             policy_number?: string;
+            policy_period_start?: string;
+            policy_period_end?: string;
             dec_page_submissions?: any;
         }>(
             'dec_pages',
-            'id, policy_id, policy_term_id, policy_number, dec_page_submissions(storage_path, file_name, bucket)',
+            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, dec_page_submissions(storage_path, file_name, bucket)',
             'policy_id',
             policyIds
         ),
@@ -483,8 +485,14 @@ export async function GET(req: NextRequest) {
         ),
     ]);
 
+    // Map terms by policy_id for term lookup
+    const termsByPolicy: Record<string, any[]> = {};
+    for (const t of terms as any[]) {
+        if (!termsByPolicy[t.policy_id]) termsByPolicy[t.policy_id] = [];
+        termsByPolicy[t.policy_id].push(t);
+    }
+
     const termDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
-    const policyDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
     for (const d of decPages) {
         const sub = Array.isArray(d.dec_page_submissions) ? d.dec_page_submissions[0] : d.dec_page_submissions;
         const bucket = (sub?.bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-raw-decpage';
@@ -496,20 +504,28 @@ export async function GET(req: NextRequest) {
         };
         if (d.policy_term_id && sub?.storage_path) {
             termDecDocMap[d.policy_term_id] = docInfo;
-        }
-        if (!policyDecDocMap[d.policy_id] && sub?.storage_path) {
-            policyDecDocMap[d.policy_id] = docInfo;
+        } else if (sub?.storage_path && d.policy_id) {
+            const polTerms = termsByPolicy[d.policy_id] || [];
+            // Match by exact start/end dates if available
+            const dateMatch = polTerms.find(t =>
+                d.policy_period_start && t.effective_date === d.policy_period_start &&
+                d.policy_period_end && t.expiration_date === d.policy_period_end
+            );
+            if (dateMatch) {
+                termDecDocMap[dateMatch.id] = docInfo;
+            } else if (polTerms.length === 1) {
+                termDecDocMap[polTerms[0].id] = docInfo;
+            }
         }
     }
-    const policyIdsWithDec = new Set(decPages.map(d => d.policy_id));
 
-    // Build per-policy doc sets, carrier maps, and file storage info
-    const policyDocTypes: Record<string, Set<string>> = {};
-    const policyRceCarrier: Record<string, string> = {};
-    const policyDicCarrier: Record<string, string> = {};
-    const policyRceDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
-    const policyDicDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
-    const policyEsDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
+    // Build per-term doc sets, carrier maps, and file storage info
+    const termDocTypes: Record<string, Set<string>> = {};
+    const termRceCarrier: Record<string, string> = {};
+    const termDicCarrier: Record<string, string> = {};
+    const termRceDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
+    const termDicDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
+    const termEsDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
 
     for (const doc of docs) {
         const fn = (doc.file_name || '').toLowerCase();
@@ -523,38 +539,54 @@ export async function GET(req: NextRequest) {
             (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic'))
         );
 
-        if (isCfpDecDoc) {
-            // It's a CFP Dec Page / Renewal document uploaded to platform_documents
-            policyIdsWithDec.add(doc.policy_id);
-            if (doc.storage_path && !policyDecDocMap[doc.policy_id]) {
-                policyDecDocMap[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+        if (isCfpDecDoc && doc.storage_path) {
+            const docInfo = {
+                storage_path: doc.storage_path,
+                file_name: doc.file_name,
+                bucket: 'cfp-platform-documents' as const,
+                policy_number: undefined,
+            };
+            if (doc.policy_term_id) {
+                termDecDocMap[doc.policy_term_id] = docInfo;
+            } else if (doc.policy_id) {
+                const polTerms = termsByPolicy[doc.policy_id] || [];
+                if (polTerms.length === 1) {
+                    termDecDocMap[polTerms[0].id] = docInfo;
+                }
             }
             continue;
         }
 
-        if (!policyDocTypes[doc.policy_id]) {
-            policyDocTypes[doc.policy_id] = new Set<string>();
-        }
-        policyDocTypes[doc.policy_id].add(doc.doc_type);
+        const polTerms = termsByPolicy[doc.policy_id] || [];
+        const targetTerms = doc.policy_term_id
+            ? polTerms.filter(t => t.id === doc.policy_term_id)
+            : (polTerms.length === 1 ? polTerms : polTerms.filter(t => t.is_current));
 
-        if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc)) {
-            const c = detectDocCarrier(doc.file_name, null, 'rce');
-            if (c) policyRceCarrier[doc.policy_id] = c;
-            if (doc.storage_path && !policyRceDoc[doc.policy_id]) {
-                policyRceDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+        for (const t of targetTerms) {
+            if (!termDocTypes[t.id]) {
+                termDocTypes[t.id] = new Set<string>();
             }
-        } else if (doc.doc_type === 'dic_dec_page' || fn.includes('dic')) {
-            // Only set as in-force DIC Dec Page if it is NOT a quote
-            if (!isQuoteDoc) {
-                const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
-                if (c) policyDicCarrier[doc.policy_id] = c;
-                if (doc.storage_path && !policyDicDoc[doc.policy_id]) {
-                    policyDicDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+            termDocTypes[t.id].add(doc.doc_type);
+
+            if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc)) {
+                const c = detectDocCarrier(doc.file_name, null, 'rce');
+                if (c) termRceCarrier[t.id] = c;
+                if (doc.storage_path && !termRceDoc[t.id]) {
+                    termRceDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
                 }
-            }
-        } else if (doc.doc_type === 'es_doc') {
-            if (doc.storage_path && !policyEsDoc[doc.policy_id]) {
-                policyEsDoc[doc.policy_id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+            } else if (doc.doc_type === 'dic_dec_page' || fn.includes('dic')) {
+                // Only set as in-force DIC Dec Page if it is NOT a quote
+                if (!isQuoteDoc) {
+                    const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
+                    if (c) termDicCarrier[t.id] = c;
+                    if (doc.storage_path && !termDicDoc[t.id]) {
+                        termDicDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+                    }
+                }
+            } else if (doc.doc_type === 'es_doc') {
+                if (doc.storage_path && !termEsDoc[t.id]) {
+                    termEsDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
+                }
             }
         }
     }
@@ -618,14 +650,9 @@ export async function GET(req: NextRequest) {
             const pid = doc.policy_id;
             if (!autoCarrierQuotes[pid]) autoCarrierQuotes[pid] = {};
             const existing = autoCarrierQuotes[pid][detected.carrier_key];
-            // Prioritize docs with extracted quote_number or premium
-            if (!existing || (detected.quote_number && !existing.quote_number) || (detected.premium && !existing.premium) || doc.doc_type === 'dic_dec_page' || doc.doc_type === 'es_doc') {
+            if (!existing || (!existing.premium && detected.premium)) {
                 autoCarrierQuotes[pid][detected.carrier_key] = {
-                    carrier_key: detected.carrier_key,
-                    coverage_type: detected.coverage_type,
-                    quote_number: detected.quote_number,
-                    premium: detected.premium,
-                    dwelling_coverage: detected.dwelling_coverage,
+                    ...detected,
                     storage_path: doc.storage_path,
                     file_name: doc.file_name,
                 };
@@ -678,29 +705,71 @@ export async function GET(req: NextRequest) {
         const policy = t.policies;
         const client = policy?.clients;
         const policyId = t.policy_id;
-        const docSet = policyDocTypes[policyId] || new Set<string>();
+        const polTerms = termsByPolicy[policyId] || [];
+        const isCurrentOrOnlyTerm = !!t.is_current || polTerms.length === 1;
 
-        const termDec = termDecDocMap[t.id] || policyDecDocMap[policyId] || null;
+        const docSet = termDocTypes[t.id] || new Set<string>();
+        const termDec = termDecDocMap[t.id] || null;
 
         // Priority for policy_number: 
         // 1. carrier_policy_number on this specific term (e.g. 'CFP 0101227750 05')
         // 2. dec_pages.policy_number linked specifically to this term
         // 3. base policy number on policy record
-        const termPolicyNum = t.carrier_policy_number || termDecDocMap[t.id]?.policy_number || policy?.policy_number || '';
+        const termPolicyNum = t.carrier_policy_number || termDec?.policy_number || policy?.policy_number || '';
         const { basePolicy, suffix } = normalizePolicyNumber(termPolicyNum);
 
         const hasRce = docSet.has('rce');
-        const rceCarrier = policyRceCarrier[policyId] || (hasRce ? 'Bamboo' : null);
+        const rceCarrier = termRceCarrier[t.id] || (hasRce ? 'Bamboo' : null);
 
         const hasDic = docSet.has('dic_dec_page') || !!t.dic_exists;
         const dicFromPn = detectDocCarrier(t.dic_policy_number, null, 'dic_dec_page');
-        const dicCarrier = policyDicCarrier[policyId] || dicFromPn || (hasDic ? 'DIC' : null);
+        const dicCarrier = termDicCarrier[t.id] || dicFromPn || (hasDic ? 'DIC' : null);
         const isPendingDec = policy?.status === 'pending_dec';
 
-        const hasDec = !!termDec || policyIdsWithDec.has(policyId);
-        const decStoragePath = termDec?.storage_path || policyDecDocMap[policyId]?.storage_path || null;
-        const decFileName = termDec?.file_name || policyDecDocMap[policyId]?.file_name || null;
-        const decBucket = (termDec?.bucket || policyDecDocMap[policyId]?.bucket || 'cfp-raw-decpage') as 'cfp-raw-decpage' | 'cfp-platform-documents';
+        const hasDec = !!termDec;
+        const decStoragePath = termDec?.storage_path || null;
+        const decFileName = termDec?.file_name || null;
+        const decBucket = (termDec?.bucket || 'cfp-raw-decpage') as 'cfp-raw-decpage' | 'cfp-platform-documents';
+
+        // Quotes, Mail Sent, Title Pro only attach to the current/active term (or single-term policies)
+        const termCfpMailSent = isCurrentOrOnlyTerm ? cfpMailSentMap[policyId] : undefined;
+        const termServicingStatus = isCurrentOrOnlyTerm ? (servicingStatusMap[policyId] || (termCfpMailSent ? 'emailed_to_agent' : null)) : null;
+        const termReturnedFromSe = isCurrentOrOnlyTerm && !servicingStatusMap[policyId] && !!servicingReturnMap[policyId];
+
+        const termCarrierQuotes = isCurrentOrOnlyTerm ? {
+            bamboo: manualCarrierQuotes[policyId]?.bamboo
+                ? {
+                    ...autoCarrierQuotes[policyId]?.bamboo,
+                    ...manualCarrierQuotes[policyId]?.bamboo,
+                    storage_path: manualCarrierQuotes[policyId]?.bamboo?.storage_path || autoCarrierQuotes[policyId]?.bamboo?.storage_path || null,
+                    file_name: manualCarrierQuotes[policyId]?.bamboo?.file_name || autoCarrierQuotes[policyId]?.bamboo?.file_name || null,
+                }
+                : autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
+            aegis: manualCarrierQuotes[policyId]?.aegis
+                ? {
+                    ...autoCarrierQuotes[policyId]?.aegis,
+                    ...manualCarrierQuotes[policyId]?.aegis,
+                    storage_path: manualCarrierQuotes[policyId]?.aegis?.storage_path || autoCarrierQuotes[policyId]?.aegis?.storage_path || null,
+                    file_name: manualCarrierQuotes[policyId]?.aegis?.file_name || autoCarrierQuotes[policyId]?.aegis?.file_name || null,
+                }
+                : autoCarrierQuotes[policyId]?.aegis || null,
+            am: manualCarrierQuotes[policyId]?.am
+                ? {
+                    ...autoCarrierQuotes[policyId]?.am,
+                    ...manualCarrierQuotes[policyId]?.am,
+                    storage_path: manualCarrierQuotes[policyId]?.am?.storage_path || autoCarrierQuotes[policyId]?.am?.storage_path || null,
+                    file_name: manualCarrierQuotes[policyId]?.am?.file_name || autoCarrierQuotes[policyId]?.am?.file_name || null,
+                }
+                : autoCarrierQuotes[policyId]?.am || null,
+            psic: manualCarrierQuotes[policyId]?.psic
+                ? {
+                    ...autoCarrierQuotes[policyId]?.psic,
+                    ...manualCarrierQuotes[policyId]?.psic,
+                    storage_path: manualCarrierQuotes[policyId]?.psic?.storage_path || autoCarrierQuotes[policyId]?.psic?.storage_path || null,
+                    file_name: manualCarrierQuotes[policyId]?.psic?.file_name || autoCarrierQuotes[policyId]?.psic?.file_name || null,
+                }
+                : autoCarrierQuotes[policyId]?.psic || null,
+        } : { bamboo: null, aegis: null, am: null, psic: null };
 
         return {
             policy_id: policyId,
@@ -709,7 +778,7 @@ export async function GET(req: NextRequest) {
             suffix: suffix || null,
             property_address: policy?.property_address_raw || '',
             carrier_name: policy?.carrier_name || '',
-            has_bamboo_coverage: bambooCoverageSet.has(policyId),
+            has_bamboo_coverage: isCurrentOrOnlyTerm ? bambooCoverageSet.has(policyId) : false,
             client_id: client?.id || '',
             named_insured: client?.named_insured || '',
             policy_term_id: t.id,
@@ -725,68 +794,35 @@ export async function GET(req: NextRequest) {
             dec_bucket: decBucket,
             has_rce: hasRce,
             rce_carrier: rceCarrier,
-            rce_storage_path: policyRceDoc[policyId]?.storage_path || null,
-            rce_file_name: policyRceDoc[policyId]?.file_name || null,
+            rce_storage_path: termRceDoc[t.id]?.storage_path || null,
+            rce_file_name: termRceDoc[t.id]?.file_name || null,
             has_dic: hasDic,
             dic_carrier: dicCarrier,
-            dic_storage_path: policyDicDoc[policyId]?.storage_path || null,
-            dic_file_name: policyDicDoc[policyId]?.file_name || null,
+            dic_storage_path: termDicDoc[t.id]?.storage_path || null,
+            dic_file_name: termDicDoc[t.id]?.file_name || null,
             has_es: docSet.has('es_doc') || !!t.es_exists,
-            es_storage_path: policyEsDoc[policyId]?.storage_path || null,
-            es_file_name: policyEsDoc[policyId]?.file_name || null,
-            no_dic_available: noDicAvailableSet.has(policyId),
+            es_storage_path: termEsDoc[t.id]?.storage_path || null,
+            es_file_name: termEsDoc[t.id]?.file_name || null,
+            no_dic_available: isCurrentOrOnlyTerm ? noDicAvailableSet.has(policyId) : false,
             is_pending_dec: isPendingDec,
-            comment_count_dec: policyCommentDec[policyId] || 0,
-            comment_count_rce: policyCommentRce[policyId] || 0,
-            comment_count_dic: policyCommentDic[policyId] || 0,
-            comment_count_quote: policyCommentQuote[policyId] || 0,
-            note_count: policyNoteCount[policyId] || 0,
-            latest_note_preview: policyLatestNotePreview[policyId] || null,
-            in_servicing_email: !!cfpMailSentMap[policyId],
-            servicing_status: servicingStatusMap[policyId] || (cfpMailSentMap[policyId] ? 'emailed_to_agent' : null),
-            returned_from_se: !servicingStatusMap[policyId] && !!servicingReturnMap[policyId],
-            return_reason: servicingReturnMap[policyId]?.reason || null,
-            return_notes: servicingReturnMap[policyId]?.custom_notes || null,
-            returned_by: servicingReturnMap[policyId]?.returned_by || null,
-            returned_at: servicingReturnMap[policyId]?.returned_at || null,
-            cfp_mail_sent: !!cfpMailSentMap[policyId],
-            cfp_mail_sent_to: cfpMailSentMap[policyId]?.sent_to || [],
-            cfp_mail_sent_at: cfpMailSentMap[policyId]?.sent_at || null,
-            carrier_quotes: {
-                bamboo: manualCarrierQuotes[policyId]?.bamboo
-                    ? {
-                        ...autoCarrierQuotes[policyId]?.bamboo,
-                        ...manualCarrierQuotes[policyId]?.bamboo,
-                        storage_path: manualCarrierQuotes[policyId]?.bamboo?.storage_path || autoCarrierQuotes[policyId]?.bamboo?.storage_path || null,
-                        file_name: manualCarrierQuotes[policyId]?.bamboo?.file_name || autoCarrierQuotes[policyId]?.bamboo?.file_name || null,
-                    }
-                    : autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
-                aegis: manualCarrierQuotes[policyId]?.aegis
-                    ? {
-                        ...autoCarrierQuotes[policyId]?.aegis,
-                        ...manualCarrierQuotes[policyId]?.aegis,
-                        storage_path: manualCarrierQuotes[policyId]?.aegis?.storage_path || autoCarrierQuotes[policyId]?.aegis?.storage_path || null,
-                        file_name: manualCarrierQuotes[policyId]?.aegis?.file_name || autoCarrierQuotes[policyId]?.aegis?.file_name || null,
-                    }
-                    : autoCarrierQuotes[policyId]?.aegis || null,
-                am: manualCarrierQuotes[policyId]?.am
-                    ? {
-                        ...autoCarrierQuotes[policyId]?.am,
-                        ...manualCarrierQuotes[policyId]?.am,
-                        storage_path: manualCarrierQuotes[policyId]?.am?.storage_path || autoCarrierQuotes[policyId]?.am?.storage_path || null,
-                        file_name: manualCarrierQuotes[policyId]?.am?.file_name || autoCarrierQuotes[policyId]?.am?.file_name || null,
-                    }
-                    : autoCarrierQuotes[policyId]?.am || null,
-                psic: manualCarrierQuotes[policyId]?.psic
-                    ? {
-                        ...autoCarrierQuotes[policyId]?.psic,
-                        ...manualCarrierQuotes[policyId]?.psic,
-                        storage_path: manualCarrierQuotes[policyId]?.psic?.storage_path || autoCarrierQuotes[policyId]?.psic?.storage_path || null,
-                        file_name: manualCarrierQuotes[policyId]?.psic?.file_name || autoCarrierQuotes[policyId]?.psic?.file_name || null,
-                    }
-                    : autoCarrierQuotes[policyId]?.psic || null,
-            },
-            title_pro: titleProMap[policyId] || null,
+            comment_count_dec: isCurrentOrOnlyTerm ? (policyCommentDec[policyId] || 0) : 0,
+            comment_count_rce: isCurrentOrOnlyTerm ? (policyCommentRce[policyId] || 0) : 0,
+            comment_count_dic: isCurrentOrOnlyTerm ? (policyCommentDic[policyId] || 0) : 0,
+            comment_count_quote: isCurrentOrOnlyTerm ? (policyCommentQuote[policyId] || 0) : 0,
+            note_count: isCurrentOrOnlyTerm ? (policyNoteCount[policyId] || 0) : 0,
+            latest_note_preview: isCurrentOrOnlyTerm ? (policyLatestNotePreview[policyId] || null) : null,
+            in_servicing_email: !!termCfpMailSent,
+            servicing_status: termServicingStatus,
+            returned_from_se: termReturnedFromSe,
+            return_reason: isCurrentOrOnlyTerm ? (servicingReturnMap[policyId]?.reason || null) : null,
+            return_notes: isCurrentOrOnlyTerm ? (servicingReturnMap[policyId]?.custom_notes || null) : null,
+            returned_by: isCurrentOrOnlyTerm ? (servicingReturnMap[policyId]?.returned_by || null) : null,
+            returned_at: isCurrentOrOnlyTerm ? (servicingReturnMap[policyId]?.returned_at || null) : null,
+            cfp_mail_sent: !!termCfpMailSent,
+            cfp_mail_sent_to: termCfpMailSent?.sent_to || [],
+            cfp_mail_sent_at: termCfpMailSent?.sent_at || null,
+            carrier_quotes: termCarrierQuotes,
+            title_pro: isCurrentOrOnlyTerm ? (titleProMap[policyId] || null) : null,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };
