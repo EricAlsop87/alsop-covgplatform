@@ -1037,7 +1037,7 @@ export interface PolicyDetail {
  * Used by the policy review page.
  * Coverage is read from policy_terms (curated/approved) — NOT from raw dec_pages.
  */
-export async function getPolicyDetailById(policyId: string, customClient?: SupabaseClient): Promise<PolicyDetail | undefined> {
+export async function getPolicyDetailById(policyId: string, customClient?: SupabaseClient, targetTermId?: string): Promise<PolicyDetail | undefined> {
     const sb = customClient || supabase;
     try {
         // DIC coverage columns (added by scripts/add_dic_fields.sql)
@@ -1160,7 +1160,10 @@ export async function getPolicyDetailById(policyId: string, customClient?: Supab
             return bScore - aScore;
         });
 
-        const currentTerm = sortedTerms.find((t: any) => t.is_current === true) || sortedTerms[0] || null;
+        const currentTerm = (targetTermId ? sortedTerms.find((t: any) => t.id === targetTermId) : null)
+            || sortedTerms.find((t: any) => t.is_current === true)
+            || sortedTerms[0]
+            || null;
 
         // Build all-terms array for the Term History panel
         const allTermsSorted: PolicyTermSummary[] = sortedTerms.map((t: any) => ({

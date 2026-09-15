@@ -123,13 +123,16 @@ export function detectCarrierQuoteInfo(
     const dicDocType = (dic?.document_type || '').toLowerCase();
     const dicCarrier = (dic?.carrier_name || '').toLowerCase();
 
-    // If it's explicitly an issued renewal or dec page without quote indication, it's not a quote
-    if (dicDocType.includes('declaration') || dicDocType.includes('renewal') || (fn.includes('dec') && !fn.includes('quote'))) {
+    // Only exclude CFP Dec pages or raw CFP Dec page submissions from carrier companion quotes
+    if ((fn.includes('cfp') && fn.includes('dec') && !fn.includes('dic') && !fn.includes('quote') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('psic') && !fn.includes('sagesure')) ||
+        dicDocType.includes('cfp_dec') ||
+        fn.includes('renewal_email_attachment') ||
+        fn.includes('renewal_offer')) {
         return null;
     }
 
-    // 1. Bamboo (Q100... or Bamboo)
-    const matchBamboo = (fileName || '').match(/(Q100\d{6,})/i) || (dic?.policy_number || '').match(/(Q100\d{6,})/i);
+    // 1. Bamboo (Q100... or CASNH... or Bamboo)
+    const matchBamboo = (fileName || '').match(/(Q100\d{6,}|CASNH\d+)/i) || (dic?.policy_number || '').match(/(Q100\d{6,}|CASNH\d+)/i);
     if (combined.includes('bamboo') || dicCarrier.includes('bamboo') || matchBamboo) {
         const isDic = (dic && dic.has_dic_endorsement === true) || combined.includes('does not cover the peril of fire') || (fn.includes('dic') && !fn.includes('ho3') && !fn.includes('home'));
         const prem = dic?.basic_premium || dic?.total_charge || null;
@@ -144,7 +147,7 @@ export function detectCarrierQuoteInfo(
     }
 
     // 2. Aegis (Q5... or Aegis or Obsidian)
-    const matchAegis = (fileName || '').match(/(Q5\d{5,}|Q\d{6,})/i) || (dic?.policy_number || '').match(/(Q5\d{5,}|Q\d{6,})/i);
+    const matchAegis = (fileName || '').match(/(Q5\d{5,}|Q\d{6,}|OBS\d+|AEG\d+)/i) || (dic?.policy_number || '').match(/(Q5\d{5,}|Q\d{6,}|OBS\d+|AEG\d+)/i);
     if (combined.includes('aegis') || combined.includes('obsidian') || dicCarrier.includes('aegis') || dicCarrier.includes('obsidian') || matchAegis) {
         const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('california dic quote') || combined.includes('difference in conditions selected') || combined.includes('difference in conditions') || fn.includes('dic');
         const prem = dic?.basic_premium || dic?.total_charge || null;
@@ -159,7 +162,7 @@ export function detectCarrierQuoteInfo(
     }
 
     // 3. American Modern (AM / 005...)
-    const matchAm = (fileName || '').match(/(005[\-\d]{7,})/i) || (dic?.policy_number || '').match(/(005[\-\d]{7,})/i);
+    const matchAm = (fileName || '').match(/(005[\-\d]{7,}|AM\d{6,})/i) || (dic?.policy_number || '').match(/(005[\-\d]{7,}|AM\d{6,})/i);
     if (
         combined.includes('american modern') ||
         combined.includes('americanmodern') ||
@@ -749,10 +752,38 @@ export async function GET(req: NextRequest) {
             cfp_mail_sent_to: cfpMailSentMap[policyId]?.sent_to || [],
             cfp_mail_sent_at: cfpMailSentMap[policyId]?.sent_at || null,
             carrier_quotes: {
-                bamboo: manualCarrierQuotes[policyId]?.bamboo || autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
-                aegis: manualCarrierQuotes[policyId]?.aegis || autoCarrierQuotes[policyId]?.aegis || null,
-                am: manualCarrierQuotes[policyId]?.am || autoCarrierQuotes[policyId]?.am || null,
-                psic: manualCarrierQuotes[policyId]?.psic || autoCarrierQuotes[policyId]?.psic || null,
+                bamboo: manualCarrierQuotes[policyId]?.bamboo
+                    ? {
+                        ...autoCarrierQuotes[policyId]?.bamboo,
+                        ...manualCarrierQuotes[policyId]?.bamboo,
+                        storage_path: manualCarrierQuotes[policyId]?.bamboo?.storage_path || autoCarrierQuotes[policyId]?.bamboo?.storage_path || null,
+                        file_name: manualCarrierQuotes[policyId]?.bamboo?.file_name || autoCarrierQuotes[policyId]?.bamboo?.file_name || null,
+                    }
+                    : autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
+                aegis: manualCarrierQuotes[policyId]?.aegis
+                    ? {
+                        ...autoCarrierQuotes[policyId]?.aegis,
+                        ...manualCarrierQuotes[policyId]?.aegis,
+                        storage_path: manualCarrierQuotes[policyId]?.aegis?.storage_path || autoCarrierQuotes[policyId]?.aegis?.storage_path || null,
+                        file_name: manualCarrierQuotes[policyId]?.aegis?.file_name || autoCarrierQuotes[policyId]?.aegis?.file_name || null,
+                    }
+                    : autoCarrierQuotes[policyId]?.aegis || null,
+                am: manualCarrierQuotes[policyId]?.am
+                    ? {
+                        ...autoCarrierQuotes[policyId]?.am,
+                        ...manualCarrierQuotes[policyId]?.am,
+                        storage_path: manualCarrierQuotes[policyId]?.am?.storage_path || autoCarrierQuotes[policyId]?.am?.storage_path || null,
+                        file_name: manualCarrierQuotes[policyId]?.am?.file_name || autoCarrierQuotes[policyId]?.am?.file_name || null,
+                    }
+                    : autoCarrierQuotes[policyId]?.am || null,
+                psic: manualCarrierQuotes[policyId]?.psic
+                    ? {
+                        ...autoCarrierQuotes[policyId]?.psic,
+                        ...manualCarrierQuotes[policyId]?.psic,
+                        storage_path: manualCarrierQuotes[policyId]?.psic?.storage_path || autoCarrierQuotes[policyId]?.psic?.storage_path || null,
+                        file_name: manualCarrierQuotes[policyId]?.psic?.file_name || autoCarrierQuotes[policyId]?.psic?.file_name || null,
+                    }
+                    : autoCarrierQuotes[policyId]?.psic || null,
             },
             title_pro: titleProMap[policyId] || null,
             term_type: 'ORIGINAL', // Will be recalculated below

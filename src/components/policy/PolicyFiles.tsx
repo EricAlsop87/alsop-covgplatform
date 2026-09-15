@@ -94,6 +94,8 @@ interface UnifiedFile {
     source_name?: string | null;
     created_by?: string | null;
     bucket?: string;
+    dec_page_id?: string;
+    policy_number?: string | null;
     dic_data?: {
         carrier_name?: string | null;
         policy_number?: string | null;
@@ -209,6 +211,8 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
     const allFiles: UnifiedFile[] = [
         ...decFiles.map(f => ({
             id: f.id,
+            dec_page_id: f.dec_page_id,
+            policy_number: f.policy_number,
             source: 'dec_page' as const,
             doc_type: 'dec_page',
             file_name: f.file_name,
@@ -601,8 +605,8 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
     // Find dec page review status for a file
     const getDecPageReview = (file: UnifiedFile): DecPageSummary | undefined => {
         if (file.source !== 'dec_page') return undefined;
-        // Match by ID — dec_pages and dec_page_files share the same ID root
-        return decPages.find(dp => dp.id === file.id);
+        // Match by ID, dec_page_id, or policy_number
+        return decPages.find(dp => dp.id === file.id || (file.dec_page_id && dp.id === file.dec_page_id) || (file.policy_number && dp.policy_number === file.policy_number));
     };
 
     const REVIEW_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
@@ -811,6 +815,31 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                                     </span>
                                                                 )}
                                                                 <span className={styles.fileNameText}>{file.file_name || 'Document'}</span>
+                                                                {(file.policy_number || decPageReview?.policy_number) && (
+                                                                    <span
+                                                                        style={{
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            fontSize: '0.68rem',
+                                                                            fontWeight: 700,
+                                                                            padding: '0.15rem 0.5rem',
+                                                                            borderRadius: '4px',
+                                                                            background: 'rgba(59, 130, 246, 0.12)',
+                                                                            color: '#3b82f6',
+                                                                            border: '1px solid rgba(59, 130, 246, 0.25)',
+                                                                            letterSpacing: '0.02em',
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                        title={`Linked Term: ${file.policy_number || decPageReview?.policy_number}${decPageReview?.policy_period_start ? ` (${decPageReview.policy_period_start} – ${decPageReview.policy_period_end || ''})` : ''}`}
+                                                                    >
+                                                                        Term: {file.policy_number || decPageReview?.policy_number}
+                                                                        {decPageReview?.policy_period_start && (
+                                                                            <span style={{ opacity: 0.85, fontWeight: 500, marginLeft: '0.3rem' }}>
+                                                                                ({decPageReview.policy_period_start.slice(0, 4)}–{decPageReview.policy_period_end?.slice(0, 4) || ''})
+                                                                            </span>
+                                                                        )}
+                                                                    </span>
+                                                                )}
                                                                 {extractedQuoteNum && (
                                                                     <span
                                                                         style={{

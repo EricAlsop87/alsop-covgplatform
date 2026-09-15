@@ -1202,7 +1202,7 @@ export function CFPSummaryTable({
                 return (
                     <div className={styles.policyNumberCell}>
                         <Link
-                            href={`/policy/${term.policy_id}`}
+                            href={`/policy/${term.policy_id}${term.policy_term_id ? `?term_id=${term.policy_term_id}` : ''}`}
                             className={styles.policyLink}
                             target="_blank"
                             title={`Open policy ${term.policy_number} in new tab`}

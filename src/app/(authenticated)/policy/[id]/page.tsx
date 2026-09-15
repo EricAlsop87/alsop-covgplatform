@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { Button } from '@/components/ui/Button/Button';
@@ -49,8 +49,17 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
     const router = useRouter();
     // Unwrap params in Next.js 15
     const { id } = use(params);
+    const searchParams = useSearchParams();
+    const termIdParam = searchParams.get('term_id') || undefined;
+    const [selectedTermId, setSelectedTermId] = useState<string | undefined>(termIdParam);
     const { addVisit } = useRecentlyVisited();
     const toast = useToast();
+
+    useEffect(() => {
+        if (termIdParam) {
+            setSelectedTermId(termIdParam);
+        }
+    }, [termIdParam]);
 
     const [declaration, setDeclaration] = useState<Declaration | undefined>(undefined);
 
@@ -277,27 +286,38 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
         }
     };
 
-    useEffect(() => {
+    const loadData = useCallback(async () => {
         if (!id) return;
+        setLoading(true);
+        try {
+            const detail = await getPolicyDetailById(id, undefined, selectedTermId);
+            if (detail) {
+                setPolicyDetailRaw(detail);
+                const decl = mapPolicyDetailToDeclaration(detail);
+                setDeclaration(decl);
 
-        async function loadData() {
-            setLoading(true);
-            try {
-                const detail = await getPolicyDetailById(id);
-                if (detail) {
-                    setPolicyDetailRaw(detail);
-                    const decl = mapPolicyDetailToDeclaration(detail);
-                    setDeclaration(decl);
+                // Fetch dec page file specifically matching this term
+                const files = await fetchDecPageFilesByPolicyId(id);
+                if (detail.dec_page_id) {
+                    const matchingFile = files.find(f => f.dec_page_id === detail.dec_page_id);
+                    setDecPageStoragePath(matchingFile?.storage_path || null);
+                } else if (decl.policy_number) {
+                    const matchingFile = files.find(f => f.policy_number === decl.policy_number);
+                    setDecPageStoragePath(matchingFile?.storage_path || null);
+                } else {
+                    setDecPageStoragePath(null);
                 }
-            } catch (error) {
-                logger.error('page', "Failed to fetch policy data", { error: error instanceof Error ? error.message : String(error) })
-            } finally {
-                setLoading(false);
             }
+        } catch (error) {
+            logger.error('page', "Failed to fetch policy data", { error: error instanceof Error ? error.message : String(error) })
+        } finally {
+            setLoading(false);
         }
+    }, [id, selectedTermId]);
 
+    useEffect(() => {
         loadData();
-    }, [id]);
+    }, [loadData]);
 
     // Fetch flag counts for the indicator pill
     useEffect(() => {
@@ -328,13 +348,6 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
             if (r) setReportRow(r);
         });
 
-        // Fetch dec page file for the Dec Page button
-        fetchDecPageFilesByPolicyId(id).then(files => {
-            if (files.length > 0 && files[0].storage_path) {
-                setDecPageStoragePath(files[0].storage_path);
-            }
-        });
-
         // Fetch DIC and RCE documents for header document buttons
         fetchPlatformDocumentsByPolicyId(id).then(docs => {
             const dicDoc = docs.find(d => d.doc_type === 'dic_dec_page' && d.storage_path);
@@ -355,12 +368,13 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
     const refreshAllData = useCallback(async () => {
         if (!id) return;
         try {
-            const [newEnrichments, newFlags, newReport, newRceData, newDicData] = await Promise.all([
+            const [newEnrichments, newFlags, newReport, newRceData, newDicData, detail] = await Promise.all([
                 getPropertyEnrichments(id),
                 fetchFlagsByPolicyId(id),
                 getLatestReportForPolicy(id),
                 fetchRceDocDataByPolicyId(id),
                 fetchDicDocDataByPolicyId(id),
+                getPolicyDetailById(id, undefined, selectedTermId),
             ]);
             setEnrichments(newEnrichments);
             setRceDocData(newRceData);
@@ -375,12 +389,21 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
                 low: open.filter((f: PolicyFlagRow) => f.severity === 'low').length,
             });
             if (newReport) setReportRow(newReport);
-            // Also refresh dec page file
-            fetchDecPageFilesByPolicyId(id).then(files => {
-                if (files.length > 0 && files[0].storage_path) {
-                    setDecPageStoragePath(files[0].storage_path);
-                }
-            });
+            if (detail) {
+                setPolicyDetailRaw(detail);
+                setDeclaration(mapPolicyDetailToDeclaration(detail));
+                fetchDecPageFilesByPolicyId(id).then(files => {
+                    if (detail.dec_page_id) {
+                        const matchingFile = files.find(f => f.dec_page_id === detail.dec_page_id);
+                        setDecPageStoragePath(matchingFile?.storage_path || null);
+                    } else if (detail.policy_number) {
+                        const matchingFile = files.find(f => f.policy_number === detail.policy_number);
+                        setDecPageStoragePath(matchingFile?.storage_path || null);
+                    } else {
+                        setDecPageStoragePath(null);
+                    }
+                });
+            }
             // Also refresh DIC and RCE documents
             fetchPlatformDocumentsByPolicyId(id).then(docs => {
                 const dicDoc = docs.find(d => d.doc_type === 'dic_dec_page' && d.storage_path);
@@ -395,7 +418,7 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
         } catch (e) {
             logger.error('page', '[PolicyPage] Failed to refresh data:', { error: e instanceof Error ? e.message : String(e) })
         }
-    }, [id]);
+    }, [id, selectedTermId]);
 
     // Auto-refresh when a dec page finishes processing in the background
     useEffect(() => {
@@ -599,8 +622,11 @@ export default function PolicyReviewPage({ params }: { params: Promise<{ id: str
                     <div className={styles.content}>
                         <TermHistoryPanel
                             terms={policyDetailRaw?.all_terms || []}
-                            activeTermId={policyDetailRaw?.policy_term_id}
+                            activeTermId={selectedTermId || policyDetailRaw?.policy_term_id}
                             policyNumber={policyDetailRaw?.policy_number}
+                            onSelectTerm={(termId) => {
+                                setSelectedTermId(termId);
+                            }}
                         />
                     </div>
                 );
