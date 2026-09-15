@@ -934,9 +934,9 @@ export function CFPSummaryTable({
 
         if (columnFilters.servicing) {
             if (columnFilters.servicing === 'sent' || columnFilters.servicing === 'in_se') {
-                result = result.filter(t => t.in_servicing_email || t.cfp_mail_sent);
+                result = result.filter(t => !!t.cfp_mail_sent);
             } else if (columnFilters.servicing === 'not_sent' || columnFilters.servicing === 'not_in_se') {
-                result = result.filter(t => !t.in_servicing_email && !t.cfp_mail_sent);
+                result = result.filter(t => !t.cfp_mail_sent);
             } else if (columnFilters.servicing === 'returned') {
                 result = result.filter(t => t.returned_from_se);
             }
@@ -1519,7 +1519,7 @@ export function CFPSummaryTable({
             }
 
             case 'servicing': {
-                const isSent = term.cfp_mail_sent || term.in_servicing_email;
+                const isSent = !!term.cfp_mail_sent;
                 if (isSent) {
                     const recipientList = term.cfp_mail_sent_to;
                     const recipientLabel = Array.isArray(recipientList) && recipientList.length > 0
