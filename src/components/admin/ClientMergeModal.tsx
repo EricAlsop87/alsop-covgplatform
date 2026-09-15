@@ -284,11 +284,11 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                     <div className={styles.cardHeaderLeft}>
                         {isSurvivor ? (
                             <div className={styles.roleBadgeSurvivor}>
-                                <Crown size={12} /> Survivor
+                                <Crown size={12} /> Primary Profile
                             </div>
                         ) : (
                             <div className={styles.roleBadgeCandidate}>
-                                Candidate {recordIndex}
+                                Merging Profile {recordIndex}
                             </div>
                         )}
                         <span className={styles.cardClientName}>{record.named_insured}</span>
@@ -308,9 +308,9 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                             <button
                                 className={styles.swapBtn}
                                 onClick={(e) => { e.stopPropagation(); handleSwapSurvivor(originalIndex); }}
-                                title="Promote to Survivor"
+                                title="Promote to Primary Profile"
                             >
-                                <ArrowRightLeft size={13} /> Make Survivor
+                                <ArrowRightLeft size={13} /> Set as Primary Profile
                             </button>
                         )}
                         {isExpanded ? <ChevronUp size={16} className={styles.chevron} /> : <ChevronDown size={16} className={styles.chevron} />}
@@ -373,12 +373,12 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                                     {isSurvivor ? (
                                         <div className={styles.policyKeptLabel}>
                                             <ShieldCheck size={11} />
-                                            These policies belong to the survivor — they will always be kept
+                                            These policies belong to the primary profile — they will always be kept
                                         </div>
                                     ) : (
                                         <div className={styles.policyMigrateLabel}>
                                             <Check size={11} />
-                                            Checked policies will be migrated to the survivor after merge
+                                            Checked policies will be migrated to the primary profile after merge
                                         </div>
                                     )}
                                     <div className={styles.policyRows}>
@@ -444,12 +444,12 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                                     {isSurvivor ? (
                                         <div className={styles.policyKeptLabel}>
                                             <ShieldCheck size={11} />
-                                            These documents belong to the survivor — they will always be kept
+                                            These documents belong to the primary profile — they will always be kept
                                         </div>
                                     ) : (
                                         <div className={styles.policyKeptLabel} style={{ background: 'rgba(16, 185, 129, 0.03)' }}>
                                             <Merge size={11} />
-                                            These documents will automatically transfer to the survivor after merge
+                                            These documents will automatically transfer to the primary profile after merge
                                         </div>
                                     )}
                                     <div className={styles.policyRows}>
@@ -536,11 +536,11 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                         <div className={styles.summaryGrid}>
                             {/* Selected fields summary */}
                             <div className={styles.summaryBlock}>
-                                <div className={styles.summaryBlockLabel}>Surviving Contact Data</div>
+                                <div className={styles.summaryBlockLabel}>Primary Contact Data</div>
                                 {FIELD_META.map(({ key, label, icon }) => {
                                     const source = allRecords[selections[key]];
                                     const val = (source as any)[key];
-                                    const sourceLabel = selections[key] === 0 ? 'Survivor' : `Candidate ${selections[key]}`;
+                                    const sourceLabel = selections[key] === 0 ? 'Primary Profile' : `Merging Profile ${selections[key]}`;
                                     return (
                                         <div key={key} className={styles.summaryFieldRow}>
                                             <span className={styles.summaryFieldIcon}>{icon}</span>
@@ -556,11 +556,11 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                             <div className={styles.summaryBlock}>
                                 <div className={styles.summaryBlockLabel}>Policy Consolidation</div>
                                 <div className={styles.summaryStatRow}>
-                                    <span>Survivor policies (kept as-is)</span>
+                                    <span>Primary profile policies (kept as-is)</span>
                                     <strong>{survivorPolicyCount}</strong>
                                 </div>
                                 <div className={styles.summaryStatRow}>
-                                    <span>Candidate policies to migrate</span>
+                                    <span>Merging profile policies to migrate</span>
                                     <strong className={migratePolicyCount > 0 ? styles.accentGreen : ''}>{migratePolicyCount}</strong>
                                 </div>
                                 {anyPoliciesExcluded && (
@@ -588,11 +588,11 @@ export default function ClientMergeModal({ survivor: initialSurvivor, candidates
                                     <div className={styles.summaryBlock}>
                                         <div className={styles.summaryBlockLabel}>Document Consolidation</div>
                                         <div className={styles.summaryStatRow}>
-                                            <span>Survivor documents</span>
+                                            <span>Primary profile documents</span>
                                             <strong>{survivorDocCount}</strong>
                                         </div>
                                         <div className={styles.summaryStatRow}>
-                                            <span>Candidate documents to transfer</span>
+                                            <span>Merging profile documents to transfer</span>
                                             <strong className={candidateDocCount > 0 ? styles.accentGreen : ''}>
                                                 {candidateDocCount}
                                             </strong>

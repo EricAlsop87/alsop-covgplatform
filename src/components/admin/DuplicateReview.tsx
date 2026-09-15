@@ -446,7 +446,7 @@ export default function DuplicateReview() {
                     )}
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: 1.5, margin: '-0.75rem 0 0' }}>
-                    Multiple client records that refer to the same person. Merging consolidates their contact data and re-parents all policies &amp; documents under a single survivor record.
+                    Multiple client records that refer to the same person. Merging consolidates their contact data and re-parents all policies &amp; documents under a single primary insured profile.
                 </p>
 
                 {filteredClients.length === 0 ? (
@@ -510,9 +510,9 @@ export default function DuplicateReview() {
                             </div>
 
                             <div className={styles.entityList}>
-                                {/* Survivor */}
+                                {/* Primary Profile */}
                                 <div className={styles.entityItem}>
-                                    <div className={`${styles.iconMarker} ${styles.iconSurvivorClient}`}>S</div>
+                                    <div className={`${styles.iconMarker} ${styles.iconSurvivorClient}`}>P</div>
                                     <div className={styles.entityDetails}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                                             <div className={styles.entityTitle}>{group.details.survivor.named_insured}</div>
@@ -539,7 +539,7 @@ export default function DuplicateReview() {
                                             </a>
                                         </div>
                                         <div className={styles.entitySubtext}>
-                                            <span style={{ color: "var(--status-success)", fontWeight: 600 }}>Survivor Record</span>
+                                            <span style={{ color: "var(--status-success)", fontWeight: 600 }}>Primary Insured Profile</span>
                                             <span>Created: {new Date(group.details.survivor.created_at).toLocaleDateString()}</span>
                                             <span>•</span>
                                             <span style={{ fontWeight: 600 }}>{(group.details.survivor.policies || []).length} policies</span>
@@ -561,7 +561,7 @@ export default function DuplicateReview() {
                                     </div>
                                 </div>
 
-                                {/* Duplicates */}
+                                {/* Merging Profiles */}
                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 {group.details.duplicates.map((rec: any, i: number) => (
                                     <div key={rec.id} className={styles.entityItem}>
@@ -592,7 +592,7 @@ export default function DuplicateReview() {
                                                 </a>
                                             </div>
                                             <div className={styles.entitySubtext}>
-                                                <span>Merge Candidate</span>
+                                                <span>Merging Profile</span>
                                                 <span>Created: {new Date(rec.created_at).toLocaleDateString()}</span>
                                                 <span>•</span>
                                                 <span style={{ fontWeight: 600 }}>{(rec.policies || []).length} policies</span>
