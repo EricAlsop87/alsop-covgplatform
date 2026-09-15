@@ -70,24 +70,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const docItems = useMemo(() => {
         if (!term) return [];
 
-        const isCarrierActive = (q: any) =>
-            Boolean(q && q.coverage_type !== 'UNAVAILABLE');
-
-        const anyCarrierQuoted = Boolean(
-            isCarrierActive(term.carrier_quotes?.bamboo) ||
-            isCarrierActive(term.carrier_quotes?.aegis) ||
-            isCarrierActive(term.carrier_quotes?.psic) ||
-            isCarrierActive(term.carrier_quotes?.am)
-        );
-
         const formatQuote = (carrierName: string, q: any) => {
             if (!q) {
                 return {
                     name: `${carrierName} Quote`,
-                    status: anyCarrierQuoted ? 'Not Quoted' : 'Not Attempted',
+                    status: 'Not Quoted',
                     statusType: 'not_quoted' as const,
                     premium: '—',
-                    details: anyCarrierQuoted ? 'Not Required (Primary quote secured)' : 'Pending portal review',
+                    details: 'No attached quote',
                 };
             }
 
