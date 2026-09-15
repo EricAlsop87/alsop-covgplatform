@@ -95,21 +95,25 @@ class GmailSmtpProvider implements EmailProvider {
     name = 'Gmail SMTP';
 
     async send(message: EmailMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
-        const fromEmail = typeof message.from === 'string' ? message.from : message.from?.email || '';
-        const replyToEmail = message.replyTo || '';
+        const fromEmail = (typeof message.from === 'string' ? message.from : message.from?.email || '').toLowerCase();
+        const replyToEmail = (message.replyTo || '').toLowerCase();
 
         let user = process.env.GMAIL_USER || 'alsopva02@gmail.com';
         let pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+        let defaultSenderName = 'Phoebe Hernandez';
 
         if ((fromEmail.includes('alsopva01') || replyToEmail.includes('alsopva01')) && process.env.GMAIL_VA01_APP_PASSWORD) {
             user = process.env.GMAIL_VA01_USER || 'alsopva01@gmail.com';
             pass = process.env.GMAIL_VA01_APP_PASSWORD.replace(/\s+/g, '');
+            defaultSenderName = 'Paula Andrea Veloza';
         } else if ((fromEmail.includes('alsopva03') || replyToEmail.includes('alsopva03')) && process.env.GMAIL_VA03_APP_PASSWORD) {
             user = process.env.GMAIL_VA03_USER || 'alsopva03@gmail.com';
             pass = process.env.GMAIL_VA03_APP_PASSWORD.replace(/\s+/g, '');
+            defaultSenderName = 'Danicah Jesoro';
         } else if ((fromEmail.includes('alsopva02') || replyToEmail.includes('alsopva02')) && process.env.GMAIL_VA02_APP_PASSWORD) {
             user = process.env.GMAIL_VA02_USER || 'alsopva02@gmail.com';
             pass = process.env.GMAIL_VA02_APP_PASSWORD.replace(/\s+/g, '');
+            defaultSenderName = 'Phoebe Hernandez';
         }
 
         if (!pass) {
@@ -127,8 +131,8 @@ class GmailSmtpProvider implements EmailProvider {
         const fromStr = typeof message.from === 'string'
             ? message.from
             : message.from
-                ? `${message.from.name || ''} <${message.from.email}>`.trim()
-                : `Coverage Check <${user}>`;
+                ? `${message.from.name || defaultSenderName} <${message.from.email}>`.trim()
+                : `${defaultSenderName} <${user}>`;
 
         const toStr = Array.isArray(message.to)
             ? message.to.map(t => typeof t === 'string' ? t : `${t.name || ''} <${t.email}>`.trim()).join(', ')

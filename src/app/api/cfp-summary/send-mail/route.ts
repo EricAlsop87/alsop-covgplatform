@@ -38,11 +38,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: 'Missing subject or email body' }, { status: 400 });
         }
 
+        // VA Team Name Mapping
+        const VA_NAMES: Record<string, string> = {
+            'alsopva01@gmail.com': 'Paula Andrea Veloza',
+            'alsopva02@gmail.com': 'Phoebe Hernandez',
+            'alsopva03@gmail.com': 'Danicah Jesoro',
+        };
+
         // Determine sender email & name
-        const senderEmail = user.email || 'alsopva02@gmail.com';
-        const senderName = user.user_metadata?.first_name && user.user_metadata?.last_name
-            ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-            : user.email?.split('@')[0] || 'Coverage Check Team';
+        const senderEmail = (user.email || 'alsopva02@gmail.com').toLowerCase();
+        const senderName = VA_NAMES[senderEmail] || (
+            user.user_metadata?.first_name && user.user_metadata?.last_name
+                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+                : user.user_metadata?.name || senderEmail.split('@')[0] || 'Coverage Check Team'
+        );
 
         // Deduplicate Primary Recipients
         const deduplicatedTo = Array.from(new Set(recipients)).filter(Boolean);

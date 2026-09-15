@@ -598,7 +598,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         }}>
                             <CheckCircle2 size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
                             <span>
-                                <strong>Auto-CC Active:</strong> <code>alsopva01@gmail.com</code>, <code>alsopva02@gmail.com</code>, <code>alsopva03@gmail.com</code> will receive a copy so all VA inboxes stay synced.
+                                <strong>Auto-CC Active:</strong> Paula Andrea Veloza (<code>alsopva01@gmail.com</code>), Phoebe Hernandez (<code>alsopva02@gmail.com</code>), Danicah Jesoro (<code>alsopva03@gmail.com</code>) will receive a copy so all VA inboxes stay synced.
                             </span>
                         </div>
                     </div>
