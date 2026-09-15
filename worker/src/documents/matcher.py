@@ -143,6 +143,68 @@ def _similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
+def _name_similarity(a: str, b: str) -> float:
+    """
+    Compute normalized name similarity ratio (0.0-1.0).
+    Includes specialized recognition for:
+    - Bamboo 2-4 letter truncated names/prefixes (e.g., 'OCA' -> 'OCAMPO', 'SER' -> 'SERRANO', 'MAD' -> 'MADRIGAL')
+    - Name initials (e.g., 'GO' -> 'GABRIEL OCAMPO')
+    - Word token subsets and order inversions (e.g., 'OCAMPO, GABRIEL' vs 'GABRIEL OCAMPO')
+    """
+    if not a or not b:
+        return 0.0
+    
+    a_norm = a.upper().strip()
+    b_norm = b.upper().strip()
+
+    # 1. Base sequence similarity
+    base_sim = SequenceMatcher(None, a_norm, b_norm).ratio()
+    if base_sim >= 0.85:
+        return base_sim
+
+    # 2. Tokenize both names
+    a_tokens = [w for w in re.split(r"\s+", a_norm) if len(w) >= 2]
+    b_tokens = [w for w in re.split(r"\s+", b_norm) if len(w) >= 2]
+    
+    if not a_tokens or not b_tokens:
+        return base_sim
+
+    a_clean = re.sub(r"[^A-Z]", "", a_norm)
+    b_clean = re.sub(r"[^A-Z]", "", b_norm)
+
+    # 3. Check Bamboo prefix / abbreviation match (e.g., 'OCA' in 'OCAMPO')
+    short_str, long_tokens = (
+        (a_clean, b_tokens) if 2 <= len(a_clean) <= 4 and len(b_clean) > len(a_clean)
+        else ((b_clean, a_tokens) if 2 <= len(b_clean) <= 4 and len(a_clean) > len(b_clean)
+        else (None, None))
+    )
+
+    if short_str:
+        for token in long_tokens:
+            token_clean = re.sub(r"[^A-Z]", "", token)
+            if token_clean.startswith(short_str):
+                return max(base_sim, 0.90)
+
+    # 4. Check initials match (e.g., 'GO' matches initials of 'GABRIEL OCAMPO')
+    long_initials = "".join(t[0] for t in long_tokens if t) if long_tokens else ""
+    if short_str and long_initials and (short_str == long_initials or short_str.startswith(long_initials)):
+        return max(base_sim, 0.88)
+
+    # 5. Token subset match (e.g., 'Gabriel Ocampo' vs 'Ocampo')
+    matched_toks = 0
+    for at in a_tokens:
+        for bt in b_tokens:
+            if SequenceMatcher(None, at, bt).ratio() >= 0.88:
+                matched_toks += 1
+                break
+    if matched_toks > 0:
+        token_ratio = matched_toks / max(len(a_tokens), len(b_tokens))
+        if token_ratio >= 0.5:
+            return max(base_sim, 0.85)
+
+    return base_sim
+
+
 # ── Match Result Types ───────────────────────────────────────────────────────
 
 class MatchCandidate(TypedDict):
@@ -272,7 +334,7 @@ def match_document_to_policy(
                 for c in all_clients:
                     c_name = normalize_name(c.get("named_insured"))
                     if c_name:
-                        sim = _similarity(norm_name, c_name)
+                        sim = _name_similarity(norm_name, c_name)
                         if sim > best_client_sim and sim >= 0.85:
                             best_client_sim = sim
                             best_client_id = c["id"]
@@ -442,7 +504,7 @@ def match_document_to_policy(
         if norm_name and named_insured:
             norm_existing = normalize_name(named_insured)
             if norm_existing:
-                name_sim = _similarity(norm_name, norm_existing)
+                name_sim = _name_similarity(norm_name, norm_existing)
 
         scored.append(MatchCandidate(
             policy_id=cand["id"],
@@ -559,14 +621,14 @@ def match_document_to_policy(
         confidence=0.3,
         match_log=match_log,
         review_reason=(
-            f"Found {len(candidates)} possible match(es). "
-            f"DIC/RCE documents require manual confirmation — "
-            f"please review the candidates below and assign to the correct policy."
+            f"Address matched '{extracted_address}', but owner name '{extracted_owner_name}' "
+            f"does not match policy holder '{best.get('named_insured')}'. "
+            f"Please verify and link manually if correct."
         ),
         action_items=[
-            "Review the candidate matches below.",
-            "Compare insured names and property addresses.",
-            "Click 'Assign' on the correct policy.",
+            f"Verify if '{extracted_owner_name}' is associated with policy #{best.get('policy_number', 'unknown')}.",
+            "Search for the correct policy and link manually.",
+            "Create a new client/policy if this is a new owner at this address.",
         ],
     )
 
@@ -639,7 +701,7 @@ def match_candidates_for_review(
                 c_insured = c.get("named_insured")
                 c_norm = normalize_name(c_insured)
                 if c_norm:
-                    sim = _similarity(norm_name, c_norm)
+                    sim = _name_similarity(norm_name, c_norm)
                     if sim >= 0.85:
                         name_matches.append((c["id"], c_insured, sim))
 
@@ -670,7 +732,7 @@ def match_candidates_for_review(
                         "property_address_raw": pol.get("property_address_raw"),
                         "name_similarity": round(name_sim, 3),
                         "address_similarity": round(addr_sim, 3),
-                        "match_source": "name",
+                        "match_source": "both" if addr_sim >= 0.80 else "name",
                     })
 
             log_step(
@@ -721,7 +783,7 @@ def match_candidates_for_review(
                             if cr.data:
                                 client_name = cr.data[0].get("named_insured")
                                 if norm_name and client_name:
-                                    name_sim = _similarity(norm_name, normalize_name(client_name) or "")
+                                    name_sim = _name_similarity(norm_name, normalize_name(client_name) or "")
                         except Exception:
                             pass
 
@@ -735,7 +797,7 @@ def match_candidates_for_review(
                         "property_address_raw": p.get("property_address_raw"),
                         "name_similarity": round(name_sim, 3),
                         "address_similarity": round(addr_sim, 3),
-                        "match_source": "address",
+                        "match_source": "both" if name_sim >= 0.80 else "address",
                     })
 
             log_step(
