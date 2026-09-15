@@ -45,14 +45,6 @@ export function Sidebar({ userRole }: SidebarProps) {
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'CFP Summary', href: '/cfp-summary', icon: FileSpreadsheet },
         { label: 'Flags', href: '/flags', icon: Flag },
-        {
-            label: 'Email Center',
-            href: '/email',
-            icon: Mail,
-            subItems: [
-                { label: 'Sent & Replies Hub', href: '/email/servicing' },
-            ],
-        },
         { label: 'Campaigns', href: '/campaigns', icon: Calendar },
         { label: 'Upload Documents', href: '/upload-document', icon: FileUp },
     ];
