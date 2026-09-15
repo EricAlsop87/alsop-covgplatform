@@ -1332,7 +1332,7 @@ export function CFPSummaryTable({
                                 subtitle: term.named_insured || undefined,
                                 docType: 'dec',
                                 storagePath: term.dec_storage_path,
-                                bucket: 'cfp-raw-decpage',
+                                bucket: (term.dec_bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-raw-decpage',
                                 fileName: term.dec_file_name || `${term.policy_number}_DEC.pdf`,
                                 policyId: term.policy_id,
                             });
