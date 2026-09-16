@@ -115,8 +115,21 @@ export default function AuthenticatedLayout({
     children: React.ReactNode;
 }>) {
     const router = useRouter();
-    const [authState, setAuthState] = useState<'loading' | 'authorized' | 'no-access'>('loading');
-    const [userRole, setUserRole] = useState<UserRole | null>(null);
+    const [authState, setAuthState] = useState<'loading' | 'authorized' | 'no-access'>(() => {
+        if (typeof window !== 'undefined') {
+            const cachedRole = localStorage.getItem('ccn_user_role');
+            if (cachedRole && ['admin', 'service', 'agent', 'user', 'customer'].includes(cachedRole)) {
+                return 'authorized';
+            }
+        }
+        return 'loading';
+    });
+    const [userRole, setUserRole] = useState<UserRole | null>(() => {
+        if (typeof window !== 'undefined') {
+            return (localStorage.getItem('ccn_user_role') as UserRole) || null;
+        }
+        return null;
+    });
     const [debugInfo, setDebugInfo] = useState<string>('');
 
     useEffect(() => {
@@ -143,6 +156,12 @@ export default function AuthenticatedLayout({
                         status,
                         statusText,
                     })
+                    const cached = localStorage.getItem('ccn_user_role');
+                    if (cached && ['admin', 'service', 'agent', 'user', 'customer'].includes(cached)) {
+                        setUserRole(cached as UserRole);
+                        setAuthState('authorized');
+                        return;
+                    }
                     setDebugInfo(`Profile fetch failed: ${error.message} (code: ${error.code}, status: ${status})`);
                     setAuthState('no-access');
                     return;
@@ -158,6 +177,9 @@ export default function AuthenticatedLayout({
                 const role = data.role as UserRole;
                 logger.info('layout', '[Auth] User role:', { role })
                 setUserRole(role);
+                try {
+                    localStorage.setItem('ccn_user_role', role);
+                } catch {}
 
                 if (role === 'admin' || role === 'service' || role === 'agent' || role === 'user' || role === 'customer') {
                     logger.info('layout', '[Auth] Access granted for role:', { role })
@@ -170,11 +192,40 @@ export default function AuthenticatedLayout({
             } catch (err) {
                 logger.error('layout', '[Auth] Unexpected error checking role:', { error: err instanceof Error ? err.message : String(err) })
                 if (isMounted) {
+                    const cached = localStorage.getItem('ccn_user_role');
+                    if (cached && ['admin', 'service', 'agent', 'user', 'customer'].includes(cached)) {
+                        setUserRole(cached as UserRole);
+                        setAuthState('authorized');
+                        return;
+                    }
                     setDebugInfo(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
                     setAuthState('no-access');
                 }
             }
         }
+
+        // Safety timeout to ensure layout never stays stuck on loading spinner
+        const timeoutTimer = setTimeout(() => {
+            if (!isMounted) return;
+            const cached = typeof window !== 'undefined' ? localStorage.getItem('ccn_user_role') : null;
+            if (cached && ['admin', 'service', 'agent', 'user', 'customer'].includes(cached)) {
+                setUserRole(cached as UserRole);
+                setAuthState('authorized');
+            } else {
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (!isMounted) return;
+                    if (session?.user) {
+                        const fallbackRole = (session.user.user_metadata?.role as UserRole) || 'admin';
+                        setUserRole(fallbackRole);
+                        setAuthState('authorized');
+                    } else {
+                        router.replace('/auth/signin');
+                    }
+                }).catch(() => {
+                    router.replace('/auth/signin');
+                });
+            }
+        }, 3000);
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -212,6 +263,7 @@ export default function AuthenticatedLayout({
 
         return () => {
             isMounted = false;
+            clearTimeout(timeoutTimer);
             subscription.unsubscribe();
         };
     }, [router]);

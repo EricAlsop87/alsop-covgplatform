@@ -386,8 +386,8 @@ export async function GET(req: NextRequest) {
             .neq('policies.status', 'pending_dec');
     }
 
-    // Date range filter
-    if ((view !== 'campaign_91_address' && view !== 'campaign_92_address') || (year && year !== 'all' && year !== '')) {
+    // Date range filter (apply only for standard CFP views, never truncate campaign view by month/year)
+    if (view !== 'campaign_91_address' && view !== 'campaign_92_address') {
         if (year && month && year !== 'all' && month !== 'all' && month !== '') {
             const y = parseInt(year, 10);
             const m = parseInt(month, 10);
@@ -434,7 +434,35 @@ export async function GET(req: NextRequest) {
         }
     }
 
-    const terms = allFetchedTerms;
+    let terms = allFetchedTerms;
+
+    // For campaign views, show exactly 1 latest active row per target property (91 total)
+    if (view === 'campaign_91_address' || view === 'campaign_92_address') {
+        const termsByPolicyMap = new Map<string, any[]>();
+        for (const t of allFetchedTerms) {
+            const pid = t.policy_id;
+            if (!termsByPolicyMap.has(pid)) {
+                termsByPolicyMap.set(pid, []);
+            }
+            termsByPolicyMap.get(pid)!.push(t);
+        }
+
+        const singleTerms: any[] = [];
+        for (const polTermsList of termsByPolicyMap.values()) {
+            const sorted = [...polTermsList].sort((a, b) => {
+                if (a.is_current && !b.is_current) return -1;
+                if (!a.is_current && b.is_current) return 1;
+                const ea = a.expiration_date || '';
+                const eb = b.expiration_date || '';
+                if (ea !== eb) return eb.localeCompare(ea);
+                const fa = a.effective_date || '';
+                const fb = b.effective_date || '';
+                return fb.localeCompare(fa);
+            });
+            singleTerms.push(sorted[0]);
+        }
+        terms = singleTerms;
+    }
 
     if (!terms || terms.length === 0) {
         return NextResponse.json({ success: true, families: [], total_terms: 0 });
