@@ -21,8 +21,12 @@ export async function POST(req: NextRequest) {
         const {
             policyId,
             policyNumber,
-            recipients,
-            recipientNames,
+            recipients, // fallback for toRecipients
+            recipientNames, // fallback for toNames
+            toRecipients,
+            toNames,
+            ccRecipients,
+            ccNames,
             customCc,
             subject,
             htmlBody,
@@ -30,7 +34,20 @@ export async function POST(req: NextRequest) {
             selectedAttachments,
         } = body;
 
-        if (!policyId || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        // Resolve primary TO recipients
+        const rawTo: string[] = Array.isArray(toRecipients) && toRecipients.length > 0
+            ? toRecipients
+            : (Array.isArray(recipients) ? recipients : []);
+        const rawToNames: string[] = Array.isArray(toNames) && toNames.length > 0
+            ? toNames
+            : (Array.isArray(recipientNames) ? recipientNames : []);
+
+        // Resolve explicit CC recipients from modal selection
+        const rawCc: string[] = Array.isArray(ccRecipients) ? ccRecipients : [];
+        const rawCcNames: string[] = Array.isArray(ccNames) ? ccNames : [];
+
+        // Validate that we have at least one recipient (either TO or custom CC)
+        if (!policyId || (rawTo.length === 0 && rawCc.length === 0 && !customCc)) {
             return NextResponse.json({ success: false, error: 'Missing policyId or recipients' }, { status: 400 });
         }
 
@@ -54,14 +71,19 @@ export async function POST(req: NextRequest) {
         );
 
         // Deduplicate Primary Recipients
-        const deduplicatedTo = Array.from(new Set(recipients)).filter(Boolean);
+        const deduplicatedTo = Array.from(new Set(rawTo)).filter(Boolean);
 
-        // Build CC List (Always include peer VA emails + any custom CCs, excluding the sender)
+        // If no explicit TO is provided but CC/custom CC exists, promote first CC or fallback
+        if (deduplicatedTo.length === 0 && rawCc.length > 0) {
+            deduplicatedTo.push(rawCc[0]);
+        }
+
+        // Build Full CC List (Explicit CCs + peer VA team emails + any custom CCs, excluding sender and primary TOs)
         const defaultVaCcs = ['alsopva01@gmail.com', 'alsopva02@gmail.com', 'alsopva03@gmail.com'];
         const extraCcs = (customCc && typeof customCc === 'string')
             ? customCc.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'))
             : [];
-        const allCc = Array.from(new Set([...defaultVaCcs, ...extraCcs])).filter(
+        const allCc = Array.from(new Set([...rawCc, ...defaultVaCcs, ...extraCcs])).filter(
             e => !deduplicatedTo.map(t => t.toLowerCase()).includes(e.toLowerCase()) &&
                  e.toLowerCase() !== senderEmail.toLowerCase()
         );
@@ -207,7 +229,9 @@ export async function POST(req: NextRequest) {
         }
 
         const now = new Date().toISOString();
-        const namesList = recipientNames && recipientNames.length > 0 ? recipientNames.join(', ') : deduplicatedTo.join(', ');
+        const toNamesList = rawToNames.length > 0 ? rawToNames.join(', ') : deduplicatedTo.join(', ');
+        const ccNamesList = rawCcNames.length > 0 ? rawCcNames.join(', ') : rawCc.join(', ');
+        const fullRecipientSummary = ccNamesList ? `${toNamesList} (CC: ${ccNamesList})` : toNamesList;
 
         // 1. Save mail sent status in manual_overrides
         const { error: overrideError } = await adminClient
@@ -218,8 +242,10 @@ export async function POST(req: NextRequest) {
                 new_value: JSON.stringify({
                     sent_at: now,
                     sent_to: deduplicatedTo,
-                    sent_to_names: recipientNames || [],
-                    sent_cc: allCc,
+                    sent_to_names: rawToNames,
+                    sent_cc: rawCc,
+                    sent_cc_names: rawCcNames,
+                    all_cc: allCc,
                     sent_by: senderName,
                     sent_by_email: senderEmail,
                     attachments: attachedNames,
@@ -256,7 +282,7 @@ export async function POST(req: NextRequest) {
                 senderEmail,
                 senderName,
                 recipientEmail: deduplicatedTo.join(', '),
-                recipientName: namesList,
+                recipientName: toNamesList,
                 ccEmail: allCc.join(', '),
                 subject,
                 bodyText: textBody || htmlBody.replace(/<[^>]*>?/gm, ''),
@@ -292,7 +318,7 @@ export async function POST(req: NextRequest) {
 
             itemData.status = 'emailed_to_agent';
             itemData.emailed_at = now;
-            itemData.assigned_agent = namesList;
+            itemData.assigned_agent = toNamesList;
             itemData.va_user_name = senderName;
 
             await adminClient.from('manual_overrides').upsert({
@@ -313,15 +339,18 @@ export async function POST(req: NextRequest) {
                 actor_user_id: user.id,
                 event_type: 'email.sent',
                 title: 'Document Status Mail Sent',
-                detail: `Sent document availability email to ${namesList} for ${policyNumber || 'policy'}`,
+                detail: `Sent document availability email to ${fullRecipientSummary} for ${policyNumber || 'policy'}`,
                 meta: {
                     policy_id: policyId,
                     policy_number: policyNumber,
                     recipients: deduplicatedTo,
-                    recipient_names: recipientNames,
+                    recipient_names: rawToNames,
+                    cc_recipients: rawCc,
+                    cc_names: rawCcNames,
                     sent_at: now,
                     sent_by: senderName,
                     subject,
+                    attachments: attachedNames,
                 },
             });
         } catch {
@@ -332,8 +361,13 @@ export async function POST(req: NextRequest) {
             success: true,
             sent_at: now,
             sent_to: deduplicatedTo,
-            sent_to_names: recipientNames || [],
+            sent_to_names: rawToNames,
+            sent_cc: rawCc,
+            sent_cc_names: rawCcNames,
             sent_by: senderName,
+            sent_by_email: senderEmail,
+            subject,
+            attachments: attachedNames,
         });
 
     } catch (err: any) {

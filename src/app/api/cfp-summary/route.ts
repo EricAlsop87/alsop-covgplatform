@@ -88,7 +88,14 @@ export interface CFPTermRow {
     // Send Mail tracking
     cfp_mail_sent?: boolean;
     cfp_mail_sent_to?: string[];
+    cfp_mail_sent_to_names?: string[];
+    cfp_mail_sent_cc?: string[];
+    cfp_mail_sent_cc_names?: string[];
+    cfp_mail_sent_by?: string | null;
+    cfp_mail_sent_by_email?: string | null;
     cfp_mail_sent_at?: string | null;
+    cfp_mail_subject?: string | null;
+    cfp_mail_attachments?: string[];
     // Title Pro verification
     title_pro?: TitleProData | null;
     // Term type within family (set by API after grouping)
@@ -747,7 +754,17 @@ export async function GET(req: NextRequest) {
     const noDicAvailableSet = new Set<string>();
     const servicingStatusMap: Record<string, string> = {};
     const servicingReturnMap: Record<string, { reason: string; custom_notes?: string; returned_by?: string; returned_at?: string }> = {};
-    const cfpMailSentMap: Record<string, { sent_to?: string[]; sent_at?: string }> = {};
+    const cfpMailSentMap: Record<string, {
+        sent_to?: string[];
+        sent_to_names?: string[];
+        sent_cc?: string[];
+        sent_cc_names?: string[];
+        sent_by?: string;
+        sent_by_email?: string;
+        sent_at?: string;
+        subject?: string;
+        attachments?: string[];
+    }> = {};
     const titleProMap: Record<string, TitleProData> = {};
     const manualCarrierQuotes: Record<string, Partial<Record<CarrierKey, CarrierQuoteData>>> = {};
 
@@ -1035,7 +1052,14 @@ export async function GET(req: NextRequest) {
             returned_at: servicingReturnMap[policyId]?.returned_at || null,
             cfp_mail_sent: !!termCfpMailSent,
             cfp_mail_sent_to: termCfpMailSent?.sent_to || [],
+            cfp_mail_sent_to_names: termCfpMailSent?.sent_to_names || [],
+            cfp_mail_sent_cc: termCfpMailSent?.sent_cc || [],
+            cfp_mail_sent_cc_names: termCfpMailSent?.sent_cc_names || [],
+            cfp_mail_sent_by: termCfpMailSent?.sent_by || null,
+            cfp_mail_sent_by_email: termCfpMailSent?.sent_by_email || null,
             cfp_mail_sent_at: termCfpMailSent?.sent_at || null,
+            cfp_mail_subject: termCfpMailSent?.subject || null,
+            cfp_mail_attachments: termCfpMailSent?.attachments || [],
             carrier_quotes: termCarrierQuotes,
             title_pro: titleProMap[policyId] || null,
             term_type: 'ORIGINAL', // Will be recalculated below

@@ -95,16 +95,35 @@ export function buildDefaultSubject(term: CFPTermRow, isUrgent: boolean): string
     return isUrgent ? `URGENT: ${base}` : base;
 }
 
+export type RecipientRole = 'to' | 'cc' | 'none';
+
+export interface SentMailDetails {
+    sent_to: string[];
+    sent_to_names: string[];
+    sent_cc: string[];
+    sent_cc_names: string[];
+    sent_by: string;
+    sent_at: string;
+    subject: string;
+    attachments: string[];
+}
+
 interface SendMailModalProps {
     term: CFPTermRow | null;
     isOpen: boolean;
     onClose: () => void;
-    onSentSuccess: (termId: string, recipientNames: string[]) => void;
+    onSentSuccess: (termId: string, details: SentMailDetails | string[]) => void;
 }
 
 export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMailModalProps) {
-    const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(['nancy', 'olga']);
-    const [ccVaTeam, setCcVaTeam] = useState<boolean>(true);
+    const [recipientRoles, setRecipientRoles] = useState<Record<string, RecipientRole>>({
+        nancy: 'to',
+        olga: 'to',
+        johnpaul: 'none',
+        esmeralda: 'none',
+        eric: 'none',
+        phoebe: 'none',
+    });
     const [customCc, setCustomCc] = useState('');
     const [isUrgent, setIsUrgent] = useState<boolean>(false);
     const [subject, setSubject] = useState('');
@@ -263,7 +282,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setCustomNotes('');
         setError(null);
         setSuccessMsg(null);
-        setSelectedRecipientIds(['nancy', 'olga']);
+        setRecipientRoles({
+            nancy: 'to',
+            olga: 'to',
+            johnpaul: 'none',
+            esmeralda: 'none',
+            eric: 'none',
+            phoebe: 'none',
+        });
         // Guardrail: Pre-select all available detected attachments by default
         setSelectedAttachmentIds(availableAttachments.map(a => a.id));
     }, [isOpen, term?.policy_term_id, availableAttachments]);
@@ -566,15 +592,59 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
     if (!isOpen || !term) return null;
 
-    const toggleRecipient = (id: string) => {
-        setSelectedRecipientIds(prev =>
-            prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
-        );
+    const toRecipients = useMemo(() => TEAM_RECIPIENTS.filter(r => recipientRoles[r.id] === 'to'), [recipientRoles]);
+    const ccRecipients = useMemo(() => TEAM_RECIPIENTS.filter(r => recipientRoles[r.id] === 'cc'), [recipientRoles]);
+
+    const setMemberRole = (id: string, role: RecipientRole) => {
+        setRecipientRoles(prev => ({
+            ...prev,
+            [id]: prev[id] === role ? 'none' : role,
+        }));
+    };
+
+    const applyPreset = (preset: 'olga_to_nancy_cc' | 'nancy_to_olga_cc' | 'olga_nancy_to' | 'clear') => {
+        if (preset === 'olga_to_nancy_cc') {
+            setRecipientRoles({
+                olga: 'to',
+                nancy: 'cc',
+                johnpaul: 'cc',
+                esmeralda: 'none',
+                eric: 'none',
+                phoebe: 'none',
+            });
+        } else if (preset === 'nancy_to_olga_cc') {
+            setRecipientRoles({
+                nancy: 'to',
+                olga: 'cc',
+                johnpaul: 'cc',
+                esmeralda: 'none',
+                eric: 'none',
+                phoebe: 'none',
+            });
+        } else if (preset === 'olga_nancy_to') {
+            setRecipientRoles({
+                olga: 'to',
+                nancy: 'to',
+                johnpaul: 'none',
+                esmeralda: 'none',
+                eric: 'none',
+                phoebe: 'none',
+            });
+        } else if (preset === 'clear') {
+            setRecipientRoles({
+                olga: 'none',
+                nancy: 'none',
+                johnpaul: 'none',
+                esmeralda: 'none',
+                eric: 'none',
+                phoebe: 'none',
+            });
+        }
     };
 
     const handleSend = async () => {
-        if (selectedRecipientIds.length === 0 && !customCc.trim()) {
-            setError('Please select at least one recipient.');
+        if (toRecipients.length === 0 && ccRecipients.length === 0 && !customCc.trim()) {
+            setError('Please select at least one recipient (TO or CC).');
             return;
         }
 
@@ -586,9 +656,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setSending(true);
         setError(null);
 
-        const selectedRecipients = TEAM_RECIPIENTS.filter(r => selectedRecipientIds.includes(r.id));
-        const recipientEmails = selectedRecipients.map(r => r.email);
-        const recipientNames = selectedRecipients.map(r => r.name.split(' ')[0]);
+        const toEmails = toRecipients.map(r => r.email);
+        const toNames = toRecipients.map(r => r.name.split(' ')[0]);
+        const ccEmails = ccRecipients.map(r => r.email);
+        const ccNames = ccRecipients.map(r => r.name.split(' ')[0]);
 
         const selectedAttachmentsPayload = availableAttachments
             .filter(a => selectedAttachmentIds.includes(a.id))
@@ -615,8 +686,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 body: JSON.stringify({
                     policyId: term.policy_id,
                     policyNumber: term.policy_number,
-                    recipients: recipientEmails,
-                    recipientNames,
+                    toRecipients: toEmails,
+                    toNames,
+                    ccRecipients: ccEmails,
+                    ccNames,
                     customCc: customCc.trim() || undefined,
                     subject,
                     htmlBody,
@@ -627,8 +700,18 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             const json = await res.json();
 
             if (res.ok && json.success) {
-                setSuccessMsg(`✓ Email successfully sent to ${recipientNames.join(', ')} (${selectedAttachmentsPayload.length} files attached)!`);
-                onSentSuccess(term.policy_id, recipientNames);
+                const namesSummary = toNames.length > 0 ? toNames.join(', ') : (ccNames.join(', ') || 'team');
+                setSuccessMsg(`✓ Email successfully sent to ${namesSummary} (${selectedAttachmentsPayload.length} files attached)!`);
+                onSentSuccess(term.policy_id, {
+                    sent_to: json.sent_to || toEmails,
+                    sent_to_names: json.sent_to_names || toNames,
+                    sent_cc: json.sent_cc || ccEmails,
+                    sent_cc_names: json.sent_cc_names || ccNames,
+                    sent_by: json.sent_by || 'Staff Member',
+                    sent_at: json.sent_at || new Date().toISOString(),
+                    subject: json.subject || subject,
+                    attachments: json.attachments || selectedAttachmentsPayload.map(a => a.fileName),
+                });
                 setTimeout(() => {
                     onClose();
                 }, 1200);
@@ -668,25 +751,81 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     {/* Recipient Selection */}
                     <div className={styles.formSection}>
                         <label className={styles.fieldLabel}>
-                            <UserCheck size={14} /> Select Recipients (One-Click Team Members)
+                            <UserCheck size={14} /> Team Recipients (Select TO or CC)
                         </label>
+
+                        {/* Quick Presets */}
+                        <div className={styles.presetButtonsRow}>
+                            <span className={styles.presetLabel}>Quick:</span>
+                            <button
+                                type="button"
+                                className={`${styles.presetBtn} ${recipientRoles.olga === 'to' && recipientRoles.nancy === 'cc' && recipientRoles.johnpaul === 'cc' ? styles.presetActive : ''}`}
+                                onClick={() => applyPreset('olga_to_nancy_cc')}
+                                title="Set Olga as TO, Nancy and JP as CC"
+                            >
+                                ⚡ To Olga (CC Nancy &amp; JP)
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.presetBtn} ${recipientRoles.nancy === 'to' && recipientRoles.olga === 'cc' && recipientRoles.johnpaul === 'cc' ? styles.presetActive : ''}`}
+                                onClick={() => applyPreset('nancy_to_olga_cc')}
+                                title="Set Nancy as TO, Olga and JP as CC"
+                            >
+                                ⚡ To Nancy (CC Olga &amp; JP)
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.presetBtn} ${recipientRoles.olga === 'to' && recipientRoles.nancy === 'to' && recipientRoles.johnpaul === 'none' ? styles.presetActive : ''}`}
+                                onClick={() => applyPreset('olga_nancy_to')}
+                                title="Set both Olga and Nancy as TO"
+                            >
+                                ⚡ To Olga &amp; Nancy
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.presetBtn} ${styles.presetClear}`}
+                                onClick={() => applyPreset('clear')}
+                                title="Clear all team recipients"
+                            >
+                                Clear
+                            </button>
+                        </div>
+
+                        {/* Recipient Cards Grid */}
                         <div className={styles.recipientPillsGrid}>
                             {TEAM_RECIPIENTS.map(r => {
-                                const isSelected = selectedRecipientIds.includes(r.id);
+                                const role = recipientRoles[r.id] || 'none';
                                 return (
-                                    <button
+                                    <div
                                         key={r.id}
-                                        type="button"
-                                        className={`${styles.recipientPill} ${isSelected ? styles.selected : ''}`}
-                                        onClick={() => toggleRecipient(r.id)}
+                                        className={`${styles.recipientCard} ${role === 'to' ? styles.roleTo : role === 'cc' ? styles.roleCc : ''}`}
                                     >
-                                        <span className={styles.avatar}>{r.avatarText}</span>
-                                        <div className={styles.recipientInfo}>
-                                            <span className={styles.name}>{r.name}</span>
-                                            <span className={styles.email}>{r.email}</span>
+                                        <div className={styles.recipientLeft}>
+                                            <span className={styles.avatar}>{r.avatarText}</span>
+                                            <div className={styles.recipientInfo}>
+                                                <span className={styles.name}>{r.name}</span>
+                                                <span className={styles.email}>{r.email}</span>
+                                            </div>
                                         </div>
-                                        {isSelected && <CheckCircle2 size={15} className={styles.checkIcon} />}
-                                    </button>
+                                        <div className={styles.roleToggleGroup}>
+                                            <button
+                                                type="button"
+                                                className={`${styles.roleBtn} ${role === 'to' ? styles.toActive : ''}`}
+                                                onClick={() => setMemberRole(r.id, 'to')}
+                                                title={`Set ${r.name} as primary TO`}
+                                            >
+                                                TO
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`${styles.roleBtn} ${role === 'cc' ? styles.ccActive : ''}`}
+                                                onClick={() => setMemberRole(r.id, 'cc')}
+                                                title={`Set ${r.name} as copy CC`}
+                                            >
+                                                CC
+                                            </button>
+                                        </div>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -936,7 +1075,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         type="button"
                         className={styles.sendBtn}
                         onClick={handleSend}
-                        disabled={sending || (selectedRecipientIds.length === 0 && !customCc.trim())}
+                        disabled={sending || (toRecipients.length === 0 && ccRecipients.length === 0 && !customCc.trim())}
                     >
                         {sending ? (
                             <>
@@ -947,7 +1086,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                             <>
                                 <Send size={15} />
                                 <span>
-                                    Send Mail ({selectedRecipientIds.length + (customCc.trim() ? 1 : 0)} To &bull; {selectedAttachmentIds.length} Attached)
+                                    Send Mail ({toRecipients.length} TO{ccRecipients.length > 0 ? `, ${ccRecipients.length} CC` : ''} &bull; {selectedAttachmentIds.length} Attached)
                                 </span>
                             </>
                         )}

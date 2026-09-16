@@ -38,7 +38,8 @@ import { exportCFPToExcel } from '@/lib/cfpExport';
 import { DocCommentPopover } from './DocCommentPopover';
 import { TitleProModal } from './TitleProModal';
 import { CarrierQuoteModal } from './CarrierQuoteModal';
-import { SendMailModal } from './SendMailModal';
+import { SendMailModal, type SentMailDetails } from './SendMailModal';
+import { SentMailInfoPopover } from './SentMailInfoPopover';
 
 const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo',
@@ -468,7 +469,17 @@ export function CFPSummaryTable({
     // ── Send Mail Modal State ─────────────────────────────────────────────
     const [activeSendMailTerm, setActiveSendMailTerm] = useState<CFPTermRow | null>(null);
 
-    const handleMailSentSuccess = (policyId: string, recipients: string[]) => {
+    const handleMailSentSuccess = (policyId: string, details: SentMailDetails | string[]) => {
+        const isDetailsObj = typeof details === 'object' && !Array.isArray(details);
+        const sentTo = isDetailsObj ? details.sent_to : (Array.isArray(details) ? details : []);
+        const sentToNames = isDetailsObj ? details.sent_to_names : [];
+        const sentCc = isDetailsObj ? details.sent_cc : [];
+        const sentCcNames = isDetailsObj ? details.sent_cc_names : [];
+        const sentBy = isDetailsObj ? details.sent_by : null;
+        const sentAt = isDetailsObj ? details.sent_at : new Date().toISOString();
+        const subject = isDetailsObj ? details.subject : null;
+        const attachments = isDetailsObj ? details.attachments : [];
+
         setFamilies(prev =>
             prev.map(f => ({
                 ...f,
@@ -479,8 +490,14 @@ export function CFPSummaryTable({
                               in_servicing_email: true,
                               servicing_status: 'ready',
                               cfp_mail_sent: true,
-                              cfp_mail_sent_to: recipients,
-                              cfp_mail_sent_at: new Date().toISOString(),
+                              cfp_mail_sent_to: sentTo,
+                              cfp_mail_sent_to_names: sentToNames,
+                              cfp_mail_sent_cc: sentCc,
+                              cfp_mail_sent_cc_names: sentCcNames,
+                              cfp_mail_sent_by: sentBy,
+                              cfp_mail_sent_at: sentAt,
+                              cfp_mail_subject: subject,
+                              cfp_mail_attachments: attachments,
                           }
                         : t
                 ),
@@ -1575,16 +1592,24 @@ export function CFPSummaryTable({
             case 'servicing': {
                 const isSent = !!term.cfp_mail_sent;
                 if (isSent) {
-                    const recipientList = term.cfp_mail_sent_to;
-                    const recipientLabel = Array.isArray(recipientList) && recipientList.length > 0
-                        ? `Sent to: ${recipientList.join(', ')}`
+                    const toList = term.cfp_mail_sent_to_names && term.cfp_mail_sent_to_names.length > 0
+                        ? term.cfp_mail_sent_to_names
+                        : term.cfp_mail_sent_to;
+                    const recipientLabel = Array.isArray(toList) && toList.length > 0
+                        ? `Sent to: ${toList.join(', ')}`
                         : 'Email already sent for this policy';
 
                     return (
                         <div className={styles.returnedSeContainer}>
-                            <span className={styles.inSeBadge} title={recipientLabel}>
-                                <Check size={10} /> Mail Sent
-                            </span>
+                            <div className={styles.mailSentBadgeRow}>
+                                <span className={styles.inSeBadge} title={recipientLabel}>
+                                    <Check size={10} /> Mail Sent
+                                </span>
+                                <SentMailInfoPopover
+                                    term={term}
+                                    onResend={() => setActiveSendMailTerm(term)}
+                                />
+                            </div>
                             <button
                                 type="button"
                                 className={styles.resendSeBtn}
