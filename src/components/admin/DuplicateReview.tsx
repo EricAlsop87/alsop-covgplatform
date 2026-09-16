@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import { Copy, AlertCircle, CheckCircle2, X, Merge, RefreshCw, Users, ShieldAlert, Search, UserPlus, Loader2, User, ExternalLink } from "lucide-react";
+import { Copy, AlertCircle, CheckCircle2, X, Merge, RefreshCw, Users, ShieldAlert, Search, UserPlus, Loader2, User, ExternalLink, Zap } from "lucide-react";
 import ClientMergeModal from "./ClientMergeModal";
 import { supabase } from "@/lib/supabaseClient";
+import { selectBestSurvivor } from "@/lib/duplicateEngine";
 import styles from "./DuplicateReview.module.css";
 import { logger } from '@/lib/logger';
 
@@ -12,6 +13,7 @@ export default function DuplicateReview() {
     const [selectedClient, setSelectedClient] = useState<string | null>(null);
     const [selectedPolicy, setSelectedPolicy] = useState<string | null>(null);
     const [isMerging, setIsMerging] = useState(false);
+    const [isAutoMerging, setIsAutoMerging] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     // Modal State
@@ -156,6 +158,44 @@ export default function DuplicateReview() {
         }
     };
 
+    const handleAutoMergeAll = async (minConfidence = 85) => {
+        const eligible = duplicateClients.filter(g => g.confidence >= minConfidence);
+        if (eligible.length === 0) {
+            alert(`No duplicate client records found with match confidence >= ${minConfidence}%.`);
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `⚡ Auto-Merge Confirmation:\n\nAre you sure you want to automatically consolidate all ${eligible.length} duplicate client clusters with >= ${minConfidence}% match confidence?\n\nProfiles with existing attachments, declaration pages, and policies are automatically prioritized as the primary insured profile.`
+        );
+        if (!confirmed) return;
+
+        setIsAutoMerging(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/merge/clients/auto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                },
+                body: JSON.stringify({ min_confidence: minConfidence }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data?.error || 'Auto-merge failed');
+            }
+
+            alert(data.message || `Successfully consolidated ${data.merged_groups_count || eligible.length} duplicate client groups!`);
+            await fetchDuplicates(false);
+        } catch (err: any) {
+            logger.error('DuplicateReview', 'Auto-merge error:', { error: err?.message || String(err) });
+            alert(err?.message || 'Failed to complete auto-merge. Please check console.');
+        } finally {
+            setIsAutoMerging(false);
+        }
+    };
+
     // ── Manual Merge: search handler ──
     const handleManualSearch = useCallback((query: string) => {
         setManualSearchQuery(query);
@@ -180,7 +220,7 @@ export default function DuplicateReview() {
                 const filtered = (data.clients || []).filter((c: any) => !selectedIds.has(c.id));
                 setManualSearchResults(filtered);
             } catch (err) {
-                logger.error('DuplicateReview', 'Manual merge search error:', { error: err instanceof Error ? err.message : String(err) })
+                logger.error('DuplicateReview', 'Manual merge search error:', { error: err instanceof Error ? err.message : String(err) });
             } finally {
                 setManualSearchLoading(false);
             }
@@ -227,15 +267,15 @@ export default function DuplicateReview() {
                 return;
             }
 
-            // Sort by created_at — oldest is survivor
-            fullClients.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            // Prioritize survivor with attachments, policies, and contact completeness
+            const { survivor, duplicates: candidates } = selectBestSurvivor(fullClients);
 
             setManualMergeGroup({
-                survivor: fullClients[0],
-                candidates: fullClients.slice(1),
+                survivor,
+                candidates,
             });
         } catch (err) {
-            logger.error('DuplicateReview', 'Failed to load clients for manual merge:', { error: err instanceof Error ? err.message : String(err) })
+            logger.error('DuplicateReview', 'Failed to load clients for manual merge:', { error: err instanceof Error ? err.message : String(err) });
         } finally {
             setManualMergeLoadingModal(false);
         }
@@ -436,16 +476,57 @@ export default function DuplicateReview() {
             <div className={styles.workspace}>
             {/* Clients Column */}
             <div className={styles.column}>
-                <div className={styles.header}>
-                    <h3 className={styles.headerTitle}>
-                        <Users size={18} style={{ color: "var(--status-success)" }} />
-                        Identified Client Duplicates
-                    </h3>
-                    {filteredClients.length > 0 && (
-                        <span className={styles.badge}>{filteredClients.length} Actionable</span>
-                    )}
+                <div className={styles.header} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h3 className={styles.headerTitle} style={{ margin: 0 }}>
+                            <Users size={18} style={{ color: "var(--status-success)" }} />
+                            Identified Client Duplicates
+                        </h3>
+                        {filteredClients.length > 0 && (
+                            <span className={styles.badge}>{filteredClients.length} Actionable</span>
+                        )}
+                    </div>
+
+                    {/* Auto-Merge All 85%+ Button */}
+                    {(() => {
+                        const highConfCount = filteredClients.filter(g => g.confidence >= 85).length;
+                        if (highConfCount === 0) return null;
+                        return (
+                            <button
+                                onClick={() => handleAutoMergeAll(85)}
+                                disabled={isAutoMerging}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    padding: '0.35rem 0.85rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 700,
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(16, 185, 129, 0.45)',
+                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.22))',
+                                    color: '#10b981',
+                                    cursor: isAutoMerging ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                title="Automatically consolidate all duplicate clients with 85%+ match confidence"
+                            >
+                                {isAutoMerging ? (
+                                    <>
+                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                                        <span>Auto-Merging 85%+...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Zap size={13} style={{ fill: 'currentColor' }} />
+                                        <span>Auto-Merge All ({highConfCount} at 85%+)</span>
+                                    </>
+                                )}
+                            </button>
+                        );
+                    })()}
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: 1.5, margin: '-0.75rem 0 0' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: 1.5, margin: '-0.25rem 0 0' }}>
                     Multiple client records that refer to the same person. Merging consolidates their contact data and re-parents all policies &amp; documents under a single primary insured profile.
                 </p>
 
@@ -468,7 +549,44 @@ export default function DuplicateReview() {
                                     <span>Match Confidence: </span>
                                     <span className={styles.confidenceHigh}>{group.confidence}%</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    {group.confidence >= 85 && (
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const survivor = group.details.survivor;
+                                                const dups = group.details.duplicates || [];
+                                                const consolidated: Record<string, any> = {};
+                                                for (const d of dups) {
+                                                    if (!survivor.email && d.email) consolidated.email = d.email;
+                                                    if (!survivor.phone && d.phone) consolidated.phone = d.phone;
+                                                    if (!survivor.mailing_address_raw && d.mailing_address_raw) {
+                                                        consolidated.mailing_address_raw = d.mailing_address_raw;
+                                                        if (d.mailing_address_norm) consolidated.mailing_address_norm = d.mailing_address_norm;
+                                                    }
+                                                }
+                                                await handleMergeClient(group.survivor_id, group.merged_ids, consolidated, true);
+                                            }}
+                                            disabled={isMerging}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '0.3rem',
+                                                padding: '0.25rem 0.55rem',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                background: 'rgba(59, 130, 246, 0.1)',
+                                                color: 'var(--accent-primary, #3b82f6)',
+                                                cursor: isMerging ? 'not-allowed' : 'pointer',
+                                            }}
+                                            title="Instantly merge this duplicate group with primary profile preserved"
+                                        >
+                                            <Zap size={11} style={{ fill: 'currentColor' }} />
+                                            Quick Merge
+                                        </button>
+                                    )}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();

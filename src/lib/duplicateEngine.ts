@@ -10,16 +10,42 @@ function isHexPlaceholder(name: string | null): boolean {
 
 /**
  * Selects the best survivor from a cluster of duplicate clients.
- * Priority: real name > hex placeholder, more tokens > fewer, older > newer
+ * Priority:
+ * 1. Real name > hex placeholder
+ * 2. Has attachments / documents (platform_documents + dec_pages) -> most reliable record
+ * 3. Has linked policies (policy count > 0)
+ * 4. Contact data completeness (email, phone, mailing address)
+ * 5. Token count / name detail
+ * 6. Tie-break: older record
  */
-function selectBestSurvivor(cluster: any[]): { survivor: any; duplicates: any[] } {
+export function selectBestSurvivor(cluster: any[]): { survivor: any; duplicates: any[] } {
     const scored = cluster.map(c => {
         const name = c.named_insured || '';
         const isHex = isHexPlaceholder(name);
         const tokens = name.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter((t: string) => t.length >= 2);
+        
+        // Count documents / attachments (both dec_pages and platform_documents)
+        const directDecPages = (c.dec_pages || []).length;
+        const platformDocs = (c.policies || []).reduce((acc: number, p: any) => acc + (p.platform_documents || []).length, 0);
+        const totalDocs = directDecPages + platformDocs;
+        
+        // Count policies
+        const policyCount = (c.policies || []).length;
+        
+        // Contact info completeness
+        const hasEmail = Boolean(c.email && String(c.email).trim().length > 0);
+        const hasPhone = Boolean(c.phone && String(c.phone).trim().length > 0);
+        const hasAddress = Boolean((c.mailing_address_raw || c.mailing_address_norm || '').trim().length > 0);
+        const contactScore = (hasEmail ? 1 : 0) + (hasPhone ? 1 : 0) + (hasAddress ? 1 : 0);
+
         return {
             client: c,
             isHex,
+            totalDocs,
+            hasDocs: totalDocs > 0,
+            policyCount,
+            hasPolicies: policyCount > 0,
+            contactScore,
             tokenCount: tokens.length,
             nameLength: name.length,
             createdAt: new Date(c.created_at).getTime(),
@@ -27,13 +53,25 @@ function selectBestSurvivor(cluster: any[]): { survivor: any; duplicates: any[] 
     });
     
     scored.sort((a, b) => {
-        // Real names win over hex placeholders
+        // 1. Real names win over hex placeholders
         if (a.isHex !== b.isHex) return a.isHex ? 1 : -1;
-        // More tokens = more context = better survivor
+        
+        // 2. HAS ATTACHMENTS / DOCUMENTS WINS (Most reliable record)
+        if (a.hasDocs !== b.hasDocs) return a.hasDocs ? -1 : 1;
+        if (a.totalDocs !== b.totalDocs) return b.totalDocs - a.totalDocs;
+        
+        // 3. HAS POLICIES WINS
+        if (a.hasPolicies !== b.hasPolicies) return a.hasPolicies ? -1 : 1;
+        if (a.policyCount !== b.policyCount) return b.policyCount - a.policyCount;
+        
+        // 4. Contact data completeness (has email/phone/address)
+        if (a.contactScore !== b.contactScore) return b.contactScore - a.contactScore;
+        
+        // 5. Name detail (more tokens = more full name e.g. First + Last vs First only)
         if (a.tokenCount !== b.tokenCount) return b.tokenCount - a.tokenCount;
-        // Longer name = more detail
         if (a.nameLength !== b.nameLength) return b.nameLength - a.nameLength;
-        // Tie-break: older record
+        
+        // 6. Tie-break: older record
         return a.createdAt - b.createdAt;
     });
     
