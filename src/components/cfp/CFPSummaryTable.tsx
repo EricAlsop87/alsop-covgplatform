@@ -1909,6 +1909,22 @@ export function CFPSummaryTable({
                             📅 This Month
                         </button>
 
+                        {/* Quick shortcut to Reset Filter (All Years & All Months) */}
+                        <button
+                            type="button"
+                            className={`${styles.filterPill} ${!year && !month ? styles.active : ''}`}
+                            onClick={() => {
+                                onYearChange('');
+                                onMonthChange('');
+                                setCurrentPage(1);
+                            }}
+                            title="Reset date filter to show all years and all months"
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', fontWeight: 600 }}
+                        >
+                            <RotateCcw size={11} style={{ display: 'inline', marginRight: '4px' }} />
+                            Reset Filter
+                        </button>
+
                         {/* Search Input with Instant Button & Refresh Arrow */}
                         <div className={styles.searchContainer}>
                             <div className={styles.searchBox}>
@@ -2034,12 +2050,11 @@ export function CFPSummaryTable({
                     <div className={styles.periodSummaryHeader}>
                         <div className={styles.periodSummaryTitle}>
                             <span>
-                                📅 {month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}
-                                {year ? year : 'All Years'} Summary
+                                📅 {!month && !year ? 'All Periods (All Years & Months)' : `${month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}${year || 'All Years'}`} Summary
                             </span>
                         </div>
                         <span className={styles.miniCardSub}>
-                            Live snapshot for selected month & year
+                            {!month && !year ? 'Live snapshot for all years & all months' : 'Live snapshot for selected month & year'}
                         </span>
                     </div>
 

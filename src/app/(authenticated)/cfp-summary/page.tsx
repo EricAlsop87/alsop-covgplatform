@@ -49,7 +49,9 @@ function CFPSummaryContent() {
     const [year, setYearState] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_year');
-            if (saved && saved !== 'all' && saved !== '' && saved !== 'undefined') return saved;
+            if (saved !== null && saved !== 'undefined') {
+                return saved === 'all' ? '' : saved;
+            }
         }
         return currentYearStr;
     });
@@ -57,7 +59,9 @@ function CFPSummaryContent() {
     const [month, setMonthState] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_month');
-            if (saved && saved !== 'all' && saved !== '' && saved !== 'undefined') return saved;
+            if (saved !== null && saved !== 'undefined') {
+                return saved === 'all' ? '' : saved;
+            }
         }
         return currentMonthStr;
     });
@@ -72,7 +76,7 @@ function CFPSummaryContent() {
         return 'active_cfp';
     });
 
-    const initialCacheKey = `${year || currentYearStr}_${month || currentMonthStr}__${view}`;
+    const initialCacheKey = `${year}_${month}__${view}`;
     const initialCached = globalCFPCache.get(initialCacheKey);
 
     const [families, setFamilies] = useState<CFPFamily[]>(() => initialCached?.families || []);
