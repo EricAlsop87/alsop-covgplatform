@@ -136,10 +136,30 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
+    const [currentUserName, setCurrentUserName] = useState<string>('');
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
-            if (data?.user?.email) setCurrentUserEmail(data.user.email.toLowerCase());
+            if (data?.user?.email) {
+                const em = data.user.email.toLowerCase();
+                setCurrentUserEmail(em);
+
+                const VA_NAMES: Record<string, string> = {
+                    'admin@coveragechecknow.com': 'Coverage Check Team',
+                    'phoebe@coveragechecknow.com': 'Phoebe Hernandez',
+                    'paula@coveragechecknow.com': 'Paula Veloza',
+                    'danicah@coveragechecknow.com': 'Danicah Jesoro',
+                    'alsopva01@gmail.com': 'Paula Veloza',
+                    'alsopva02@gmail.com': 'Phoebe Hernandez',
+                    'alsopva03@gmail.com': 'Danicah Jesoro',
+                };
+
+                const metaName = data.user.user_metadata?.first_name
+                    ? `${data.user.user_metadata.first_name} ${data.user.user_metadata.last_name || ''}`.trim()
+                    : data.user.user_metadata?.name;
+
+                setCurrentUserName(metaName || VA_NAMES[em] || 'Coverage Check Team');
+            }
         });
     }, []);
 
@@ -585,12 +605,15 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
           ${notesBlock}
 
-          <p style="font-size:12px;color:#64748b;margin-top:24px;padding-top:14px;border-top:1px solid #e2e8f0;">
-            Sent via Coverage Check &bull; Please reply directly to this email if you have any questions or require updates.
-          </p>
+          <div style="margin-top:24px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;font-size:13px;color:#334155;">
+            <div style="font-weight:700;color:#0f172a;font-size:13.5px;">Prepared &amp; Sent by: ${currentUserName || 'Coverage Check Team'}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+              Coverage Check Now &bull; <a href="mailto:admin@coveragechecknow.com" style="color:#2563eb;text-decoration:none;">admin@coveragechecknow.com</a> &bull; All replies are routed to our servicing team
+            </div>
+          </div>
         </div>
         `;
-    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds]);
+    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName]);
 
     if (!isOpen || !term) return null;
 
