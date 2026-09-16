@@ -808,6 +808,19 @@
         }
     }
 
+    &.agentReview,
+    &.needsUw {
+        background: #fef3c7;
+        color: #b45309;
+        border-color: #fde68a;
+
+        &:hover {
+            background: #fde68a;
+            border-color: #f59e0b;
+            transform: translateY(-1px);
+        }
+    }
+
     &.unavailable {
         background: #fef2f2;
         color: #b91c1c;

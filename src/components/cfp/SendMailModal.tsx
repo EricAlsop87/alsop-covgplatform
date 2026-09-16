@@ -167,7 +167,20 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         }
 
-        // 7. PSIC Quote
+        // 7. SageSure Quote
+        if (term.carrier_quotes?.sagesure?.storage_path) {
+            addCandidate({
+                id: 'sagesure',
+                label: 'SageSure Quote',
+                badge: 'SAGESURE QUOTE',
+                fileName: term.carrier_quotes.sagesure.file_name || term.carrier_quotes.sagesure.doc_file_name || 'SageSure_Quote.pdf',
+                storagePath: term.carrier_quotes.sagesure.storage_path,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'quote',
+            });
+        }
+
+        // 8. PSIC Quote
         if (term.carrier_quotes?.psic?.storage_path) {
             addCandidate({
                 id: 'psic',
@@ -180,7 +193,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         }
 
-        // 8. In-force DIC Dec Page (if distinct from quotes)
+        // 9. In-force DIC Dec Page (if distinct from quotes)
         if (term.has_dic && term.dic_storage_path) {
             addCandidate({
                 id: 'dic',
@@ -253,7 +266,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         }
     };
 
-    // Build structured document items covering all 4 companion carriers + Dec + RCE + Title
+    // Build structured document items covering all 5 companion carriers + Dec + RCE + Title
     const docItems = useMemo(() => {
         if (!term) return [];
 
@@ -264,7 +277,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     status: 'Not Quoted',
                     statusType: 'not_quoted' as const,
                     premium: '—',
-                    details: 'No attached quote',
+                    details: '—',
                 };
             }
 
@@ -274,21 +287,36 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     status: 'Unable to Quote',
                     statusType: 'declined' as const,
                     premium: '—',
-                    details: q.notes || 'Ineligible / Underwriting decline',
+                    details: q.notes ? `Reason: ${q.notes}` : '✕ Ineligible / No Option',
                 };
             }
 
-            const isAttached = selectedAttachmentIds.includes(carrierKey);
+            if (q.coverage_type === 'AGENT_REVIEW') {
+                const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : '—';
+                const quoteStr = q.quote_number ? `Quote #: ${q.quote_number}` : 'Quote # Pending';
+                const remarksStr = q.notes ? `UW Remarks: ${q.notes}` : 'Needs agent review in carrier portal';
+                return {
+                    name: `${carrierName} Quote`,
+                    status: 'Quoted • Needs UW',
+                    statusType: 'needs_uw' as const,
+                    premium: premStr,
+                    details: `${quoteStr} • ${remarksStr}`,
+                };
+            }
+
             const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : (q.coverage_type || 'Quoted');
-            const details = [
-                q.coverage_type ? `Type: ${q.coverage_type}` : null,
-                q.notes ? `Note: ${q.notes}` : null,
-                isAttached ? '(Attached)' : '(Not Attached)',
-            ].filter(Boolean).join(' | ');
+            const quotePart = q.quote_number ? `Quote #: ${q.quote_number}` : null;
+            const typePart = q.coverage_type && q.coverage_type !== 'QUOTE' ? `Type: ${q.coverage_type}` : null;
+            const remarksPart = q.notes ? `Remarks: ${q.notes}` : null;
+
+            const detailParts = [quotePart, typePart, remarksPart].filter(Boolean);
+            const details = detailParts.length > 0 ? detailParts.join(' • ') : 'Quote Available';
+
+            const statusLabel = q.coverage_type === 'FULL' ? 'Quoted (Full)' : q.coverage_type === 'DIC' ? 'Quoted (DIC)' : 'Quoted';
 
             return {
                 name: `${carrierName} Quote`,
-                status: 'Quoted',
+                status: statusLabel,
                 statusType: 'quoted' as const,
                 premium: premStr,
                 details,
@@ -298,6 +326,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const bamboo = formatQuote('Bamboo', 'bamboo', term.carrier_quotes?.bamboo);
         const aegis = formatQuote('Aegis', 'aegis', term.carrier_quotes?.aegis);
         const am = formatQuote('American Modern (AM)', 'am', term.carrier_quotes?.am);
+        const sagesure = formatQuote('SageSure', 'sagesure', term.carrier_quotes?.sagesure);
         const psic = formatQuote('PSIC', 'psic', term.carrier_quotes?.psic);
 
         const titleStatus = term.title_pro
@@ -350,6 +379,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             bamboo,
             aegis,
             am,
+            sagesure,
             psic,
             {
                 name: 'Title Pro Report',
@@ -378,21 +408,23 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const rowsHtml = docItems.map(item => {
             let badgeHtml = '';
             if (item.statusType === 'available' || item.statusType === 'quoted') {
-                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+                badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
+            } else if (item.statusType === 'needs_uw') {
+                badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
             } else if (item.statusType === 'declined') {
-                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+                badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
             } else if (item.statusType === 'not_quoted') {
-                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;font-weight:600;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+                badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;font-weight:600;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
             } else {
-                badgeHtml = `<span style="display:inline-block;padding:3px 10px;border-radius:4px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">${item.status}</span>`;
+                badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:700;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
             }
 
             return `
             <tr style="border-bottom:1px solid #e2e8f0;">
               <td style="padding:10px 14px;font-weight:600;color:#0f172a;font-size:13px;">${item.name}</td>
               <td style="padding:10px 14px;text-align:center;">${badgeHtml}</td>
-              <td style="padding:10px 14px;color:#334155;font-weight:500;font-size:13px;">${item.premium}</td>
-              <td style="padding:10px 14px;color:#64748b;font-size:12px;">${item.details}</td>
+              <td style="padding:10px 14px;color:#334155;font-weight:600;font-size:13px;">${item.premium}</td>
+              <td style="padding:10px 14px;color:#475569;font-size:12px;">${item.details}</td>
             </tr>`;
         }).join('');
 
@@ -442,10 +474,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">
             <thead>
               <tr style="background:#f8fafc;text-align:left;border-bottom:2px solid #cbd5e1;">
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Document / Carrier</th>
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Item / Carrier</th>
                 <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:center;width:140px;">Status</th>
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Type / Premium</th>
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Notes / Details</th>
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Amount / Premium</th>
+                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Quote # &amp; Underwriting Remarks</th>
               </tr>
             </thead>
             <tbody>

@@ -204,19 +204,19 @@
 /* ── Coverage Type Radio Grid ── */
 .coverageGrid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.4rem;
 }
 
 .coverageCard {
     border: 1.5px solid var(--border-default, #cbd5e1);
     border-radius: 8px;
-    padding: 0.625rem 0.35rem;
+    padding: 0.5rem 0.25rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
     cursor: pointer;
     background: #ffffff;
     transition: all 0.15s ease;
@@ -249,6 +249,15 @@
             background: #faf5ff;
             border-color: #a855f7;
             color: #7e22ce;
+        }
+    }
+
+    &.needsUw,
+    &.agentReview {
+        &.active {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #b45309;
         }
     }
 

@@ -25,6 +25,7 @@ const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo Insurance',
     aegis: 'Aegis Security / General',
     am: 'American Modern (AM)',
+    sagesure: 'SageSure',
     psic: 'Pacific Specialty (PSIC)',
 };
 
@@ -269,6 +270,14 @@ export function CarrierQuoteModal({
                                 </div>
 
                                 <div
+                                    className={`${styles.coverageCard} ${styles.agentReview} ${coverageType === 'AGENT_REVIEW' ? styles.active : ''}`}
+                                    onClick={() => setCoverageType('AGENT_REVIEW')}
+                                >
+                                    <span className={styles.cardTitle}>🟠 Needs UW</span>
+                                    <span className={styles.cardSubtitle}>Quoted • Needs UW</span>
+                                </div>
+
+                                <div
                                     className={`${styles.coverageCard} ${styles.unavailable} ${coverageType === 'UNAVAILABLE' ? styles.active : ''}`}
                                     onClick={() => setCoverageType('UNAVAILABLE')}
                                 >
@@ -278,7 +287,7 @@ export function CarrierQuoteModal({
                             </div>
                         </div>
 
-                        {/* If Quoted (DIC or FULL): Show Quote # and Premium */}
+                        {/* If Quoted (DIC, FULL, QUOTE, or AGENT_REVIEW): Show Quote # and Premium */}
                         {coverageType !== 'UNAVAILABLE' && (
                             <div className={styles.inputRow}>
                                 <div className={styles.formGroup}>
@@ -334,7 +343,9 @@ export function CarrierQuoteModal({
                                 <label className={styles.formLabel} htmlFor="carrier_notes_input">
                                     {coverageType === 'UNAVAILABLE'
                                         ? 'Decline / Ineligibility Reason (from carrier portal)'
-                                        : 'Underwriting Remarks / Notes (Optional)'}
+                                        : coverageType === 'AGENT_REVIEW'
+                                            ? 'Underwriting Remarks / Questions for Licensed Agent'
+                                            : 'Underwriting Remarks / Notes (Optional)'}
                                 </label>
                                 <span className={styles.charCount}>{notes.length}/500</span>
                             </div>
@@ -345,7 +356,9 @@ export function CarrierQuoteModal({
                                 placeholder={
                                     coverageType === 'UNAVAILABLE'
                                         ? 'e.g. Brush score 92 exceeds guidelines; carrier has no option for Full or DIC'
-                                        : 'e.g. Quoted HO-3 surplus lines with $2,500 deductible'
+                                        : coverageType === 'AGENT_REVIEW'
+                                            ? 'e.g. Eligible for quote; needs licensed agent to answer UW questions regarding brush clearance and roof age in carrier portal.'
+                                            : 'e.g. Quoted HO-3 surplus lines with $2,500 deductible'
                                 }
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
@@ -377,6 +390,12 @@ export function CarrierQuoteModal({
                                 >
                                     <ExternalLink size={12} /> Preview PDF
                                 </button>
+                            </div>
+                        ) : carrierKey === 'sagesure' ? (
+                            <div className={styles.docAttachmentBox}>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                    ℹ️ SageSure manual quote entry (No PDF upload required).
+                                </span>
                             </div>
                         ) : (
                             <div className={styles.docAttachmentBox}>

@@ -44,6 +44,7 @@ const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo',
     aegis: 'Aegis',
     am: 'American Modern',
+    sagesure: 'SageSure',
     psic: 'Pacific Specialty',
 };
 import type { DocNoteTag } from '@/lib/notes';
@@ -64,6 +65,7 @@ export interface ColumnFilters {
     bamboo?: string;
     aegis?: string;
     am?: string;
+    sagesure?: string;
     psic?: string;
     title_pro?: string;
     servicing?: string;
@@ -81,6 +83,7 @@ export type CFPColumnKey =
     | 'bamboo'
     | 'aegis'
     | 'am'
+    | 'sagesure'
     | 'psic'
     | 'title_pro'
     | 'servicing'
@@ -105,6 +108,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'bamboo', label: 'Bamboo', width: 105, minWidth: 80, align: 'center' },
     { key: 'aegis', label: 'Aegis', width: 105, minWidth: 80, align: 'center' },
     { key: 'am', label: 'AM', width: 105, minWidth: 80, align: 'center' },
+    { key: 'sagesure', label: 'SageSure', width: 105, minWidth: 80, align: 'center' },
     { key: 'psic', label: 'PSIC', width: 105, minWidth: 80, align: 'center' },
     { key: 'title_pro', label: 'Title Pro', width: 95, minWidth: 75, align: 'center' },
     { key: 'servicing', label: 'Send Mail', width: 115, minWidth: 85, align: 'center' },
@@ -132,7 +136,7 @@ interface CFPSummaryTableProps {
     totalFamilies: number;
 }
 
-type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'has_dic_quote' | 'has_full_quote' | 'has_any_quote' | 'has_unavailable' | 'has_comments' | 'returned_from_se';
+type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'has_dic_quote' | 'has_full_quote' | 'has_needs_uw' | 'has_any_quote' | 'has_unavailable' | 'has_comments' | 'returned_from_se';
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -803,6 +807,10 @@ export function CFPSummaryTable({
                         const quotes = Object.values(t.carrier_quotes || {});
                         return quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
                     }
+                    case 'has_needs_uw': {
+                        const quotes = Object.values(t.carrier_quotes || {});
+                        return quotes.some(q => q?.coverage_type === 'AGENT_REVIEW');
+                    }
                     case 'has_any_quote': {
                         const quotes = Object.values(t.carrier_quotes || {});
                         return quotes.some(q => q && q.coverage_type !== 'UNAVAILABLE');
@@ -900,7 +908,7 @@ export function CFPSummaryTable({
             }
         }
 
-        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'am', 'psic'];
+        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'];
         for (const cKey of carrierFilterKeys) {
             const filterVal = columnFilters[cKey];
             if (filterVal) {
@@ -915,6 +923,8 @@ export function CFPSummaryTable({
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'FULL');
                 } else if (filterVal === 'quote_only') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'QUOTE');
+                } else if (filterVal === 'agent_review') {
+                    result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'AGENT_REVIEW');
                 } else if (filterVal === 'unavailable') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'UNAVAILABLE');
                 } else if (filterVal === 'unquoted') {
@@ -1027,6 +1037,7 @@ export function CFPSummaryTable({
             if (columnFilters.bamboo) parts.push(`Bamboo_${columnFilters.bamboo}`);
             if (columnFilters.aegis) parts.push(`Aegis_${columnFilters.aegis}`);
             if (columnFilters.am) parts.push(`AM_${columnFilters.am}`);
+            if (columnFilters.sagesure) parts.push(`SageSure_${columnFilters.sagesure}`);
             if (columnFilters.psic) parts.push(`PSIC_${columnFilters.psic}`);
             if (columnFilters.title_pro) parts.push(`Title_${columnFilters.title_pro}`);
             const desc = parts.length > 0 ? parts.join('_') : 'All';
@@ -1437,6 +1448,7 @@ export function CFPSummaryTable({
             case 'bamboo':
             case 'aegis':
             case 'am':
+            case 'sagesure':
             case 'psic': {
                 const carrierKey = colKey as CarrierKey;
                 const quote = term.carrier_quotes?.[carrierKey];
@@ -1451,6 +1463,9 @@ export function CFPSummaryTable({
                     } else if (quote.coverage_type === 'QUOTE') {
                         badgeClass = styles.quote;
                         label = 'QUOTE';
+                    } else if (quote.coverage_type === 'AGENT_REVIEW') {
+                        badgeClass = styles.agentReview;
+                        label = 'Needs UW';
                     } else if (quote.coverage_type === 'UNAVAILABLE') {
                         badgeClass = styles.unavailable;
                         label = '✕ None';
@@ -1464,11 +1479,11 @@ export function CFPSummaryTable({
                     }
 
                     const titleParts = [
-                        `${cName}: ${quote.coverage_type}`,
+                        `${cName}: ${quote.coverage_type === 'AGENT_REVIEW' ? 'Quoted • Needs UW' : quote.coverage_type}`,
                     ];
                     if (quote.quote_number) titleParts.push(`Quote #: ${quote.quote_number}`);
                     if (quote.premium) titleParts.push(`Premium: $${quote.premium.toLocaleString()}`);
-                    if (quote.notes) titleParts.push(`Reason/Notes: ${quote.notes}`);
+                    if (quote.notes) titleParts.push(`Remarks/Notes: ${quote.notes}`);
                     if (quote.file_name) titleParts.push(`Document: ${quote.file_name}`);
                     titleParts.push('(Click to view / edit / copy)');
 
@@ -1484,7 +1499,7 @@ export function CFPSummaryTable({
                         >
                             <span>{label}</span>
                             {suffix && <span className={styles.quoteSuffix}>{suffix}</span>}
-                            {quote.notes && quote.coverage_type === 'UNAVAILABLE' && (
+                            {quote.notes && (quote.coverage_type === 'UNAVAILABLE' || quote.coverage_type === 'AGENT_REVIEW') && (
                                 <span className={styles.noteBadgeDot} title={quote.notes}>💬</span>
                             )}
                             {quote.storage_path && <FileText size={10} style={{ opacity: 0.8 }} />}
@@ -1706,12 +1721,14 @@ export function CFPSummaryTable({
                         <option value="Bamboo">Bamboo</option>
                         <option value="AM">American Modern</option>
                         <option value="Aegis">Aegis</option>
+                        <option value="SageSure">SageSure</option>
                         <option value="PSIC">PSIC</option>
                     </select>
                 );
             case 'bamboo':
             case 'aegis':
             case 'am':
+            case 'sagesure':
             case 'psic': {
                 const cKey = colKey as CarrierKey;
                 const cName = CARRIER_NAMES[cKey] || cKey.toUpperCase();
@@ -1726,6 +1743,7 @@ export function CFPSummaryTable({
                         <option value="dic">DIC (✔)</option>
                         <option value="full">FULL (✔)</option>
                         <option value="quote_only">Quote Only (✔)</option>
+                        <option value="agent_review">Quoted • Needs UW (🟠)</option>
                         <option value="unavailable">Unavailable (✕)</option>
                         <option value="unquoted">Unquoted (+)</option>
                     </select>
@@ -2184,6 +2202,13 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('has_full_quote'); setCurrentPage(1); }}
                     >
                         Has Full Quote
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${docFilter === 'has_needs_uw' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_needs_uw'); setCurrentPage(1); }}
+                    >
+                        Needs UW (🟠)
                     </button>
                     <button
                         type="button"

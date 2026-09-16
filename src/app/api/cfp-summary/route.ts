@@ -6,8 +6,8 @@ import { normalizePolicyNumber } from '@/lib/normalization';
 export const dynamic = 'force-dynamic';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'psic';
-export type CoverageQuoteType = 'DIC' | 'FULL' | 'QUOTE' | 'UNAVAILABLE';
+export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
+export type CoverageQuoteType = 'DIC' | 'FULL' | 'QUOTE' | 'AGENT_REVIEW' | 'UNAVAILABLE';
 
 export interface CarrierQuoteData {
     carrier_key: CarrierKey;
@@ -220,6 +220,21 @@ export function detectCarrierQuoteInfo(
             carrier_key: 'psic',
             coverage_type: isDic ? 'DIC' : 'FULL',
             quote_number: matchPsic ? matchPsic[1] : (dic?.policy_number || null),
+            premium: prem,
+            dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
+            doc_file_name: fileName || null,
+        };
+    }
+
+    // 5. SageSure
+    const matchSageSure = (fileName || '').match(/(SS\d{6,}|SAGESURE\d*)/i) || (dic?.policy_number || '').match(/(SS\d{6,}|SAGESURE\d*)/i);
+    if (combined.includes('sagesure') || dicCarrier.includes('sagesure') || matchSageSure) {
+        const isDic = (dic && dic.has_dic_endorsement !== false) || combined.includes('difference in conditions') || fn.includes('dic');
+        const prem = extractTotalPremium(dic);
+        return {
+            carrier_key: 'sagesure',
+            coverage_type: isDic ? 'DIC' : 'FULL',
+            quote_number: matchSageSure ? matchSageSure[1] : (dic?.policy_number || null),
             premium: prem,
             dwelling_coverage: dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null,
             doc_file_name: fileName || null,
@@ -946,6 +961,14 @@ export async function GET(req: NextRequest) {
                     file_name: manualCarrierQuotes[policyId]?.am?.file_name || autoCarrierQuotes[policyId]?.am?.file_name || null,
                 }
                 : autoCarrierQuotes[policyId]?.am || null,
+            sagesure: manualCarrierQuotes[policyId]?.sagesure
+                ? {
+                    ...autoCarrierQuotes[policyId]?.sagesure,
+                    ...manualCarrierQuotes[policyId]?.sagesure,
+                    storage_path: manualCarrierQuotes[policyId]?.sagesure?.storage_path || autoCarrierQuotes[policyId]?.sagesure?.storage_path || null,
+                    file_name: manualCarrierQuotes[policyId]?.sagesure?.file_name || autoCarrierQuotes[policyId]?.sagesure?.file_name || null,
+                }
+                : autoCarrierQuotes[policyId]?.sagesure || null,
             psic: manualCarrierQuotes[policyId]?.psic
                 ? {
                     ...autoCarrierQuotes[policyId]?.psic,

@@ -26,6 +26,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         { header: 'Bamboo', key: 'bamboo', width: 24 },
         { header: 'Aegis', key: 'aegis', width: 24 },
         { header: 'AM', key: 'am', width: 24 },
+        { header: 'SageSure', key: 'sagesure', width: 24 },
         { header: 'PSIC', key: 'psic', width: 24 },
         { header: 'Title Pro', key: 'title_pro', width: 22 },
         { header: 'Notes', key: 'notes_preview', width: 32 },
@@ -54,6 +55,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
     const formatQuote = (q: any) => {
         if (!q) return 'Unquoted';
         if (q.coverage_type === 'UNAVAILABLE') return `Unavailable${q.notes ? ` (${q.notes})` : ''}`;
+        if (q.coverage_type === 'AGENT_REVIEW') return `Needs UW${q.quote_number ? ` (#${q.quote_number})` : ''}${q.premium ? ` - $${Number(q.premium).toLocaleString()}` : ''}${q.notes ? ` [${q.notes}]` : ''}`;
         return `${q.coverage_type}${q.quote_number ? ` (#${q.quote_number})` : ''}${q.premium ? ` - $${Number(q.premium).toLocaleString()}` : ''}`;
     };
 
@@ -78,6 +80,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             bamboo: formatQuote(quotes.bamboo),
             aegis: formatQuote(quotes.aegis),
             am: formatQuote(quotes.am),
+            sagesure: formatQuote(quotes.sagesure),
             psic: formatQuote(quotes.psic),
             title_pro: term.title_pro
                 ? `${term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : 'Mismatch'} (${term.title_pro.title_name})`
@@ -96,7 +99,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         }
 
         // Center align indicator columns
-        ['suffix', 'effective_date', 'expiration_date', 'has_dec', 'has_rce', 'bamboo', 'aegis', 'am', 'psic', 'title_pro'].forEach(col => {
+        ['suffix', 'effective_date', 'expiration_date', 'has_dec', 'has_rce', 'bamboo', 'aegis', 'am', 'sagesure', 'psic', 'title_pro'].forEach(col => {
             const cell = row.getCell(col);
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
@@ -115,7 +118,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
         }
 
         // Style Carrier Quote cells
-        const carrierColKeys = ['bamboo', 'aegis', 'am', 'psic'] as const;
+        const carrierColKeys = ['bamboo', 'aegis', 'am', 'sagesure', 'psic'] as const;
         for (const cKey of carrierColKeys) {
             const q = quotes[cKey];
             const cell = row.getCell(cKey);
@@ -125,6 +128,10 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
                 cell.font = { color: { argb: 'FF16A34A' }, bold: true };
             } else if (q.coverage_type === 'DIC') {
                 cell.font = { color: { argb: 'FF2563EB' }, bold: true };
+            } else if (q.coverage_type === 'QUOTE') {
+                cell.font = { color: { argb: 'FF7E22CE' }, bold: true };
+            } else if (q.coverage_type === 'AGENT_REVIEW') {
+                cell.font = { color: { argb: 'FFD97706' }, bold: true };
             } else if (q.coverage_type === 'UNAVAILABLE') {
                 cell.font = { color: { argb: 'FFDC2626' }, bold: true };
             }
