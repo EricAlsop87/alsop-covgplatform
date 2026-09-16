@@ -57,18 +57,26 @@ export async function POST(req: NextRequest) {
 
         // VA Team Name Mapping
         const VA_NAMES: Record<string, string> = {
+            'admin@coveragechecknow.com': 'Coverage Check Admin',
+            'phoebe@coveragechecknow.com': 'Phoebe Hernandez',
+            'paula@coveragechecknow.com': 'Paula Veloza',
+            'danicah@coveragechecknow.com': 'Danicah Jesoro',
             'alsopva01@gmail.com': 'Paula Andrea Veloza',
             'alsopva02@gmail.com': 'Phoebe Hernandez',
             'alsopva03@gmail.com': 'Danicah Jesoro',
         };
 
-        // Determine sender email & name
-        const senderEmail = (user.email || 'alsopva02@gmail.com').toLowerCase();
-        const senderName = VA_NAMES[senderEmail] || (
+        // Determine user/operator display name
+        const userEmail = (user.email || 'admin@coveragechecknow.com').toLowerCase();
+        const operatorName = VA_NAMES[userEmail] || (
             user.user_metadata?.first_name && user.user_metadata?.last_name
                 ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-                : user.user_metadata?.name || senderEmail.split('@')[0] || 'Coverage Check Team'
+                : user.user_metadata?.name || 'Coverage Check Team'
         );
+
+        // Official main sender is always admin@coveragechecknow.com connected to CCN Website
+        const senderEmail = 'admin@coveragechecknow.com';
+        const senderName = `${operatorName} via Coverage Check`;
 
         // Deduplicate Primary Recipients
         const deduplicatedTo = Array.from(new Set(rawTo)).filter(Boolean);
@@ -78,14 +86,17 @@ export async function POST(req: NextRequest) {
             deduplicatedTo.push(rawCc[0]);
         }
 
-        // Build Full CC List (Explicit CCs + peer VA team emails + any custom CCs, excluding sender and primary TOs)
-        const defaultVaCcs = ['alsopva01@gmail.com', 'alsopva02@gmail.com', 'alsopva03@gmail.com'];
+        // Build Full CC List (Explicit CCs + peer CCN team emails + any custom CCs, excluding primary TOs)
+        const defaultVaCcs = [
+            'phoebe@coveragechecknow.com',
+            'danicah@coveragechecknow.com',
+            'paula@coveragechecknow.com',
+        ];
         const extraCcs = (customCc && typeof customCc === 'string')
             ? customCc.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'))
             : [];
         const allCc = Array.from(new Set([...rawCc, ...defaultVaCcs, ...extraCcs])).filter(
-            e => !deduplicatedTo.map(t => t.toLowerCase()).includes(e.toLowerCase()) &&
-                 e.toLowerCase() !== senderEmail.toLowerCase()
+            e => !deduplicatedTo.map(t => t.toLowerCase()).includes(e.toLowerCase())
         );
 
         const adminClient = getSupabaseAdmin();

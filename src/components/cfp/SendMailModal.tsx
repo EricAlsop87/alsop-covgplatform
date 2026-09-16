@@ -42,12 +42,14 @@ export interface AttachmentItem {
 }
 
 export const TEAM_RECIPIENTS: TeamRecipient[] = [
-    { id: 'phoebe', name: 'Phoebe (Trial Test)', email: 'phoebe@coveragechecknow.com', avatarText: 'PH', roleText: 'Trial' },
     { id: 'nancy', name: 'Nancy Maldonado', email: 'nmaldonado@allstate.com', avatarText: 'NM', roleText: 'Admin' },
     { id: 'olga', name: 'Olga Soto', email: 'olgasoto@allstate.com', avatarText: 'OS', roleText: 'Service' },
-    { id: 'esmeralda', name: 'Esmeralda Cervantes', email: 'egamboa-cerva@allstate.com', avatarText: 'EC', roleText: 'Admin' },
     { id: 'johnpaul', name: 'John Paul Dizon', email: 'johndizon2@allstate.com', avatarText: 'JP', roleText: 'Admin' },
+    { id: 'esmeralda', name: 'Esmeralda Cervantes', email: 'egamboa-cerva@allstate.com', avatarText: 'EC', roleText: 'Admin' },
     { id: 'eric', name: 'Eric Alsop', email: 'ealsop@allstate.com', avatarText: 'EA', roleText: 'Manager' },
+    { id: 'phoebe', name: 'Phoebe Hernandez', email: 'phoebe@coveragechecknow.com', avatarText: 'PH', roleText: 'Support' },
+    { id: 'danicah', name: 'Danicah Jesoro', email: 'danicah@coveragechecknow.com', avatarText: 'DJ', roleText: 'Support' },
+    { id: 'paula', name: 'Paula Veloza', email: 'paula@coveragechecknow.com', avatarText: 'PV', roleText: 'Support' },
 ];
 
 export function toTitleCase(str: string): string {
@@ -844,14 +846,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         }}>
                             <CheckCircle2 size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
                             <span>
-                                {currentUserEmail.includes('alsopva01') ? (
-                                    <><strong>Auto-CC Active:</strong> Phoebe Hernandez (<code>alsopva02@gmail.com</code>) and Danicah Jesoro (<code>alsopva03@gmail.com</code>) will be CC&apos;d so all VA inboxes stay synced (your copy is automatically in your Sent box).</>
-                                ) : currentUserEmail.includes('alsopva02') ? (
-                                    <><strong>Auto-CC Active:</strong> Paula Andrea Veloza (<code>alsopva01@gmail.com</code>) and Danicah Jesoro (<code>alsopva03@gmail.com</code>) will be CC&apos;d so all VA inboxes stay synced (your copy is automatically in your Sent box).</>
-                                ) : currentUserEmail.includes('alsopva03') ? (
-                                    <><strong>Auto-CC Active:</strong> Paula Andrea Veloza (<code>alsopva01@gmail.com</code>) and Phoebe Hernandez (<code>alsopva02@gmail.com</code>) will be CC&apos;d so all VA inboxes stay synced (your copy is automatically in your Sent box).</>
+                                {currentUserEmail.includes('paula') || currentUserEmail.includes('alsopva01') ? (
+                                    <><strong>Auto-CC Active:</strong> Phoebe Hernandez (<code>phoebe@coveragechecknow.com</code>) and Danicah Jesoro (<code>danicah@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
+                                ) : currentUserEmail.includes('phoebe') || currentUserEmail.includes('alsopva02') ? (
+                                    <><strong>Auto-CC Active:</strong> Paula Veloza (<code>paula@coveragechecknow.com</code>) and Danicah Jesoro (<code>danicah@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
+                                ) : currentUserEmail.includes('danicah') || currentUserEmail.includes('alsopva03') ? (
+                                    <><strong>Auto-CC Active:</strong> Paula Veloza (<code>paula@coveragechecknow.com</code>) and Phoebe Hernandez (<code>phoebe@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
                                 ) : (
-                                    <><strong>Auto-CC Active:</strong> Peer VA team inboxes will be auto-CC&apos;d so all team inboxes stay synced without duplicating your Sent box.</>
+                                    <><strong>Auto-CC Active:</strong> Support team inboxes (<code>phoebe@coveragechecknow.com</code>, <code>danicah@coveragechecknow.com</code>, <code>paula@coveragechecknow.com</code>) will be auto-CC&apos;d so all team inboxes stay synced.</>
                                 )}
                             </span>
                         </div>

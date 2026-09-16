@@ -241,11 +241,25 @@ class PostmarkProvider implements EmailProvider {
                 if (data.ErrorCode === 400 && data.Message?.includes('Sender Signature')) {
                     friendlyError = `Sender not verified in Postmark: "${fromStr}".`;
                 }
+
+                // If Postmark is in test/approval mode (ErrorCode 412), gracefully fall back to Gmail SMTP if configured
+                if (data.ErrorCode === 412 && (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD)) {
+                    logger.warn('emailService', '[Postmark] Account pending approval (ErrorCode 412) — falling back to Gmail SMTP for delivery', { error: data.Message });
+                    const fallback = new GmailSmtpProvider();
+                    return await fallback.send(message);
+                }
+
                 return { success: false, error: friendlyError };
             }
 
             return { success: true, messageId: data.MessageID };
         } catch (err: any) {
+            // Network or runtime error fallback to Gmail SMTP if available
+            if (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD) {
+                logger.warn('emailService', '[Postmark] Network error — falling back to Gmail SMTP', { error: err.message });
+                const fallback = new GmailSmtpProvider();
+                return await fallback.send(message);
+            }
             return { success: false, error: err.message };
         }
     }
@@ -293,11 +307,11 @@ export function getDevRedirectTarget(): string {
 }
 
 export function getDefaultFrom(): string {
-    return process.env.EMAIL_FROM_DEFAULT || 'alsopva02@gmail.com';
+    return process.env.EMAIL_FROM_DEFAULT || 'Coverage Check Now <admin@coveragechecknow.com>';
 }
 
 export function getDefaultReplyTo(): string {
-    return process.env.EMAIL_REPLY_TO_DEFAULT || 'alsopva02@gmail.com';
+    return process.env.EMAIL_REPLY_TO_DEFAULT || 'admin@coveragechecknow.com';
 }
 
 export function getEmailSystemStatus(): EmailSystemStatus {
@@ -323,7 +337,16 @@ function getProvider(message?: EmailMessage): EmailProvider {
     const fromEmail = (typeof message?.from === 'string' ? message.from : message?.from?.email || '').toLowerCase();
     const replyToEmail = (message?.replyTo || '').toLowerCase();
 
-    // If message is from or replied to by any VA account or any @gmail.com address, ALWAYS route via Gmail SMTP!
+    // Prefer Postmark for all @coveragechecknow.com domain communications
+    if (
+        (fromEmail.includes('@coveragechecknow.com') || replyToEmail.includes('@coveragechecknow.com')) &&
+        process.env.POSTMARK_SERVER_TOKEN &&
+        process.env.POSTMARK_SERVER_TOKEN !== 'your_postmark_token_here'
+    ) {
+        return new PostmarkProvider();
+    }
+
+    // If message is from or replied to by any legacy VA account or any @gmail.com address, route via Gmail SMTP
     if (
         fromEmail.includes('alsopva') ||
         replyToEmail.includes('alsopva') ||
@@ -333,15 +356,15 @@ function getProvider(message?: EmailMessage): EmailProvider {
         return new GmailSmtpProvider();
     }
 
-    if (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA01_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD || process.env.GMAIL_VA03_APP_PASSWORD) {
-        return new GmailSmtpProvider();
-    }
-
     if (process.env.POSTMARK_SERVER_TOKEN && process.env.POSTMARK_SERVER_TOKEN !== 'your_postmark_token_here') {
         return new PostmarkProvider();
     }
 
-    return new GmailSmtpProvider();
+    if (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA01_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD || process.env.GMAIL_VA03_APP_PASSWORD) {
+        return new GmailSmtpProvider();
+    }
+
+    return new PostmarkProvider();
 }
 
 // ---------------------------------------------------------------------------
