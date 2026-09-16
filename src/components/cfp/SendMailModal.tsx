@@ -50,6 +50,51 @@ export const TEAM_RECIPIENTS: TeamRecipient[] = [
     { id: 'eric', name: 'Eric Alsop', email: 'ealsop@allstate.com', avatarText: 'EA', roleText: 'Manager' },
 ];
 
+export function toTitleCase(str: string): string {
+    if (!str) return '';
+    return str
+        .toLowerCase()
+        .replace(/(?:^|[\s/,\-\(\).#])([a-z])/g, m => m.toUpperCase())
+        .replace(/\bCa\b/g, 'CA')
+        .replace(/\bNv\b/g, 'NV')
+        .replace(/\bAz\b/g, 'AZ')
+        .replace(/\bOr\b/g, 'OR')
+        .replace(/\bWa\b/g, 'WA')
+        .replace(/\bTx\b/g, 'TX')
+        .replace(/\bFl\b/g, 'FL')
+        .replace(/\bCo\b/g, 'CO')
+        .replace(/\bUt\b/g, 'UT')
+        .replace(/\bId\b/g, 'ID')
+        .replace(/\bPo Box\b/gi, 'PO Box')
+        .replace(/\bApt\b/gi, 'Apt')
+        .replace(/\bSte\b/gi, 'Ste')
+        .replace(/\bUnit\b/gi, 'Unit')
+        .replace(/\bLlc\b/gi, 'LLC')
+        .replace(/\bInc\b/gi, 'Inc')
+        .replace(/\bTr\b/gi, 'TR')
+        .replace(/\bN\b/g, 'N')
+        .replace(/\bS\b/g, 'S')
+        .replace(/\bE\b/g, 'E')
+        .replace(/\bW\b/g, 'W')
+        .replace(/\bNe\b/g, 'NE')
+        .replace(/\bNw\b/g, 'NW')
+        .replace(/\bSe\b/g, 'SE')
+        .replace(/\bSw\b/g, 'SW')
+        .trim();
+}
+
+export function buildDefaultSubject(term: CFPTermRow, isUrgent: boolean): string {
+    const rawPol = term.policy_number || 'Policy';
+    const cleanPol = rawPol.replace(/^CFP\s*/i, '').trim();
+    const cfpPart = `CFP ${cleanPol}`;
+    const insuredPart = toTitleCase(term.named_insured || '');
+    const addrPart = toTitleCase(term.property_address || '');
+
+    const parts = [cfpPart, insuredPart, addrPart].filter(Boolean);
+    const base = parts.join(' - ');
+    return isUrgent ? `URGENT: ${base}` : base;
+}
+
 interface SendMailModalProps {
     term: CFPTermRow | null;
     isOpen: boolean;
@@ -61,6 +106,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(['nancy', 'olga']);
     const [ccVaTeam, setCcVaTeam] = useState<boolean>(true);
     const [customCc, setCustomCc] = useState('');
+    const [isUrgent, setIsUrgent] = useState<boolean>(false);
     const [subject, setSubject] = useState('');
     const [customNotes, setCustomNotes] = useState('');
     const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
@@ -212,9 +258,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     // Initialize subject, notes & pre-selected attachments when modal opens with term
     useEffect(() => {
         if (!isOpen || !term) return;
-        const polNum = term.policy_number || 'Policy';
-        const addr = term.property_address || 'Address';
-        setSubject(`CFP ${polNum.replace(/^CFP\s*/i, '')} - ${addr}`);
+        setIsUrgent(false);
+        setSubject(buildDefaultSubject(term, false));
         setCustomNotes('');
         setError(null);
         setSuccessMsg(null);
@@ -222,6 +267,21 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         // Guardrail: Pre-select all available detected attachments by default
         setSelectedAttachmentIds(availableAttachments.map(a => a.id));
     }, [isOpen, term?.policy_term_id, availableAttachments]);
+
+    const handleToggleUrgent = () => {
+        setIsUrgent(prev => {
+            const next = !prev;
+            setSubject(currSubj => {
+                const cleanSubj = currSubj
+                    .replace(/^URGENT:\s*/i, '')
+                    .replace(/^\[URGENT\]\s*/i, '')
+                    .replace(/^URGENT\s*-\s*/i, '')
+                    .trim();
+                return next ? `URGENT: ${cleanSubj}` : cleanSubj;
+            });
+            return next;
+        });
+    };
 
     const toggleAttachment = (id: string) => {
         setSelectedAttachmentIds(prev =>
@@ -443,8 +503,16 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                  <strong>Notice:</strong> No documents attached (Status Summary Only).
                </div>`;
 
+        const urgentBannerHtml = isUrgent
+            ? `<div style="margin-bottom:16px;padding:10px 14px;background:#fef2f2;border:1.5px solid #ef4444;border-left:5px solid #dc2626;border-radius:6px;">
+                 <strong style="color:#b91c1c;font-size:12.5px;letter-spacing:0.04em;text-transform:uppercase;">🚨 URGENT &bull; High Priority Request</strong>
+                 <p style="margin:4px 0 0 0;color:#7f1d1d;font-size:12px;">This policy requires immediate attention / expedited action.</p>
+               </div>`
+            : '';
+
         return `
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;max-width:680px;margin:0 auto;padding:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+          ${urgentBannerHtml}
           <div style="border-bottom:2px solid #1e3a8a;padding-bottom:12px;margin-bottom:18px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <h2 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;">
@@ -664,17 +732,35 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         />
                     </div>
 
-                    {/* Subject Line */}
+                    {/* Subject Line with URGENT Toggle */}
                     <div className={styles.formSection}>
-                        <label className={styles.fieldLabel}>
-                            <FileText size={14} /> Subject
-                        </label>
+                        <div className={styles.subjectHeaderRow}>
+                            <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                <FileText size={14} /> Subject
+                            </label>
+                            <button
+                                type="button"
+                                className={`${styles.urgentToggleBtn} ${isUrgent ? styles.urgentActive : ''}`}
+                                onClick={handleToggleUrgent}
+                                title={isUrgent ? 'Click to remove URGENT flag' : 'Click to mark this email as URGENT'}
+                            >
+                                <AlertTriangle size={12} />
+                                <span>{isUrgent ? 'URGENT: ON' : 'Mark URGENT'}</span>
+                            </button>
+                        </div>
                         <input
                             type="text"
-                            className={styles.textInput}
+                            className={`${styles.textInput} ${isUrgent ? styles.urgentSubjectInput : ''}`}
                             value={subject}
-                            onChange={e => setSubject(e.target.value)}
-                            placeholder="Email subject..."
+                            onChange={e => {
+                                const val = e.target.value;
+                                setSubject(val);
+                                const hasUrgent = /^URGENT[:\- ]/i.test(val.trim()) || /^\[URGENT\]/i.test(val.trim());
+                                if (hasUrgent !== isUrgent) {
+                                    setIsUrgent(hasUrgent);
+                                }
+                            }}
+                            placeholder="CFP No - Insured Name - Address"
                         />
                     </div>
 

@@ -190,9 +190,52 @@
     }
 }
 
-.checkIcon {
-    color: #2563eb;
-    flex-shrink: 0;
+.subjectHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+}
+
+.urgentToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    transition: all 0.15s ease;
+    user-select: none;
+
+    &:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #b91c1c;
+    }
+
+    &.urgentActive {
+        background: #fef2f2;
+        border-color: #ef4444;
+        color: #dc2626;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+}
+
+.urgentSubjectInput {
+    border-color: #ef4444 !important;
+    background: #fffafa !important;
+    font-weight: 600;
+    color: #0f172a;
+
+    &:focus {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+    }
 }
 
 .textInput {
