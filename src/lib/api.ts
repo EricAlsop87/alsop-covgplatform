@@ -2665,7 +2665,7 @@ export async function getDecPageFileDownloadUrl(storagePath: string): Promise<st
 // Platform Documents (RCE, DIC, etc.)
 // ---------------------------------------------------------------------------
 
-export type PlatformDocType = 'rce' | 'dic_dec_page' | 'es_doc' | 'invoice' | 'inspection' | 'endorsement' | 'questionnaire';
+export type PlatformDocType = 'rce' | 'dic_dec_page' | 'es_doc' | 'invoice' | 'inspection' | 'endorsement' | 'questionnaire' | 'other' | 'dec_page';
 
 export interface PlatformDocumentInfo {
     id: string;

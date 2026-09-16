@@ -5,7 +5,7 @@
 
 export interface CarrierBadgeInfo {
     label: string;
-    carrierKey: 'bamboo' | 'american_modern' | 'psic' | 'aegis' | 'sagesure' | 'none';
+    carrierKey: 'bamboo' | 'american_modern' | 'psic' | 'aegis' | 'sagesure' | 'fair_plan' | 'none';
     tooltip: string;
     textColor: string;
     bgColor: string;
@@ -50,6 +50,12 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
         textColor: '#7c3aed',
         bgColor: 'rgba(124, 58, 237, 0.12)',
         borderColor: 'rgba(124, 58, 237, 0.30)',
+    },
+    // 6. California FAIR Plan - Classic Cobalt / Royal Blue
+    fair_plan: {
+        textColor: '#1e40af',
+        bgColor: 'rgba(30, 64, 175, 0.12)',
+        borderColor: 'rgba(30, 64, 175, 0.30)',
     },
     // None
     none: {
@@ -110,6 +116,22 @@ export function getCarrierBadge(
 
     const raw = (carrierOrSource || '').trim();
     const lower = raw.toLowerCase();
+
+    // 0. California FAIR Plan
+    if (
+        lower.includes('fair plan') ||
+        lower.includes('california fair') ||
+        lower.includes('californiafair') ||
+        lower.includes('cfp')
+    ) {
+        return {
+            label: 'California FAIR Plan',
+            carrierKey: 'fair_plan',
+            tooltip: `California FAIR Plan (${docType.toUpperCase()})`,
+            ...CARRIER_STYLES.fair_plan,
+            hasDoc: true,
+        };
+    }
 
     // 1. American Modern
     if (
@@ -216,7 +238,7 @@ export function getCarrierBadge(
 
 /**
  * Detect carrier info directly from a document object (file_name, carrier_name, doc_type, source, created_by).
- * Resolves strictly to one of the supported companion carriers: Bamboo, American Modern, PSIC, Aegis, SageSure.
+ * Resolves to California FAIR Plan or companion carriers: Bamboo, American Modern, PSIC, Aegis, SageSure.
  */
 export function detectDocumentCarrier(doc: {
     file_name?: string | null;
@@ -235,6 +257,23 @@ export function detectDocumentCarrier(doc: {
     const lower = combined.toLowerCase();
 
     // Check specific carriers FIRST before any generic 360Value fallback
+
+    // 0. California FAIR Plan (CFP, California FAIR Plan, Fair Plan)
+    if (
+        lower.includes('fair plan') ||
+        lower.includes('california fair') ||
+        lower.includes('californiafair') ||
+        lower.includes('cfp') ||
+        docType === 'dec_page'
+    ) {
+        return {
+            label: 'California FAIR Plan',
+            carrierKey: 'fair_plan',
+            tooltip: 'California FAIR Plan Declaration Page',
+            ...CARRIER_STYLES.fair_plan,
+            hasDoc: true,
+        };
+    }
 
     // 1. American Modern (AM, Cotality, RCT Express, Homeowners Flex, 005...)
     if (

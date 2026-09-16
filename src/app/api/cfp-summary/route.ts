@@ -258,6 +258,15 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
     const createdBy = (rceCreatedBy || '').toLowerCase();
     const combined = `${fn} ${txt} ${src} ${createdBy}`;
 
+    // 0. California FAIR Plan (CFP, California FAIR Plan)
+    if (
+        combined.includes('fair plan') ||
+        combined.includes('california fair') ||
+        combined.includes('californiafair')
+    ) {
+        return 'California FAIR Plan';
+    }
+
     // 1. American Modern (AM) — check RCE source and AM markers FIRST
     if (
         src.includes('american_modern') ||
@@ -544,11 +553,12 @@ export async function GET(req: NextRequest) {
             doc_type: string;
             file_name?: string;
             storage_path?: string;
+            bucket?: string;
             doc_data_dic?: any;
             doc_data_rce?: any;
         }>(
             'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
             'policy_id',
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
@@ -639,9 +649,13 @@ export async function GET(req: NextRequest) {
         const dic = Array.isArray(doc.doc_data_dic) ? doc.doc_data_dic[0] : doc.doc_data_dic;
         const rce = Array.isArray(doc.doc_data_rce) ? doc.doc_data_rce[0] : doc.doc_data_rce;
         const dicType = (dic?.document_type || '').toLowerCase();
+        const dicCarrierName = (dic?.carrier_name || '').toLowerCase();
+        const isFairPlanCarrier = dicCarrierName.includes('fair plan') || dicCarrierName.includes('california fair') || fn.includes('fair plan') || fn.includes('california fair');
         const isQuoteDoc = fn.includes('quote') || dicType.includes('quote');
 
         const isCfpDecDoc = (
+            doc.doc_type === 'dec_page' ||
+            isFairPlanCarrier ||
             fn.includes('renewal_email_attachment') ||
             fn.includes('renewal_offer') ||
             (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic'))
@@ -651,12 +665,12 @@ export async function GET(req: NextRequest) {
             const docInfo = {
                 storage_path: doc.storage_path,
                 file_name: doc.file_name,
-                bucket: 'cfp-platform-documents' as const,
+                bucket: (doc.bucket || 'cfp-platform-documents') as 'cfp-raw-decpage' | 'cfp-platform-documents',
                 policy_number: undefined,
             };
             if (doc.policy_id) {
                 policyDecDocMap[doc.policy_id] = docInfo;
-                if (fn.includes('renewal')) {
+                if (fn.includes('renewal') || dicType.includes('renewal')) {
                     policyRenewalDecDocMap[doc.policy_id] = docInfo;
                 }
             }
@@ -692,11 +706,11 @@ export async function GET(req: NextRequest) {
                 } else if (policyRceDoc[pid] && !policyRceDoc[pid].replacement_cost && rce?.replacement_cost) {
                     policyRceDoc[pid].replacement_cost = rce.replacement_cost;
                 }
-            } else if (doc.doc_type === 'dic_dec_page' || fn.includes('dic')) {
-                // Only set as in-force DIC Dec Page if it is NOT a quote
+            } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
+                // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
                 if (!isQuoteDoc) {
                     const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
-                    if (c && !policyDicCarrier[pid]) policyDicCarrier[pid] = c;
+                    if (c && c !== 'California FAIR Plan' && !policyDicCarrier[pid]) policyDicCarrier[pid] = c;
                     if (doc.storage_path && !policyDicDoc[pid]) {
                         policyDicDoc[pid] = { storage_path: doc.storage_path, file_name: doc.file_name };
                     }
@@ -733,11 +747,11 @@ export async function GET(req: NextRequest) {
                 } else if (termRceDoc[t.id] && !termRceDoc[t.id].replacement_cost && rce?.replacement_cost) {
                     termRceDoc[t.id].replacement_cost = rce.replacement_cost;
                 }
-            } else if (doc.doc_type === 'dic_dec_page' || fn.includes('dic')) {
-                // Only set as in-force DIC Dec Page if it is NOT a quote
+            } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
+                // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
                 if (!isQuoteDoc) {
                     const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
-                    if (c && !termDicCarrier[t.id]) termDicCarrier[t.id] = c;
+                    if (c && c !== 'California FAIR Plan' && !termDicCarrier[t.id]) termDicCarrier[t.id] = c;
                     if (doc.storage_path && !termDicDoc[t.id]) {
                         termDicDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
                     }

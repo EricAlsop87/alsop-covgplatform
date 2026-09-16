@@ -75,7 +75,12 @@ function ReviewCard({ doc, onDelete, isDeleting, onConfirm, isConfirming }: {
     onConfirm: (id: string) => void;
     isConfirming: boolean;
 }) {
-    const docConfig = DOC_TYPE_CONFIG[doc.doc_type] || DOC_TYPE_CONFIG.other;
+    const isCfpDec = (doc.carrier_name || '').toLowerCase().includes('fair plan') || 
+                     (doc.file_name || '').toLowerCase().includes('dec') ||
+                     (doc.file_name || '').toLowerCase().includes('renewal');
+    const docConfig = isCfpDec && (doc.doc_type === 'dic_dec_page' || doc.doc_type === 'other')
+        ? DOC_TYPE_CONFIG.dec_page
+        : (DOC_TYPE_CONFIG[doc.doc_type] || DOC_TYPE_CONFIG.other);
     const status = getMatchStatusBadge(doc);
 
     return (
@@ -545,7 +550,12 @@ function MismatchedDocumentsTab() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
                 {docs.map(doc => {
-                    const docConfig = DOC_TYPE_CONFIG[doc.doc_type] || DOC_TYPE_CONFIG.other;
+                    const isCfpDec = (doc.carrier_name || '').toLowerCase().includes('fair plan') || 
+                                     (doc.file_name || '').toLowerCase().includes('dec') ||
+                                     (doc.file_name || '').toLowerCase().includes('renewal');
+                    const docConfig = isCfpDec && (doc.doc_type === 'dic_dec_page' || doc.doc_type === 'other')
+                        ? DOC_TYPE_CONFIG.dec_page
+                        : (DOC_TYPE_CONFIG[doc.doc_type] || DOC_TYPE_CONFIG.other);
                     const carrier = detectDocumentCarrier({
                         file_name: doc.file_name,
                         doc_type: doc.doc_type,
