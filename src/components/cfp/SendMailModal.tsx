@@ -126,6 +126,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         eric: 'none',
         phoebe: 'none',
     });
+    const [customTo, setCustomTo] = useState('');
     const [customCc, setCustomCc] = useState('');
     const [isUrgent, setIsUrgent] = useState<boolean>(false);
     const [subject, setSubject] = useState('');
@@ -302,6 +303,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setIsUrgent(false);
         setSubject(buildDefaultSubject(term, false));
         setCustomNotes('');
+        setCustomTo('');
+        setCustomCc('');
         setError(null);
         setSuccessMsg(null);
         setRecipientRoles({
@@ -620,6 +623,11 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const toRecipients = useMemo(() => TEAM_RECIPIENTS.filter(r => recipientRoles[r.id] === 'to'), [recipientRoles]);
     const ccRecipients = useMemo(() => TEAM_RECIPIENTS.filter(r => recipientRoles[r.id] === 'cc'), [recipientRoles]);
 
+    const extraToCount = useMemo(() => {
+        return customTo ? customTo.split(/[,;\s]+/).map(e => e.trim()).filter(e => e.includes('@')).length : 0;
+    }, [customTo]);
+    const totalToCount = toRecipients.length + extraToCount;
+
     const setMemberRole = (id: string, role: RecipientRole) => {
         setRecipientRoles(prev => ({
             ...prev,
@@ -713,6 +721,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     policyNumber: term.policy_number,
                     toRecipients: toEmails,
                     toNames,
+                    customTo: customTo.trim() || undefined,
                     ccRecipients: ccEmails,
                     ccNames,
                     customCc: customCc.trim() || undefined,
@@ -880,6 +889,20 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                 )}
                             </span>
                         </div>
+                    </div>
+
+                    {/* Custom TO / Additional Primary Emails */}
+                    <div className={styles.formSection}>
+                        <label className={styles.fieldLabel}>
+                            <Plus size={13} /> Additional TO / Custom Primary Email (Optional)
+                        </label>
+                        <input
+                            type="text"
+                            className={styles.textInput}
+                            placeholder="e.g. producer@allstate.com, csr@allstate.com"
+                            value={customTo}
+                            onChange={e => setCustomTo(e.target.value)}
+                        />
                     </div>
 
                     {/* Custom CC / Additional Emails */}
@@ -1100,7 +1123,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         type="button"
                         className={styles.sendBtn}
                         onClick={handleSend}
-                        disabled={sending || (toRecipients.length === 0 && ccRecipients.length === 0 && !customCc.trim())}
+                        disabled={sending || (totalToCount === 0 && ccRecipients.length === 0 && !customCc.trim())}
                     >
                         {sending ? (
                             <>
@@ -1111,7 +1134,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                             <>
                                 <Send size={15} />
                                 <span>
-                                    Send Mail ({toRecipients.length} TO{ccRecipients.length > 0 ? `, ${ccRecipients.length} CC` : ''} &bull; {selectedAttachmentIds.length} Attached)
+                                    Send Mail ({totalToCount} TO{ccRecipients.length > 0 ? `, ${ccRecipients.length} CC` : ''} &bull; {selectedAttachmentIds.length} Attached)
                                 </span>
                             </>
                         )}

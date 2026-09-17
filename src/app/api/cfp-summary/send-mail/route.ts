@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
             recipientNames, // fallback for toNames
             toRecipients,
             toNames,
+            customTo,
             ccRecipients,
             ccNames,
             customCc,
@@ -42,12 +43,16 @@ export async function POST(req: NextRequest) {
             ? toNames
             : (Array.isArray(recipientNames) ? recipientNames : []);
 
+        const extraTos = (customTo && typeof customTo === 'string')
+            ? customTo.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'))
+            : [];
+
         // Resolve explicit CC recipients from modal selection
         const rawCc: string[] = Array.isArray(ccRecipients) ? ccRecipients : [];
         const rawCcNames: string[] = Array.isArray(ccNames) ? ccNames : [];
 
-        // Validate that we have at least one recipient (either TO or custom CC)
-        if (!policyId || (rawTo.length === 0 && rawCc.length === 0 && !customCc)) {
+        // Validate that we have at least one recipient (either TO, custom TO, CC, or custom CC)
+        if (!policyId || (rawTo.length === 0 && extraTos.length === 0 && rawCc.length === 0 && !customCc)) {
             return NextResponse.json({ success: false, error: 'Missing policyId or recipients' }, { status: 400 });
         }
 
@@ -78,8 +83,8 @@ export async function POST(req: NextRequest) {
         const senderEmail = 'admin@coveragechecknow.com';
         const senderName = `${operatorName} via Coverage Check`;
 
-        // Deduplicate Primary Recipients
-        const deduplicatedTo = Array.from(new Set(rawTo)).filter(Boolean);
+        // Deduplicate Primary Recipients (Modal selections + custom TO entries)
+        const deduplicatedTo = Array.from(new Set([...rawTo, ...extraTos])).filter(Boolean);
 
         // If no explicit TO is provided but CC/custom CC exists, promote first CC or fallback
         if (deduplicatedTo.length === 0 && rawCc.length > 0) {
