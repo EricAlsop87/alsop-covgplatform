@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
 import { env } from '@/lib/env';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-    const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service', 'agent'] });
-    if (isAuthError(auth)) return auth;
-
     const apiKey = env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
         logger.error('ImageProxy', 'GOOGLE_MAPS_API_KEY not configured');
