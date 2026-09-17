@@ -21,47 +21,47 @@ export const CARRIER_STYLES: Record<CarrierBadgeInfo['carrierKey'], {
     bgColor: string;
     borderColor: string;
 }> = {
-    // 1. Bamboo - Vibrant Orange (matches the Orange circular icon with bamboo stalks)
+    // 1. Bamboo - Soft Amber/Orange
     bamboo: {
-        textColor: '#ea580c',
-        bgColor: 'rgba(234, 88, 12, 0.12)',
-        borderColor: 'rgba(234, 88, 12, 0.30)',
+        textColor: '#fb923c',
+        bgColor: 'rgba(251, 146, 60, 0.12)',
+        borderColor: 'rgba(251, 146, 60, 0.28)',
     },
-    // 2. American Modern - Teal / Cyan Blue (matches the multi-colored pinwheel icon)
+    // 2. American Modern - Soft Cyan / Sky Blue
     american_modern: {
-        textColor: '#0891b2',
-        bgColor: 'rgba(8, 145, 178, 0.12)',
-        borderColor: 'rgba(8, 145, 178, 0.30)',
+        textColor: '#38bdf8',
+        bgColor: 'rgba(56, 189, 248, 0.12)',
+        borderColor: 'rgba(56, 189, 248, 0.28)',
     },
-    // 3. PSIC (Pacific Specialty) - Classic Navy / Blue (matches the psic wordmark)
+    // 3. PSIC (Pacific Specialty) - Soft Blue
     psic: {
-        textColor: '#1d4ed8',
-        bgColor: 'rgba(29, 78, 216, 0.12)',
-        borderColor: 'rgba(29, 78, 216, 0.30)',
+        textColor: '#60a5fa',
+        bgColor: 'rgba(96, 165, 250, 0.12)',
+        borderColor: 'rgba(96, 165, 250, 0.28)',
     },
-    // 4. Aegis General - Slate / Steel Shield (matches the silver-slate shield outline icon)
+    // 4. Aegis General - Clean Slate / Silver
     aegis: {
-        textColor: '#475569',
-        bgColor: 'rgba(71, 85, 105, 0.12)',
-        borderColor: 'rgba(71, 85, 105, 0.30)',
+        textColor: '#94a3b8',
+        bgColor: 'rgba(148, 163, 184, 0.12)',
+        borderColor: 'rgba(148, 163, 184, 0.28)',
     },
-    // 5. SageSure - Violet / Purple
+    // 5. SageSure - Soft Purple
     sagesure: {
-        textColor: '#7c3aed',
-        bgColor: 'rgba(124, 58, 237, 0.12)',
-        borderColor: 'rgba(124, 58, 237, 0.30)',
+        textColor: '#c084fc',
+        bgColor: 'rgba(192, 132, 252, 0.12)',
+        borderColor: 'rgba(192, 132, 252, 0.28)',
     },
-    // 6. California FAIR Plan - Classic Cobalt / Royal Blue
+    // 6. California FAIR Plan - Vibrant Soft Royal Blue
     fair_plan: {
-        textColor: '#1e40af',
-        bgColor: 'rgba(30, 64, 175, 0.12)',
-        borderColor: 'rgba(30, 64, 175, 0.30)',
+        textColor: '#60a5fa',
+        bgColor: 'rgba(96, 165, 250, 0.12)',
+        borderColor: 'rgba(96, 165, 250, 0.28)',
     },
     // None
     none: {
         textColor: '#94a3b8',
         bgColor: 'rgba(148, 163, 184, 0.12)',
-        borderColor: 'rgba(148, 163, 184, 0.30)',
+        borderColor: 'rgba(148, 163, 184, 0.25)',
     },
 };
 
