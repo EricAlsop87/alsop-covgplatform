@@ -2084,27 +2084,27 @@ export function CFPSummaryTable({
                     </div>
 
                     <div className={styles.periodSummaryCards}>
-                        {/* 1. Total Policies */}
+                        {/* 1. Total Policy Terms */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardPolicies}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Total Policies</span>
+                                <span className={styles.miniCardLabel}>Total Policy Terms</span>
                                 <FileText size={13} className={styles.miniCardIcon} />
                             </div>
                             <span className={styles.miniCardValue}>{periodStats.total.toLocaleString()}</span>
                             <span className={styles.miniCardSub}>
-                                in {month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}{year || 'all years'}
+                                {totalFamilies && totalFamilies > 0 ? `${totalFamilies.toLocaleString()} unique accounts` : `in ${month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}${year || 'all years'}`}
                             </span>
                         </div>
 
-                        {/* 2. DEC Page */}
+                        {/* 2. Uploaded DEC */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDec}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>DEC Page</span>
+                                <span className={styles.miniCardLabel}>DEC Pages</span>
                                 <AlertCircle size={13} className={styles.miniCardIcon} />
                             </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="DEC pages on file">
-                                    <Check size={11} /> {periodStats.decAvailable.toLocaleString()} available
+                                    <Check size={11} /> {periodStats.decAvailable.toLocaleString()} uploaded ({periodStats.total > 0 ? ((periodStats.decAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
                                 </span>
                                 <span 
                                     className={styles.metricMissing} 
@@ -2122,15 +2122,15 @@ export function CFPSummaryTable({
                             </div>
                         </div>
 
-                        {/* 3. RCE */}
+                        {/* 3. Uploaded RCE */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardRce}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>RCE Document</span>
+                                <span className={styles.miniCardLabel}>RCE Reports</span>
                                 <ShieldAlert size={13} className={styles.miniCardIcon} />
                             </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="RCE documents on file">
-                                    <Check size={11} /> {periodStats.rceAvailable.toLocaleString()} available
+                                    <Check size={11} /> {periodStats.rceAvailable.toLocaleString()} uploaded ({periodStats.total > 0 ? ((periodStats.rceAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
                                 </span>
                                 <span 
                                     className={styles.metricMissing} 
@@ -2156,7 +2156,7 @@ export function CFPSummaryTable({
                             </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="Policies with at least one DIC quote">
-                                    <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} quoted
+                                    <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} quoted ({periodStats.total > 0 ? ((periodStats.dicAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
                                 </span>
                                 {periodStats.unavailableCount > 0 && (
                                     <span 
@@ -2185,7 +2185,7 @@ export function CFPSummaryTable({
                             </div>
                             <div className={styles.miniCardMetrics}>
                                 <span className={styles.metricAvail} title="Policies with full coverage quote">
-                                    <Check size={11} /> {periodStats.fullAvailable.toLocaleString()} quoted
+                                    <Check size={11} /> {periodStats.fullAvailable.toLocaleString()} quoted ({periodStats.total > 0 ? ((periodStats.fullAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
                                 </span>
                                 <span 
                                     className={styles.metricMissing} 

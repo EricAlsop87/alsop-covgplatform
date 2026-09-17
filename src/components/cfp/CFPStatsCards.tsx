@@ -32,13 +32,17 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
     const dicUploaded = stats.uploaded_dic ?? Math.max(0, stats.total_policies - stats.missing_dic);
     const esUploaded = stats.uploaded_es ?? Math.max(0, stats.total_policies - stats.missing_es);
     const totalDecOverall = stats.total_dec_uploaded_overall ?? decUploaded;
-    const totalDecSubmissions = stats.total_dec_submissions ?? totalDecOverall;
+    const total = stats.total_policies || 1;
+    const decPct = ((decUploaded / total) * 100).toFixed(1);
+    const rcePct = ((rceUploaded / total) * 100).toFixed(1);
+    const dicPct = ((dicUploaded / total) * 100).toFixed(1);
+    const esPct = ((esUploaded / total) * 100).toFixed(1);
 
     const cards = [
         {
-            title: 'CFP Policies',
+            title: 'Active CFP Policies',
             value: stats.total_policies.toLocaleString(),
-            sublabel: stats.total_bamboo_pending ? `+ ${stats.total_bamboo_pending.toLocaleString()} Bamboo in-force pending` : 'Total tracked policies',
+            sublabel: stats.total_bamboo_pending ? `+ ${stats.total_bamboo_pending.toLocaleString()} Bamboo in-force pending` : 'Total unique accounts',
             uploaded: undefined as string | number | undefined,
             color: '#3B82F6',
             bg: 'rgba(59, 130, 246, 0.12)',
@@ -54,39 +58,39 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             icon: CalendarClock,
         },
         {
-            title: 'Total DEC Uploads',
+            title: 'Uploaded DEC Pages',
             value: decUploaded.toLocaleString(),
-            sublabel: `${stats.missing_dec.toLocaleString()} missing on active CFP`,
-            uploaded: totalDecOverall > decUploaded ? `${totalDecOverall.toLocaleString()} platform total` : `${totalDecSubmissions.toLocaleString()} submitted`,
+            sublabel: `${stats.missing_dec.toLocaleString()} remaining to upload`,
+            uploaded: `${decPct}% (${totalDecOverall > decUploaded ? `${totalDecOverall.toLocaleString()} total` : `${decUploaded}`})`,
             color: '#10B981',
             bg: 'rgba(16, 185, 129, 0.12)',
             icon: FileCheck,
         },
         {
-            title: 'Missing RCE',
-            value: stats.missing_rce.toLocaleString(),
-            sublabel: 'Awaiting RCE document',
-            uploaded: rceUploaded,
-            color: '#A855F7',
-            bg: 'rgba(168, 85, 247, 0.12)',
+            title: 'Uploaded RCE Reports',
+            value: rceUploaded.toLocaleString(),
+            sublabel: `${stats.missing_rce.toLocaleString()} remaining to upload`,
+            uploaded: `${rcePct}% complete`,
+            color: '#8B5CF6',
+            bg: 'rgba(139, 92, 246, 0.12)',
             icon: ShieldAlert,
         },
         {
-            title: 'Missing DIC',
-            value: stats.missing_dic.toLocaleString(),
-            sublabel: 'Needs companion DIC doc',
-            uploaded: dicUploaded,
-            color: '#EC4899',
-            bg: 'rgba(236, 72, 153, 0.12)',
+            title: 'In-Force DIC Decs',
+            value: dicUploaded.toLocaleString(),
+            sublabel: `${stats.missing_dic.toLocaleString()} remaining to upload`,
+            uploaded: `${dicPct}% complete`,
+            color: '#F59E0B',
+            bg: 'rgba(245, 158, 11, 0.12)',
             icon: ShieldOff,
         },
         {
-            title: 'Missing Quote / E&S',
-            value: stats.missing_es.toLocaleString(),
-            sublabel: 'Needs Quote/E&S doc',
-            uploaded: esUploaded,
-            color: '#F43F5E',
-            bg: 'rgba(244, 63, 94, 0.12)',
+            title: 'Quotes & E&S Docs',
+            value: esUploaded.toLocaleString(),
+            sublabel: `${stats.missing_es.toLocaleString()} remaining to upload`,
+            uploaded: `${esPct}% complete`,
+            color: '#EC4899',
+            bg: 'rgba(236, 72, 153, 0.12)',
             icon: FileQuestion,
         },
     ];
