@@ -102,16 +102,16 @@ class GmailSmtpProvider implements EmailProvider {
         let pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '') || 'waihnqinahtlkbdh';
         let defaultSenderName = 'Phoebe Hernandez';
 
-        if (fromEmail.includes('alsopva01') || replyToEmail.includes('alsopva01')) {
+        if (fromEmail.includes('alsopva01') || fromEmail.includes('paula') || replyToEmail.includes('alsopva01') || replyToEmail.includes('paula')) {
             user = process.env.GMAIL_VA01_USER || 'alsopva01@gmail.com';
             pass = process.env.GMAIL_VA01_APP_PASSWORD?.replace(/\s+/g, '') || 'gultgbnkhkdkosvq';
             defaultSenderName = 'Paula Andrea Veloza';
-        } else if (fromEmail.includes('alsopva03') || replyToEmail.includes('alsopva03')) {
+        } else if (fromEmail.includes('alsopva03') || fromEmail.includes('danicah') || replyToEmail.includes('alsopva03') || replyToEmail.includes('danicah')) {
             user = process.env.GMAIL_VA03_USER || 'alsopva03@gmail.com';
             pass = process.env.GMAIL_VA03_APP_PASSWORD?.replace(/\s+/g, '') || 'yolktbaamzeoxhiu';
             defaultSenderName = 'Danicah Jesoro';
-        } else if (fromEmail.includes('alsopva02') || replyToEmail.includes('alsopva02')) {
-            user = process.env.GMAIL_VA02_USER || 'alsopva02@gmail.com';
+        } else {
+            user = process.env.GMAIL_VA02_USER || process.env.GMAIL_USER || 'alsopva02@gmail.com';
             pass = (process.env.GMAIL_VA02_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || 'waihnqinahtlkbdh';
             defaultSenderName = 'Phoebe Hernandez';
         }
@@ -128,11 +128,12 @@ class GmailSmtpProvider implements EmailProvider {
             },
         });
 
-        const fromStr = typeof message.from === 'string'
-            ? message.from
-            : message.from
-                ? `${message.from.name || defaultSenderName} <${message.from.email}>`.trim()
-                : `${defaultSenderName} <${user}>`;
+        // For Gmail SMTP, ensure From header aligns with the authenticated Gmail account so SPF/DKIM pass 100% into Primary Inbox
+        const rawName = typeof message.from === 'string'
+            ? message.from.split('<')[0].replace(/via Coverage Check|Coverage Check Now/gi, '').trim().replace(/"/g, '')
+            : message.from?.name;
+        const displayName = rawName && rawName !== 'Coverage Check Team' ? `${rawName} (Coverage Check)` : `${defaultSenderName} (Coverage Check)`;
+        const fromStr = `${displayName} <${user}>`;
 
         const toStr = Array.isArray(message.to)
             ? message.to.map(t => typeof t === 'string' ? t : `${t.name || ''} <${t.email}>`.trim()).join(', ')
