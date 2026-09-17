@@ -539,10 +539,12 @@ export async function GET(req: NextRequest) {
             policy_number?: string;
             policy_period_start?: string;
             policy_period_end?: string;
+            property_location?: string;
+            mailing_address?: string;
             dec_page_submissions?: any;
         }>(
             'dec_pages',
-            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, dec_page_submissions(storage_path, file_name, bucket)',
+            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, dec_page_submissions(storage_path, file_name, bucket)',
             'policy_id',
             policyIds
         ),
@@ -554,11 +556,12 @@ export async function GET(req: NextRequest) {
             file_name?: string;
             storage_path?: string;
             bucket?: string;
+            extracted_address?: string;
             doc_data_dic?: any;
             doc_data_rce?: any;
         }>(
             'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
             'policy_id',
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
@@ -595,8 +598,19 @@ export async function GET(req: NextRequest) {
     const termDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
     const policyDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
     const policyRenewalDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
+    const policyAddressMap: Record<string, string> = {};
+    const termAddressMap: Record<string, string> = {};
 
     for (const d of decPages) {
+        const addr = d.property_location || d.mailing_address;
+        if (addr) {
+            if (d.policy_id && !policyAddressMap[d.policy_id]) {
+                policyAddressMap[d.policy_id] = addr;
+            }
+            if (d.policy_term_id && !termAddressMap[d.policy_term_id]) {
+                termAddressMap[d.policy_term_id] = addr;
+            }
+        }
         const sub = Array.isArray(d.dec_page_submissions) ? d.dec_page_submissions[0] : d.dec_page_submissions;
         const bucket = (sub?.bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-raw-decpage';
         const docInfo = {
@@ -645,6 +659,14 @@ export async function GET(req: NextRequest) {
     const policyEsDoc: Record<string, { storage_path?: string; file_name?: string }> = {};
 
     for (const doc of docs) {
+        if (doc.extracted_address) {
+            if (doc.policy_id && !policyAddressMap[doc.policy_id]) {
+                policyAddressMap[doc.policy_id] = doc.extracted_address;
+            }
+            if (doc.policy_term_id && !termAddressMap[doc.policy_term_id]) {
+                termAddressMap[doc.policy_term_id] = doc.extracted_address;
+            }
+        }
         const fn = (doc.file_name || '').toLowerCase();
         const dic = Array.isArray(doc.doc_data_dic) ? doc.doc_data_dic[0] : doc.doc_data_dic;
         const rce = Array.isArray(doc.doc_data_rce) ? doc.doc_data_rce[0] : doc.doc_data_rce;
@@ -1015,7 +1037,7 @@ export async function GET(req: NextRequest) {
             policy_number: termPolicyNum,
             base_policy: basePolicy || termPolicyNum,
             suffix: suffix || null,
-            property_address: policy?.property_address_raw || '',
+            property_address: policy?.property_address_raw || termAddressMap[t.id] || policyAddressMap[policyId] || '',
             carrier_name: policy?.carrier_name || '',
             has_bamboo_coverage: bambooCoverageSet.has(policyId),
             client_id: client?.id || '',

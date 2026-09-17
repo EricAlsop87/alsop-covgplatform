@@ -138,7 +138,7 @@ export async function upsertPolicy(
     // Try to find existing policy by policy_number + normalized address
     let query = admin
         .from('policies')
-        .select('id')
+        .select('id, property_address_raw, property_address_norm')
         .eq('created_by_account_id', accountId)
         .eq('policy_number', policyNumber.trim());
 
@@ -146,10 +146,31 @@ export async function upsertPolicy(
         query = query.eq('property_address_norm', normalizedAddr);
     }
 
-    const { data: existing, error: findError } = await query.limit(1).single();
+    let { data: existing, error: findError } = await query.limit(1).single();
 
-    if (existing && !findError) {
+    if (!existing) {
+        // Fallback: search by policy_number alone if no address match was found
+        const { data: byNum } = await admin
+            .from('policies')
+            .select('id, property_address_raw, property_address_norm')
+            .eq('created_by_account_id', accountId)
+            .eq('policy_number', policyNumber.trim())
+            .limit(1)
+            .single();
+        if (byNum) existing = byNum;
+    }
+
+    if (existing) {
         logger.info('Ingest', 'Found existing policy', { policyId: existing.id, policyNumber });
+        if (propertyAddress && (!existing.property_address_raw || !existing.property_address_norm)) {
+            await admin
+                .from('policies')
+                .update({
+                    property_address_raw: existing.property_address_raw || propertyAddress,
+                    property_address_norm: existing.property_address_norm || normalizedAddr,
+                })
+                .eq('id', existing.id);
+        }
         return existing.id;
     }
 
