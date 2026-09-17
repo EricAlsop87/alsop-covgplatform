@@ -242,8 +242,8 @@ class PostmarkProvider implements EmailProvider {
                     friendlyError = `Sender not verified in Postmark: "${fromStr}".`;
                 }
 
-                // If Postmark is in test/approval mode (ErrorCode 412), gracefully fall back to Gmail SMTP if configured
-                if (data.ErrorCode === 412 && (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD)) {
+                // If Postmark is in test/approval mode (ErrorCode 412), gracefully fall back to Gmail SMTP for delivery
+                if (data.ErrorCode === 412) {
                     logger.warn('emailService', '[Postmark] Account pending approval (ErrorCode 412) — falling back to Gmail SMTP for delivery', { error: data.Message });
                     const fallback = new GmailSmtpProvider();
                     return await fallback.send(message);
@@ -254,13 +254,10 @@ class PostmarkProvider implements EmailProvider {
 
             return { success: true, messageId: data.MessageID };
         } catch (err: any) {
-            // Network or runtime error fallback to Gmail SMTP if available
-            if (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD) {
-                logger.warn('emailService', '[Postmark] Network error — falling back to Gmail SMTP', { error: err.message });
-                const fallback = new GmailSmtpProvider();
-                return await fallback.send(message);
-            }
-            return { success: false, error: err.message };
+            // Network or runtime error fallback to Gmail SMTP
+            logger.warn('emailService', '[Postmark] Network/runtime error — falling back to Gmail SMTP', { error: err.message });
+            const fallback = new GmailSmtpProvider();
+            return await fallback.send(message);
         }
     }
 }
