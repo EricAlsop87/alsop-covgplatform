@@ -634,6 +634,26 @@
     }
 }
 
+:global([data-theme='dark']) .docBadge {
+    &.yes {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    &.no {
+        background: rgba(239, 68, 68, 0.12);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.22);
+            color: #ffffff;
+            border-color: #f87171;
+        }
+    }
+}
+
 .uploadPlusBtn {
     display: inline-flex;
     align-items: center;
@@ -655,6 +675,18 @@
         color: #ffffff;
         border-color: var(--color-primary, #2243B6);
         text-decoration: none;
+    }
+}
+
+:global([data-theme='dark']) .uploadPlusBtn {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #93c5fd;
+
+    &:hover {
+        background: #3b82f6;
+        color: #ffffff;
+        border-color: #3b82f6;
     }
 }
 
@@ -720,6 +752,50 @@
     }
 }
 
+:global([data-theme='dark']) .carrierBadge {
+    &.bamboo {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    &.am {
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    &.aegis {
+        background: rgba(168, 85, 247, 0.15);
+        color: #d8b4fe;
+        border-color: rgba(168, 85, 247, 0.3);
+    }
+
+    &.sagesure {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fde68a;
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    &.psic {
+        background: rgba(6, 182, 212, 0.15);
+        color: #67e8f9;
+        border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    &.other {
+        background: rgba(148, 163, 184, 0.15);
+        color: #cbd5e1;
+        border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    &.noDic {
+        background: rgba(239, 68, 68, 0.1);
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+}
+
 .dicActionCell {
     display: inline-flex;
     align-items: center;
@@ -751,6 +827,18 @@
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+}
+
+:global([data-theme='dark']) .markNoDicBtn {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #fca5a5;
     }
 }
 
@@ -849,6 +937,82 @@
     }
 }
 
+:global([data-theme='dark']) .carrierQuoteBadge {
+    &.dic {
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+        border-color: rgba(59, 130, 246, 0.35);
+
+        &:hover {
+            background: rgba(59, 130, 246, 0.25);
+            border-color: #60a5fa;
+            color: #ffffff;
+        }
+    }
+
+    &.full {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.35);
+
+        &:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #34d399;
+            color: #ffffff;
+        }
+    }
+
+    &.quote {
+        background: rgba(168, 85, 247, 0.15);
+        color: #d8b4fe;
+        border-color: rgba(168, 85, 247, 0.35);
+
+        &:hover {
+            background: rgba(168, 85, 247, 0.25);
+            border-color: #c084fc;
+            color: #ffffff;
+        }
+    }
+
+    &.agentReview,
+    &.needsUw {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fde68a;
+        border-color: rgba(245, 158, 11, 0.35);
+
+        &:hover {
+            background: rgba(245, 158, 11, 0.25);
+            border-color: #fbbf24;
+            color: #ffffff;
+        }
+    }
+
+    &.unavailable {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.35);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: #f87171;
+            color: #ffffff;
+        }
+    }
+
+    &.unquoted {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        color: #64748b;
+
+        &:hover {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.4);
+            border-style: solid;
+        }
+    }
+}
+
 .quoteSuffix {
     font-size: 0.6875rem;
     font-family: monospace;
@@ -927,6 +1091,57 @@
             border-color: var(--color-primary, #2243B6);
             border-style: solid;
             transform: translateY(-1px);
+        }
+    }
+}
+
+:global([data-theme='dark']) .titleProBadge {
+    &.matched {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.35);
+
+        &:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #34d399;
+            color: #ffffff;
+        }
+    }
+
+    &.partial {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fde68a;
+        border-color: rgba(245, 158, 11, 0.35);
+
+        &:hover {
+            background: rgba(245, 158, 11, 0.25);
+            border-color: #fbbf24;
+            color: #ffffff;
+        }
+    }
+
+    &.mismatch {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.35);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: #f87171;
+            color: #ffffff;
+        }
+    }
+
+    &.unverified {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        color: #64748b;
+
+        &:hover {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.4);
+            border-style: solid;
         }
     }
 }
@@ -1012,6 +1227,18 @@
     }
 }
 
+:global([data-theme='dark']) .noteIndicatorBtn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+
+    &:hover {
+        background: rgba(245, 158, 11, 0.25);
+        border-color: #fbbf24;
+        color: #ffffff;
+    }
+}
+
 .noteAddBtn {
     display: inline-flex;
     align-items: center;
@@ -1030,6 +1257,18 @@
         background: #f8fafc;
         border-color: var(--color-primary, #2243B6);
         color: var(--color-primary, #2243B6);
+    }
+}
+
+:global([data-theme='dark']) .noteAddBtn {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #94a3b8;
+
+    &:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: #3b82f6;
+        color: #60a5fa;
     }
 }
 
@@ -1160,6 +1399,33 @@
     }
 }
 
+:global([data-theme='dark']) .filterRow {
+    background: #111827;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+
+    th {
+        background: #111827 !important;
+        border-right-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+:global([data-theme='dark']) .columnFilterSelect,
+:global([data-theme='dark']) .columnFilterInput {
+    background: #1A2234;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+
+    &:hover, &:focus {
+        border-color: #3b82f6;
+    }
+
+    &.activeFilter {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.18);
+        color: #93c5fd;
+    }
+}
+
 .columnFilterInput {
     width: 100%;
     box-sizing: border-box;
@@ -1212,6 +1478,12 @@
     background: var(--bg-surface-subtle, #f8fafc);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md, 8px);
+}
+
+:global([data-theme='dark']) .periodSummaryStrip {
+    background: rgba(17, 24, 39, 0.65);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .periodSummaryHeader {
@@ -1272,12 +1544,12 @@
 
     /* Card 1: Total Policies (Blue) */
     &.cardPolicies {
-        --card-theme-color: #2243B6;
-        background: linear-gradient(180deg, rgba(34, 67, 182, 0.05) 0%, var(--bg-surface) 100%);
-        border-color: rgba(34, 67, 182, 0.22);
+        --card-theme-color: #3B82F6;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.06) 0%, var(--bg-surface) 100%);
+        border-color: rgba(59, 130, 246, 0.22);
 
         .miniCardLabel {
-            color: #1e3a8a;
+            color: #1d4ed8;
         }
         .miniCardValue {
             color: #1e3a8a;
@@ -1341,6 +1613,68 @@
     }
 }
 
+:global([data-theme='dark']) .summaryMiniCard {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .miniCardValue {
+        color: #f8fafc;
+    }
+
+    &.cardPolicies {
+        --card-theme-color: #60a5fa;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border-color: rgba(59, 130, 246, 0.3);
+
+        .miniCardLabel {
+            color: #93c5fd;
+        }
+        .miniCardValue {
+            color: #f8fafc;
+        }
+    }
+
+    &.cardDec {
+        --card-theme-color: #fbbf24;
+        background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border-color: rgba(245, 158, 11, 0.3);
+
+        .miniCardLabel {
+            color: #fde68a;
+        }
+    }
+
+    &.cardRce {
+        --card-theme-color: #a78bfa;
+        background: linear-gradient(180deg, rgba(139, 92, 246, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border-color: rgba(139, 92, 246, 0.3);
+
+        .miniCardLabel {
+            color: #c4b5fd;
+        }
+    }
+
+    &.cardDic {
+        --card-theme-color: #f472b6;
+        background: linear-gradient(180deg, rgba(236, 72, 153, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border-color: rgba(236, 72, 153, 0.3);
+
+        .miniCardLabel {
+            color: #fbcfe8;
+        }
+    }
+
+    &.cardQuote {
+        --card-theme-color: #f87171;
+        background: linear-gradient(180deg, rgba(239, 68, 68, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border-color: rgba(239, 68, 68, 0.3);
+
+        .miniCardLabel {
+            color: #fca5a5;
+        }
+    }
+}
+
 .miniCardTop {
     display: flex;
     align-items: center;
@@ -1398,6 +1732,11 @@
     font-size: 0.6875rem;
 }
 
+:global([data-theme='dark']) .metricAvail {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.15);
+}
+
 .metricMissing {
     display: inline-flex;
     align-items: center;
@@ -1415,6 +1754,15 @@
     }
 }
 
+:global([data-theme='dark']) .metricMissing {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.15);
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.25);
+    }
+}
+
 .miniProgressBar {
     width: 100%;
     height: 4px;
@@ -1422,6 +1770,10 @@
     border-radius: 2px;
     overflow: hidden;
     margin-top: 0.1rem;
+}
+
+:global([data-theme='dark']) .miniProgressBar {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .miniProgressFill {
@@ -1647,6 +1999,12 @@
     white-space: nowrap;
 }
 
+:global([data-theme='dark']) .inSeBadge {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
 .sendSeBtn {
     display: inline-flex;
     align-items: center;
@@ -1675,6 +2033,18 @@
     }
 }
 
+:global([data-theme='dark']) .sendSeBtn {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.35);
+
+    &:hover:not(:disabled) {
+        background: #2563eb;
+        color: #ffffff;
+        border-color: #3b82f6;
+    }
+}
+
 .returnedSeContainer {
     display: flex;
     flex-direction: column;
@@ -1699,6 +2069,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: help;
+}
+
+:global([data-theme='dark']) .returnedSeBadge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.35);
 }
 
 .resendSeBtn {
@@ -1729,10 +2105,28 @@
     }
 }
 
+:global([data-theme='dark']) .resendSeBtn {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.35);
+
+    &:hover:not(:disabled) {
+        background: #2563eb;
+        color: #ffffff;
+        border-color: #3b82f6;
+    }
+}
+
 .returnedAlertPill {
     border-color: #f59e0b !important;
     color: #b45309 !important;
     background: #fffbeb !important;
+}
+
+:global([data-theme='dark']) .returnedAlertPill {
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    color: #fde68a !important;
+    background: rgba(245, 158, 11, 0.15) !important;
 }
 
 .pillCountAlert {

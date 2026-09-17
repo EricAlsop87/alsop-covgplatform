@@ -15,7 +15,8 @@
     position: relative;
     overflow: hidden;
     min-width: 0;
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .kpiCard::after {
@@ -26,7 +27,25 @@
     right: 0;
     height: 3px;
     background: var(--card-color);
-    opacity: 0.8;
+    opacity: 0.85;
+}
+
+.kpiCard:hover {
+    transform: translateY(-2px);
+    border-color: var(--card-color);
+    box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.15), 0 0 12px -3px var(--card-color);
+}
+
+[data-theme='dark'] .kpiCard {
+    background: rgba(17, 24, 39, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .kpiCard:hover {
+    border-color: var(--card-color);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 0 16px -2px var(--card-color);
 }
 
 .kpiTop {
@@ -39,16 +58,20 @@
 
 .kpiTitle {
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-muted);
     line-height: 1.2;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.035em;
     flex: 1;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+[data-theme='dark'] .kpiTitle {
+    color: #94a3b8;
 }
 
 .kpiIcon {
@@ -80,6 +103,10 @@
     letter-spacing: -0.02em;
 }
 
+[data-theme='dark'] .kpiValue {
+    color: #f8fafc;
+}
+
 .uploadedBadge {
     display: inline-flex;
     align-items: center;
@@ -94,9 +121,15 @@
     white-space: nowrap;
 }
 
+[data-theme='dark'] .uploadedBadge {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
 .uploadedDot {
     font-size: 0.5rem;
-    color: #16a34a;
+    color: currentColor;
 }
 
 .kpiSublabel {
@@ -106,6 +139,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+[data-theme='dark'] .kpiSublabel {
+    color: #64748b;
 }
 
 .loadingSkeleton {
