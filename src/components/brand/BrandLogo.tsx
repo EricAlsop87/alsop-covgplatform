@@ -40,13 +40,17 @@ export function BrandEmblem({
     mode?: 'auto' | 'light' | 'dark' | 'monochrome';
 }) {
     // Color definitions based on mode
-    let leftColor = '#1E40AF';
+    let leftColor = '#2563EB';
     let rightColor = '#3B82F6';
     let checkColor = '#FFFFFF';
 
     if (mode === 'dark') {
-        leftColor = '#2563EB';
+        leftColor = '#3B82F6';
         rightColor = '#60A5FA';
+        checkColor = '#FFFFFF';
+    } else if (mode === 'light') {
+        leftColor = '#1E40AF';
+        rightColor = '#3B82F6';
         checkColor = '#FFFFFF';
     } else if (mode === 'monochrome') {
         leftColor = 'currentColor';
@@ -102,12 +106,15 @@ export function BrandLogo({
     }
 
     // Determine text colors based on mode
-    let mainTextColor = '#0F172A'; // Slate-900
-    let checkTextColor = '#2563EB'; // Blue-600
+    let mainTextColor = 'var(--text-high, #0F172A)';
+    let checkTextColor = 'var(--color-primary, #3B82F6)';
 
     if (mode === 'dark') {
         mainTextColor = '#FFFFFF';
         checkTextColor = '#60A5FA'; // Bright Blue-400 for high dark contrast
+    } else if (mode === 'light') {
+        mainTextColor = '#0F172A';
+        checkTextColor = '#2563EB';
     } else if (mode === 'monochrome') {
         mainTextColor = 'currentColor';
         checkTextColor = 'currentColor';
@@ -134,13 +141,14 @@ export function BrandLogo({
                     color: mainTextColor,
                     display: 'inline-flex',
                     alignItems: 'center',
+                    gap: '0.04em',
                     lineHeight: 1,
                     fontFamily: 'inherit',
                 }}
             >
-                <span>Coverage</span>
+                <span style={{ color: mainTextColor }}>Coverage</span>
                 <span style={{ color: checkTextColor, fontWeight: 900 }}>Check</span>
-                <span>Now</span>
+                <span style={{ color: mainTextColor, opacity: 0.9 }}>Now</span>
             </span>
         </div>
     );
