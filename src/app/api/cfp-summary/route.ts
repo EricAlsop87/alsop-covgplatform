@@ -352,6 +352,19 @@ export interface CFPSummaryStats {
     uploaded_es?: number;
 }
 
+// In-memory server cache for instant CFP responses
+interface ServerCacheEntry {
+    data: {
+        success: boolean;
+        families: CFPFamily[];
+        total_terms: number;
+        total_families: number;
+    };
+    timestamp: number;
+}
+const serverSummaryCache = new Map<string, ServerCacheEntry>();
+const SERVER_CACHE_TTL_MS = 25_000;
+
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service'] });
@@ -370,6 +383,15 @@ export async function GET(req: NextRequest) {
     if (statsOnly) {
         const stats = await computeStats(admin);
         return NextResponse.json({ success: true, stats });
+    }
+
+    // Check server memory cache for fast instantaneous returns on un-searched views
+    const cacheKey = `${year || ''}_${month || ''}_${search}_${view}`;
+    if (!search) {
+        const cached = serverSummaryCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < SERVER_CACHE_TTL_MS) {
+            return NextResponse.json(cached.data);
+        }
     }
 
     // ── 2. Main data query ────────────────────────────────────────────────
@@ -403,6 +425,108 @@ export async function GET(req: NextRequest) {
                 )
             )
         `);
+
+    // Intelligent server-side search push-down: resolve matching policy IDs first to avoid scanning 3000+ terms
+    if (search) {
+        const cleanQ = search.trim();
+        const tokens = cleanQ.split(/\s+/).filter(Boolean);
+
+        const policySearches = tokens.map(t =>
+            admin
+                .from('policies')
+                .select('id')
+                .or(`policy_number.ilike.%${t}%,property_address_raw.ilike.%${t}%,property_address_norm.ilike.%${t}%`)
+                .limit(100)
+        );
+
+        const clientSearches = tokens.map(t =>
+            admin
+                .from('clients')
+                .select('id')
+                .ilike('named_insured', `%${t}%`)
+                .limit(100)
+        );
+
+        const decSearches = tokens.map(t =>
+            admin
+                .from('dec_pages')
+                .select('policy_id')
+                .or(`policy_number.ilike.%${t}%,insured_name.ilike.%${t}%,property_location.ilike.%${t}%,mailing_address.ilike.%${t}%`)
+                .not('policy_id', 'is', null)
+                .limit(100)
+        );
+
+        const docSearches = tokens.map(t =>
+            admin
+                .from('platform_documents')
+                .select('policy_id')
+                .or(`extracted_address.ilike.%${t}%,file_name.ilike.%${t}%`)
+                .not('policy_id', 'is', null)
+                .limit(100)
+        );
+
+        const [policyResults, clientResults, decResults, docResults] = await Promise.all([
+            Promise.all(policySearches),
+            Promise.all(clientSearches),
+            Promise.all(decSearches),
+            Promise.all(docSearches),
+        ]);
+
+        const matchedPolicyIds = new Set<string>();
+
+        const clientIds = new Set<string>();
+        for (const res of clientResults) {
+            if (res.data) {
+                for (const c of res.data) {
+                    clientIds.add(c.id);
+                }
+            }
+        }
+
+        if (clientIds.size > 0) {
+            const { data: polsForClients } = await admin
+                .from('policies')
+                .select('id')
+                .in('client_id', Array.from(clientIds))
+                .limit(200);
+            if (polsForClients) {
+                for (const p of polsForClients) {
+                    matchedPolicyIds.add(p.id);
+                }
+            }
+        }
+
+        for (const res of policyResults) {
+            if (res.data) {
+                for (const p of res.data) {
+                    matchedPolicyIds.add(p.id);
+                }
+            }
+        }
+
+        for (const res of decResults) {
+            if (res.data) {
+                for (const d of res.data) {
+                    if (d.policy_id) matchedPolicyIds.add(d.policy_id);
+                }
+            }
+        }
+
+        for (const res of docResults) {
+            if (res.data) {
+                for (const doc of res.data) {
+                    if (doc.policy_id) matchedPolicyIds.add(doc.policy_id);
+                }
+            }
+        }
+
+        const searchPolicyIds = Array.from(matchedPolicyIds);
+        if (searchPolicyIds.length === 0) {
+            return NextResponse.json({ success: true, families: [], total_terms: 0, total_families: 0 });
+        }
+
+        termsQuery = termsQuery.in('policy_id', searchPolicyIds);
+    }
 
     if (view === 'campaign_91_address' || view === 'campaign_92_address') {
         termsQuery = termsQuery.eq('import_batch_id', 'c9200000-0000-0000-0000-000000000092');
@@ -502,8 +626,8 @@ export async function GET(req: NextRequest) {
     // ── 3. Gather all policy_ids from result ──────────────────────────────
     const policyIds = [...new Set((terms as any[]).map((t: any) => t.policy_id))];
 
-    // Helper to batch large in() queries in chunks of 250 and run concurrently
-    const CHUNK_SIZE = 250;
+    // Helper to batch large in() queries in chunks of 600 and run concurrently
+    const CHUNK_SIZE = 600;
     async function chunkedInQuery<T>(
         table: string,
         select: string,
@@ -1166,12 +1290,21 @@ export async function GET(req: NextRequest) {
         return ea.localeCompare(eb);
     });
 
-    return NextResponse.json({
+    const responsePayload = {
         success: true,
         families,
         total_terms: filtered.length,
         total_families: families.length,
-    });
+    };
+
+    if (!search) {
+        serverSummaryCache.set(cacheKey, {
+            data: responsePayload,
+            timestamp: Date.now(),
+        });
+    }
+
+    return NextResponse.json(responsePayload);
 }
 
 // ── PATCH /api/cfp-summary — toggle manual overrides (full coverage, no dic) ──
@@ -1199,6 +1332,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     const admin = getSupabaseAdmin();
+
+    // Invalidate server memory cache on manual updates
+    serverSummaryCache.clear();
 
     // Persist via manual_overrides
     for (const u of updates) {

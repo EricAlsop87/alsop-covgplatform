@@ -211,10 +211,7 @@ function CFPSummaryContent() {
     }, [fetchStats]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchData();
-        }, 100);
-        return () => clearTimeout(timer);
+        fetchData();
     }, [fetchData]);
 
     return (
