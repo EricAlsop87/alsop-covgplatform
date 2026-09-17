@@ -55,9 +55,9 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
         },
         {
             title: 'Total DEC Uploads',
-            value: totalDecOverall.toLocaleString(),
+            value: decUploaded.toLocaleString(),
             sublabel: `${stats.missing_dec.toLocaleString()} missing on active CFP`,
-            uploaded: totalDecSubmissions > totalDecOverall ? `${totalDecSubmissions.toLocaleString()} total submitted` : `${totalDecOverall.toLocaleString()} on file`,
+            uploaded: totalDecOverall > decUploaded ? `${totalDecOverall.toLocaleString()} platform total` : `${totalDecSubmissions.toLocaleString()} submitted`,
             color: '#10B981',
             bg: 'rgba(16, 185, 129, 0.12)',
             icon: FileCheck,
