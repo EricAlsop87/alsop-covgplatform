@@ -138,7 +138,18 @@ interface CFPSummaryTableProps {
     totalFamilies: number;
 }
 
-type DocFilterType = 'all' | 'missing_dec' | 'missing_rce' | 'has_dic_quote' | 'has_full_quote' | 'has_needs_uw' | 'has_any_quote' | 'has_unavailable' | 'has_comments' | 'returned_from_se';
+type DocFilterType =
+    | 'all'
+    | 'missing_dec'
+    | 'has_renewal_offer'
+    | 'missing_rce'
+    | 'has_dic_quote'
+    | 'has_full_quote'
+    | 'has_needs_uw'
+    | 'has_any_quote'
+    | 'has_unavailable'
+    | 'has_comments'
+    | 'returned_from_se';
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -814,7 +825,9 @@ export function CFPSummaryTable({
             result = result.filter(t => {
                 switch (docFilter) {
                     case 'missing_dec':
-                        return !t.has_dec;
+                        return !t.has_dec && !t.has_renewal_dec;
+                    case 'has_renewal_offer':
+                        return !!t.has_renewal_dec;
                     case 'missing_rce':
                         return !t.has_rce;
                     case 'has_dic_quote': {
@@ -913,8 +926,10 @@ export function CFPSummaryTable({
         if (columnFilters.dec) {
             if (columnFilters.dec === 'uploaded') {
                 result = result.filter(t => t.has_dec);
+            } else if (columnFilters.dec === 'renewal_offer') {
+                result = result.filter(t => t.has_renewal_dec);
             } else if (columnFilters.dec === 'missing') {
-                result = result.filter(t => !t.has_dec);
+                result = result.filter(t => !t.has_dec && !t.has_renewal_dec);
             }
         }
 
@@ -996,7 +1011,7 @@ export function CFPSummaryTable({
         let returnedFromSe = 0;
 
         for (const t of allTerms) {
-            if (t.has_dec) decAvailable++;
+            if (t.has_dec || t.has_renewal_dec) decAvailable++;
             if (t.has_rce || t.rce_carrier) rceAvailable++;
             const quotes = Object.values(t.carrier_quotes || {});
             const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
@@ -1731,6 +1746,7 @@ export function CFPSummaryTable({
                     >
                         <option value="">All DEC</option>
                         <option value="uploaded">DEC (Uploaded)</option>
+                        <option value="renewal_offer">Renewal Offer (✔)</option>
                         <option value="missing">Missing (None)</option>
                     </select>
                 );
@@ -2217,6 +2233,14 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
                     >
                         Missing DEC
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${docFilter === 'has_renewal_offer' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('has_renewal_offer'); setCurrentPage(1); }}
+                        style={docFilter === 'has_renewal_offer' ? { background: 'rgba(14, 165, 233, 0.15)', color: '#0284c7', borderColor: '#0284c7' } : {}}
+                    >
+                        Renewal Offer (✔)
                     </button>
                     <button
                         type="button"

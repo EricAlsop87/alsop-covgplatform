@@ -75,7 +75,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             annual_premium: term.annual_premium ?? '',
             payment_status: term.payment_status || '',
             payment_plan: term.payment_plan || '',
-            has_dec: term.has_dec ? 'Uploaded' : 'Missing',
+            has_dec: term.has_dec ? 'Uploaded' : (term.has_renewal_dec ? 'Renewal Offer' : 'Missing'),
             has_rce: term.rce_carrier || (term.has_rce ? 'Uploaded' : 'Missing'),
             bamboo: formatQuote(quotes.bamboo),
             aegis: formatQuote(quotes.aegis),
