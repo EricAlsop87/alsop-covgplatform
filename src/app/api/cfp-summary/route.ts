@@ -1040,10 +1040,20 @@ export async function GET(req: NextRequest) {
         const termDec = termDecDocMap[t.id] || null;
 
         // Priority for policy_number: 
-        // 1. carrier_policy_number on this specific term (e.g. 'CFP 0101227750 05')
+        // 1. carrier_policy_number on this specific term IF it's a real policy number (e.g. 'CFP 0101227750 05')
         // 2. dec_pages.policy_number linked specifically to this term
         // 3. base policy number on policy record
-        const termPolicyNum = t.carrier_policy_number || termDec?.policy_number || policy?.policy_number || '';
+        // 4. carrier_policy_number fallback (e.g. BAM-P-xxxx if policy is pending_dec)
+        let termPolicyNum = '';
+        if (t.carrier_policy_number && (t.carrier_policy_number.startsWith('CFP') || t.carrier_policy_number.startsWith('COM') || t.carrier_policy_number.startsWith('CEA') || t.carrier_policy_number.startsWith('DIV') || t.carrier_policy_number.startsWith('DWG'))) {
+            termPolicyNum = t.carrier_policy_number;
+        } else if (termDec?.policy_number) {
+            termPolicyNum = termDec.policy_number;
+        } else if (policy?.policy_number && (policy.policy_number.startsWith('CFP') || policy.policy_number.startsWith('COM') || policy.policy_number.startsWith('CEA') || policy.policy_number.startsWith('DIV') || policy.policy_number.startsWith('DWG'))) {
+            termPolicyNum = policy.policy_number;
+        } else {
+            termPolicyNum = t.carrier_policy_number || policy?.policy_number || '';
+        }
         const { basePolicy, suffix } = normalizePolicyNumber(termPolicyNum);
 
         const rceDoc = termRceDoc[t.id] || policyRceDoc[policyId] || null;
