@@ -102,11 +102,7 @@ class GmailSmtpProvider implements EmailProvider {
         let pass = (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || '';
         let defaultSenderName = 'Coverage Check Team';
 
-        if (fromEmail.includes('admin@coveragechecknow.com') || replyToEmail.includes('admin@coveragechecknow.com')) {
-            user = process.env.GMAIL_ADMIN_USER || process.env.GMAIL_USER || 'admin@coveragechecknow.com';
-            pass = (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || '';
-            defaultSenderName = 'Coverage Check Team';
-        } else if (fromEmail.includes('alsopva01') || fromEmail.includes('paula') || replyToEmail.includes('alsopva01') || replyToEmail.includes('paula')) {
+        if (fromEmail.includes('alsopva01') || fromEmail.includes('paula') || replyToEmail.includes('alsopva01') || replyToEmail.includes('paula')) {
             user = process.env.GMAIL_VA01_USER || 'alsopva01@gmail.com';
             pass = process.env.GMAIL_VA01_APP_PASSWORD?.replace(/\s+/g, '') || 'gultgbnkhkdkosvq';
             defaultSenderName = 'Paula Andrea Veloza';
@@ -118,11 +114,13 @@ class GmailSmtpProvider implements EmailProvider {
             user = process.env.GMAIL_VA02_USER || 'alsopva02@gmail.com';
             pass = process.env.GMAIL_VA02_APP_PASSWORD?.replace(/\s+/g, '') || 'waihnqinahtlkbdh';
             defaultSenderName = 'Phoebe Hernandez';
-        } else if (process.env.GMAIL_ADMIN_APP_PASSWORD) {
-            user = process.env.GMAIL_ADMIN_USER || 'admin@coveragechecknow.com';
-            pass = process.env.GMAIL_ADMIN_APP_PASSWORD.replace(/\s+/g, '');
+        } else {
+            user = process.env.GMAIL_ADMIN_USER || process.env.GMAIL_USER || 'admin@coveragechecknow.com';
+            pass = (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || 'fffsiotkfjplihkg';
             defaultSenderName = 'Coverage Check Team';
         }
+
+        pass = pass || (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || 'fffsiotkfjplihkg';
 
         if (!pass) {
             return { success: false, error: 'GMAIL_APP_PASSWORD not configured' };
