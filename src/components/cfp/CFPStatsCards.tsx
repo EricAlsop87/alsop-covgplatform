@@ -32,11 +32,6 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
     const dicUploaded = stats.uploaded_dic ?? Math.max(0, stats.total_policies - stats.missing_dic);
     const esUploaded = stats.uploaded_es ?? Math.max(0, stats.total_policies - stats.missing_es);
     const totalDecOverall = stats.total_dec_uploaded_overall ?? decUploaded;
-    const total = stats.total_policies || 1;
-    const decPct = ((decUploaded / total) * 100).toFixed(1);
-    const rcePct = ((rceUploaded / total) * 100).toFixed(1);
-    const dicPct = ((dicUploaded / total) * 100).toFixed(1);
-    const esPct = ((esUploaded / total) * 100).toFixed(1);
 
     const cards = [
         {
@@ -61,7 +56,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             title: 'Uploaded DEC Pages',
             value: decUploaded.toLocaleString(),
             sublabel: `${stats.missing_dec.toLocaleString()} remaining to upload`,
-            uploaded: `${decPct}% (${totalDecOverall > decUploaded ? `${totalDecOverall.toLocaleString()} total` : `${decUploaded}`})`,
+            uploaded: totalDecOverall > decUploaded ? `${totalDecOverall.toLocaleString()} total files` : undefined,
             color: '#10B981',
             bg: 'rgba(16, 185, 129, 0.12)',
             icon: FileCheck,
@@ -70,7 +65,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             title: 'Uploaded RCE Reports',
             value: rceUploaded.toLocaleString(),
             sublabel: `${stats.missing_rce.toLocaleString()} remaining to upload`,
-            uploaded: `${rcePct}% complete`,
+            uploaded: undefined as string | number | undefined,
             color: '#8B5CF6',
             bg: 'rgba(139, 92, 246, 0.12)',
             icon: ShieldAlert,
@@ -79,7 +74,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             title: 'In-Force DIC Decs',
             value: dicUploaded.toLocaleString(),
             sublabel: `${stats.missing_dic.toLocaleString()} remaining to upload`,
-            uploaded: `${dicPct}% complete`,
+            uploaded: undefined as string | number | undefined,
             color: '#F59E0B',
             bg: 'rgba(245, 158, 11, 0.12)',
             icon: ShieldOff,
@@ -88,7 +83,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             title: 'Quotes & E&S Docs',
             value: esUploaded.toLocaleString(),
             sublabel: `${stats.missing_es.toLocaleString()} remaining to upload`,
-            uploaded: `${esPct}% complete`,
+            uploaded: undefined as string | number | undefined,
             color: '#EC4899',
             bg: 'rgba(236, 72, 153, 0.12)',
             icon: FileQuestion,

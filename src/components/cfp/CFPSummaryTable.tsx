@@ -16,6 +16,7 @@ import {
     SlidersHorizontal,
     Filter,
     FileText,
+    FileCheck,
     AlertCircle,
     ShieldAlert,
     ShieldOff,
@@ -2096,22 +2097,20 @@ export function CFPSummaryTable({
                             </span>
                         </div>
 
-                        {/* 2. Uploaded DEC */}
+                        {/* 2. Uploaded DEC Pages */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDec}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>DEC Pages</span>
-                                <AlertCircle size={13} className={styles.miniCardIcon} />
+                                <span className={styles.miniCardLabel}>Uploaded DEC</span>
+                                <FileCheck size={13} className={styles.miniCardIcon} />
                             </div>
+                            <span className={styles.miniCardValue}>{periodStats.decAvailable.toLocaleString()}</span>
                             <div className={styles.miniCardMetrics}>
-                                <span className={styles.metricAvail} title="DEC pages on file">
-                                    <Check size={11} /> {periodStats.decAvailable.toLocaleString()} uploaded ({periodStats.total > 0 ? ((periodStats.decAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
-                                </span>
                                 <span 
                                     className={styles.metricMissing} 
                                     title="Click to filter by Missing DEC"
                                     onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
                                 >
-                                    <X size={11} /> {periodStats.decMissing.toLocaleString()} missing
+                                    <X size={10} /> {periodStats.decMissing.toLocaleString()} missing
                                 </span>
                             </div>
                             <div className={styles.miniProgressBar}>
@@ -2122,22 +2121,20 @@ export function CFPSummaryTable({
                             </div>
                         </div>
 
-                        {/* 3. Uploaded RCE */}
+                        {/* 3. Uploaded RCE Reports */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardRce}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>RCE Reports</span>
+                                <span className={styles.miniCardLabel}>Uploaded RCE</span>
                                 <ShieldAlert size={13} className={styles.miniCardIcon} />
                             </div>
+                            <span className={styles.miniCardValue}>{periodStats.rceAvailable.toLocaleString()}</span>
                             <div className={styles.miniCardMetrics}>
-                                <span className={styles.metricAvail} title="RCE documents on file">
-                                    <Check size={11} /> {periodStats.rceAvailable.toLocaleString()} uploaded ({periodStats.total > 0 ? ((periodStats.rceAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
-                                </span>
                                 <span 
                                     className={styles.metricMissing} 
                                     title="Click to filter by Missing RCE"
                                     onClick={() => { setDocFilter('missing_rce'); setCurrentPage(1); }}
                                 >
-                                    <X size={11} /> {periodStats.rceMissing.toLocaleString()} missing
+                                    <X size={10} /> {periodStats.rceMissing.toLocaleString()} missing
                                 </span>
                             </div>
                             <div className={styles.miniProgressBar}>
@@ -2154,19 +2151,19 @@ export function CFPSummaryTable({
                                 <span className={styles.miniCardLabel}>DIC Quotes</span>
                                 <ShieldOff size={13} className={styles.miniCardIcon} />
                             </div>
+                            <span className={styles.miniCardValue}>{periodStats.dicAvailable.toLocaleString()}</span>
                             <div className={styles.miniCardMetrics}>
-                                <span className={styles.metricAvail} title="Policies with at least one DIC quote">
-                                    <Check size={11} /> {periodStats.dicAvailable.toLocaleString()} quoted ({periodStats.total > 0 ? ((periodStats.dicAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
-                                </span>
-                                {periodStats.unavailableCount > 0 && (
+                                {periodStats.unavailableCount > 0 ? (
                                     <span 
                                         className={styles.metricNotice} 
                                         title="Click to filter by Unavailable carrier quotes"
                                         onClick={() => { setDocFilter('has_unavailable'); setCurrentPage(1); }}
-                                        style={{ fontSize: '0.6875rem', color: '#dc2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                        style={{ fontSize: '0.6875rem', color: '#f87171', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
                                     >
                                         <X size={10} /> {periodStats.unavailableCount.toLocaleString()} unavail
                                     </span>
+                                ) : (
+                                    <span className={styles.miniCardSub}>in-force quoted</span>
                                 )}
                             </div>
                             <div className={styles.miniProgressBar}>
@@ -2183,14 +2180,13 @@ export function CFPSummaryTable({
                                 <span className={styles.miniCardLabel}>Full Covg Quotes</span>
                                 <FileQuestion size={13} className={styles.miniCardIcon} />
                             </div>
+                            <span className={styles.miniCardValue}>{periodStats.fullAvailable.toLocaleString()}</span>
                             <div className={styles.miniCardMetrics}>
-                                <span className={styles.metricAvail} title="Policies with full coverage quote">
-                                    <Check size={11} /> {periodStats.fullAvailable.toLocaleString()} quoted ({periodStats.total > 0 ? ((periodStats.fullAvailable / periodStats.total) * 100).toFixed(1) : 0}%)
-                                </span>
                                 <span 
-                                    className={styles.metricMissing} 
+                                    className={styles.metricNotice} 
                                     title="Click to view all policies with any quote"
                                     onClick={() => { setDocFilter('has_any_quote'); setCurrentPage(1); }}
+                                    style={{ fontSize: '0.6875rem', color: '#93c5fd', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
                                 >
                                     {periodStats.quoteAvailable.toLocaleString()} total quoted
                                 </span>

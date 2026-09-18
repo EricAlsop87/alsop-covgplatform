@@ -1635,12 +1635,12 @@
     }
 
     &.cardDec {
-        --card-theme-color: #fbbf24;
-        background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
-        border-color: rgba(245, 158, 11, 0.3);
+        --card-theme-color: #10b981;
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+        border-color: rgba(16, 185, 129, 0.3);
 
         .miniCardLabel {
-            color: #fde68a;
+            color: #6ee7b7;
         }
     }
 
