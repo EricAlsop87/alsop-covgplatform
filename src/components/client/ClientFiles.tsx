@@ -269,8 +269,19 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
   allFiles.forEach(d => {
     const fn = (d.file_name || '').toLowerCase();
     const dicDocType = (d.dic_data?.document_type || '').toLowerCase();
-    const isQuoteDoc = d.doc_type === 'quote' || (fn.includes('quote') && !fn.includes('dec') && !fn.includes('rce')) || dicDocType.includes('quote');
-    const key = isQuoteDoc ? 'quote' : d.doc_type;
+    let key = d.doc_type;
+    if (d.doc_type === 'rce' || (fn.includes('rce') && !fn.includes('quote')) || fn.includes('360value') || fn.includes('valuation')) {
+      key = 'rce';
+    } else if (d.doc_type === 'quote' || (fn.includes('quote') && !fn.includes('dec')) || dicDocType.includes('quote')) {
+      key = 'quote';
+    } else if (
+      d.doc_type === 'dec_page' ||
+      (fn.includes('dec') && !fn.includes('quote') && !fn.includes('rce')) ||
+      fn.includes('declaration') ||
+      (d.carrier_name && d.carrier_name.toLowerCase().includes('california fair plan'))
+    ) {
+      key = 'dec_page';
+    }
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(d);
   });
@@ -323,10 +334,29 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                       created_by: file.created_by,
                     });
 
+                    const fnLower = (file.file_name || '').toLowerCase();
+                    const isDecPage = groupKey === 'dec_page' || file.doc_type === 'dec_page' || (fnLower.includes('dec') && !fnLower.includes('quote') && !fnLower.includes('rce')) || fnLower.includes('declaration') || (file.carrier_name && file.carrier_name.toLowerCase().includes('california fair plan'));
+                    const isQuote = groupKey === 'quote' || file.doc_type === 'quote';
+                    const isRce = groupKey === 'rce' || file.doc_type === 'rce';
+
+                    let docBadgeLabel = docTypeInfo.label;
+                    let docBadgeColor = docTypeInfo.color;
+
+                    if (isDecPage) {
+                      docBadgeLabel = 'DEC PAGE';
+                      docBadgeColor = '#3b82f6';
+                    } else if (isQuote) {
+                      docBadgeLabel = 'QUOTE';
+                      docBadgeColor = '#06b6d4';
+                    } else if (isRce) {
+                      docBadgeLabel = 'RCE';
+                      docBadgeColor = '#10b981';
+                    }
+
                     return (
                       <div key={`${file.source}-${file.id}`} className={styles.fileItem}>
                         <div className={styles.fileInfo}>
-                          <div className={styles.fileIconWrap} style={{ '--doc-color': docTypeInfo.color } as React.CSSProperties}>
+                          <div className={styles.fileIconWrap} style={{ '--doc-color': docBadgeColor } as React.CSSProperties}>
                             <FileText size={18} />
                           </div>
                           <div className={styles.fileDetails}>
@@ -334,12 +364,12 @@ export function ClientFiles({ clientId }: ClientFilesProps) {
                               <span
                                 className={styles.docTypeBadge}
                                 style={{
-                                  backgroundColor: `${docTypeInfo.color}18`,
-                                  color: docTypeInfo.color,
-                                  borderColor: `${docTypeInfo.color}30`,
+                                  backgroundColor: `${docBadgeColor}18`,
+                                  color: docBadgeColor,
+                                  borderColor: `${docBadgeColor}30`,
                                 }}
                               >
-                                {docTypeInfo.label}
+                                {docBadgeLabel}
                               </span>
                               {carrierBadge && (
                                 <span

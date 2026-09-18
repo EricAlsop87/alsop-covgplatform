@@ -318,6 +318,16 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
             return 'quote';
         }
 
+        // Dec page detection (FAIR Plan, Dec Pages, etc.)
+        if (
+            f.doc_type === 'dec_page' ||
+            (fn.includes('dec') && !fn.includes('quote') && !fn.includes('rce')) ||
+            fn.includes('declaration') ||
+            (f.carrier_name && f.carrier_name.toLowerCase().includes('california fair plan'))
+        ) {
+            return 'dec_page';
+        }
+
         return f.doc_type;
     };
 
@@ -759,6 +769,13 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                 (fnLower.includes('quote') && !fnLower.includes('dec') && !fnLower.includes('rce')) ||
                                                 dicDocType.includes('quote')
                                             );
+                                            const isDecPage = (
+                                                groupKey === 'dec_page' ||
+                                                file.doc_type === 'dec_page' ||
+                                                (fnLower.includes('dec') && !fnLower.includes('quote') && !fnLower.includes('rce')) ||
+                                                fnLower.includes('declaration') ||
+                                                (file.carrier_name && file.carrier_name.toLowerCase().includes('california fair plan'))
+                                            );
 
                                             let docBadgeLabel = docTypeInfo.label;
                                             let docBadgeColor = docTypeInfo.color;
@@ -774,6 +791,9 @@ export function PolicyFiles({ policyId, onDecPageApproved }: PolicyFilesProps) {
                                                     docBadgeLabel = 'QUOTE';
                                                     docBadgeColor = '#06b6d4';
                                                 }
+                                            } else if (isDecPage) {
+                                                docBadgeLabel = 'DEC PAGE';
+                                                docBadgeColor = '#3b82f6';
                                             }
 
                                             // Extracted quote number
