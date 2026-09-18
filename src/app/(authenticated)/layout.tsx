@@ -115,25 +115,19 @@ export default function AuthenticatedLayout({
     children: React.ReactNode;
 }>) {
     const router = useRouter();
-    const [authState, setAuthState] = useState<'loading' | 'authorized' | 'no-access'>(() => {
-        if (typeof window !== 'undefined') {
-            const cachedRole = localStorage.getItem('ccn_user_role');
-            if (cachedRole && ['admin', 'service', 'agent', 'user', 'customer'].includes(cachedRole)) {
-                return 'authorized';
-            }
-        }
-        return 'loading';
-    });
-    const [userRole, setUserRole] = useState<UserRole | null>(() => {
-        if (typeof window !== 'undefined') {
-            return (localStorage.getItem('ccn_user_role') as UserRole) || null;
-        }
-        return null;
-    });
+    const [authState, setAuthState] = useState<'loading' | 'authorized' | 'no-access'>('loading');
+    const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [debugInfo, setDebugInfo] = useState<string>('');
 
     useEffect(() => {
         let isMounted = true;
+
+        // Immediately apply cached role on client mount to minimize layout flash
+        const cachedRole = localStorage.getItem('ccn_user_role');
+        if (cachedRole && ['admin', 'service', 'agent', 'user', 'customer'].includes(cachedRole)) {
+            setUserRole(cachedRole as UserRole);
+            setAuthState('authorized');
+        }
 
         async function checkRoleAccess(userId: string) {
             try {
