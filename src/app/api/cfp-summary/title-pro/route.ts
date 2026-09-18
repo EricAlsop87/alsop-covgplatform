@@ -4,6 +4,43 @@ import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
+export async function GET(req: NextRequest) {
+    const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service', 'agent'] });
+    if (isAuthError(auth)) return auth;
+
+    const admin = getSupabaseAdmin();
+    const { searchParams } = new URL(req.url);
+    const policy_id = searchParams.get('policy_id');
+
+    if (!policy_id) {
+        return NextResponse.json({ error: 'policy_id is required' }, { status: 400 });
+    }
+
+    try {
+        const { data, error } = await admin
+            .from('manual_overrides')
+            .select('new_value')
+            .eq('policy_id', policy_id)
+            .eq('field_name', 'title_pro')
+            .maybeSingle();
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        let titleData = null;
+        if (data?.new_value) {
+            try {
+                titleData = typeof data.new_value === 'string' ? JSON.parse(data.new_value) : data.new_value;
+            } catch {}
+        }
+
+        return NextResponse.json({ success: true, title_pro: titleData });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    }
+}
+
 export async function POST(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service', 'agent'] });
     if (isAuthError(auth)) return auth;

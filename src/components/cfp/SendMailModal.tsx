@@ -18,6 +18,8 @@ import {
     ShieldCheck,
     CheckSquare,
     Square,
+    AlertCircle,
+    Info,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './SendMailModal.module.scss';
@@ -138,30 +140,39 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [liveTitlePro, setLiveTitlePro] = useState<any>(term?.title_pro || null);
     const [previewMode, setPreviewMode] = useState<'full_email' | 'table_only'>('full_email');
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmWarnings, setConfirmWarnings] = useState<Array<{ id: string; label: string; desc: string; severity: 'warning' | 'info' }>>([]);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
     const [currentUserName, setCurrentUserName] = useState<string>('');
 
-    // Fetch live manual_overrides for title_pro to guarantee real-time accuracy
+    // Fetch live Title Pro via API route to guarantee 100% real-time accuracy and bypass client RLS restrictions
     useEffect(() => {
         setLiveTitlePro(term?.title_pro || null);
         if (!isOpen || !term?.policy_id) return;
 
-        supabase
-            .from('manual_overrides')
-            .select('new_value')
-            .eq('policy_id', term.policy_id)
-            .eq('field_name', 'title_pro')
-            .maybeSingle()
-            .then(({ data, error }) => {
-                if (!error && data?.new_value) {
-                    try {
-                        const parsed = typeof data.new_value === 'string' ? JSON.parse(data.new_value) : data.new_value;
-                        setLiveTitlePro(parsed);
-                    } catch {
-                        // ignore JSON parse error
+        let isMounted = true;
+        (async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const res = await fetch(`/api/cfp-summary/title-pro?policy_id=${encodeURIComponent(term.policy_id)}`, {
+                    headers: {
+                        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                    },
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    if (isMounted && json.success) {
+                        setLiveTitlePro(json.title_pro || null);
                     }
                 }
-            });
+            } catch {
+                // Keep initial term?.title_pro
+            }
+        })();
+
+        return () => {
+            isMounted = false;
+        };
     }, [isOpen, term?.policy_id, term?.title_pro]);
 
     useEffect(() => {
@@ -483,13 +494,47 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const isRenewalAttached = selectedAttachmentIds.includes('renewal_dec');
         const isRceAttached = selectedAttachmentIds.includes('rce');
 
-        const decStatus = term.has_dec
-            ? 'Available'
-            : (term.has_renewal_dec ? 'Renewal Available' : 'Missing');
-        const decStatusType = (term.has_dec || term.has_renewal_dec) ? ('available' as const) : ('missing' as const);
-        const decDetails = term.has_dec
-            ? (term.expiration_date ? `Exp: ${term.expiration_date} ${isDecAttached ? '(Attached)' : '(Not Attached)'}` : (isDecAttached ? '(Attached)' : '(Not Attached)'))
-            : (term.has_renewal_dec ? (isRenewalAttached ? 'Renewal Offer (Attached)' : 'Renewal Offer (Not Attached)') : (term.expiration_date ? `Exp: ${term.expiration_date} (No Dec Page)` : 'No Dec Page on file'));
+        const currentPremVal = term.annual_premium ? Number(term.annual_premium) : null;
+        const renewalPremVal = term.renewal_annual_premium ? Number(term.renewal_annual_premium) : null;
+
+        const currentPremStr = currentPremVal ? `$${Math.round(currentPremVal).toLocaleString()}` : null;
+        const renewalPremStr = renewalPremVal ? `$${Math.round(renewalPremVal).toLocaleString()}` : null;
+
+        let displayPrem = '—';
+        if (currentPremStr && renewalPremStr && currentPremStr !== renewalPremStr) {
+            displayPrem = `${currentPremStr} (Current) / ${renewalPremStr} (Renewal)`;
+        } else if (renewalPremStr) {
+            displayPrem = `${renewalPremStr} (Renewal Offer)`;
+        } else if (currentPremStr) {
+            displayPrem = currentPremStr;
+        }
+
+        let decStatus = 'Missing';
+        let decStatusType: 'available' | 'missing' = 'missing';
+        let decName = 'FAIR Plan Dec Page';
+        let decDetails = 'No Dec Page on file';
+
+        if (term.has_dec && term.has_renewal_dec) {
+            decName = 'FAIR Plan Dec & Renewal Offer';
+            decStatus = 'Available + Renewal';
+            decStatusType = 'available';
+            const expPart = term.expiration_date ? `Current Exp: ${term.expiration_date}` : '';
+            const renExpPart = term.renewal_expiration_date ? `Renewal Exp: ${term.renewal_expiration_date}` : '';
+            const attPart = `Dec ${isDecAttached ? '✓ Attached' : '(Not Attached)'}, Renewal ${isRenewalAttached ? '✓ Attached' : '(Not Attached)'}`;
+            decDetails = [expPart, renExpPart, attPart].filter(Boolean).join(' • ');
+        } else if (term.has_renewal_dec) {
+            decName = 'Renewal Offer Dec Page';
+            decStatus = 'Renewal Available';
+            decStatusType = 'available';
+            const expPart = term.renewal_expiration_date || term.expiration_date ? `Exp: ${term.renewal_expiration_date || term.expiration_date}` : '';
+            decDetails = `Renewal Offer ${isRenewalAttached ? '(Attached)' : '(Not Attached)'}${expPart ? ` • ${expPart}` : ''}`;
+        } else if (term.has_dec) {
+            decName = 'FAIR Plan Dec Page';
+            decStatus = 'Available';
+            decStatusType = 'available';
+            const expPart = term.expiration_date ? `Exp: ${term.expiration_date}` : '';
+            decDetails = `FAIR Plan Dec ${isDecAttached ? '(Attached)' : '(Not Attached)'}${expPart ? ` • ${expPart}` : ''}`;
+        }
 
         const rceDetails = term.has_rce
             ? `${term.rce_carrier || '360Value'} Valuation ${isRceAttached ? '(Attached)' : '(Not Attached)'}`
@@ -501,10 +546,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         return [
             {
-                name: 'FAIR Plan Dec Page',
+                name: decName,
                 status: decStatus,
                 statusType: decStatusType,
-                premium: term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—',
+                premium: displayPrem,
                 details: decDetails,
             },
             {
@@ -537,7 +582,20 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const insured = term.named_insured || 'Insured';
         const addr = term.property_address || 'Address on file';
         const exp = term.expiration_date || '—';
-        const prem = term.annual_premium ? `$${Number(term.annual_premium).toLocaleString()}` : '—';
+
+        const currentPremVal = term.annual_premium ? Number(term.annual_premium) : null;
+        const renewalPremVal = term.renewal_annual_premium ? Number(term.renewal_annual_premium) : null;
+        const currentPremStr = currentPremVal ? `$${Math.round(currentPremVal).toLocaleString()}` : null;
+        const renewalPremStr = renewalPremVal ? `$${Math.round(renewalPremVal).toLocaleString()}` : null;
+
+        let displayPrem = '—';
+        if (currentPremStr && renewalPremStr && currentPremStr !== renewalPremStr) {
+            displayPrem = `${currentPremStr} (Current) &bull; ${renewalPremStr} (Renewal)`;
+        } else if (renewalPremStr) {
+            displayPrem = `${renewalPremStr} (Renewal Offer)`;
+        } else if (currentPremStr) {
+            displayPrem = currentPremStr;
+        }
 
         const attachedFilesList = availableAttachments
             .filter(a => selectedAttachmentIds.includes(a.id))
@@ -638,7 +696,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     <td style="padding:12px 16px;font-size:13px;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
                       <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Named Insured:</strong> ${insured}</div>
                       <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Property Address:</strong> ${addr}</div>
-                      <div><strong style="color:#1e40af;">Expiration Date:</strong> ${exp} &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">FAIR Plan Premium:</strong> ${prem}</div>
+                      <div><strong style="color:#1e40af;">Expiration Date:</strong> ${exp}${term.renewal_expiration_date ? ` &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">Renewal Exp:</strong> ${term.renewal_expiration_date}` : ''} &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">FAIR Plan Premium:</strong> ${displayPrem}</div>
                     </td>
                   </tr>
                 </table>
@@ -734,6 +792,88 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 eric: 'none',
                 phoebe: 'none',
             });
+        }
+    };
+
+    const handleInitiateSend = () => {
+        if (toRecipients.length === 0 && ccRecipients.length === 0 && !customCc.trim()) {
+            setError('Please select at least one recipient (TO or CC).');
+            return;
+        }
+
+        if (!subject.trim()) {
+            setError('Please enter a subject line.');
+            return;
+        }
+
+        const effectiveTitlePro = liveTitlePro || term?.title_pro;
+        const warnings: Array<{ id: string; label: string; desc: string; severity: 'warning' | 'info' }> = [];
+
+        // 1. Missing Title Pro
+        if (!effectiveTitlePro) {
+            warnings.push({
+                id: 'title_pro',
+                label: 'Missing Title Pro Report',
+                desc: 'Title Pro record has not been matched or verified for this property.',
+                severity: 'warning',
+            });
+        } else if (effectiveTitlePro.match_status === 'mismatch') {
+            warnings.push({
+                id: 'title_pro_mismatch',
+                label: 'Title Pro Name Mismatch',
+                desc: `Title Pro shows a name mismatch (${effectiveTitlePro.title_name || 'Mismatch'}).`,
+                severity: 'warning',
+            });
+        }
+
+        // 2. Missing Companion Quotes
+        const carriers: Array<{ key: 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic'; name: string }> = [
+            { key: 'bamboo', name: 'Bamboo' },
+            { key: 'aegis', name: 'Aegis' },
+            { key: 'am', name: 'American Modern (AM)' },
+            { key: 'sagesure', name: 'SageSure' },
+            { key: 'psic', name: 'Pacific Specialty (PSIC)' },
+        ];
+
+        const unquotedCarriers = carriers.filter(c => {
+            const q = term?.carrier_quotes?.[c.key];
+            return !q || (!q.premium && !q.coverage_type && !q.quote_number);
+        });
+
+        if (unquotedCarriers.length > 0) {
+            warnings.push({
+                id: 'quotes',
+                label: `Missing Companion Quotes (${unquotedCarriers.length} of 5 Missing)`,
+                desc: `${unquotedCarriers.map(c => c.name).join(', ')} companion quote(s) are not generated or attached.`,
+                severity: 'warning',
+            });
+        }
+
+        // 3. Missing Dec Page / Renewal Offer
+        if (!term?.has_dec && !term?.has_renewal_dec) {
+            warnings.push({
+                id: 'dec_page',
+                label: 'Missing FAIR Plan Dec Page',
+                desc: 'No current FAIR Plan Dec Page or Renewal Offer is on file.',
+                severity: 'warning',
+            });
+        }
+
+        // 4. Missing RCE Valuation
+        if (!term?.has_rce) {
+            warnings.push({
+                id: 'rce',
+                label: 'Missing RCE Valuation Report',
+                desc: 'No replacement cost valuation is on file.',
+                severity: 'info',
+            });
+        }
+
+        if (warnings.length > 0) {
+            setConfirmWarnings(warnings);
+            setShowConfirmModal(true);
+        } else {
+            handleSend();
         }
     };
 
@@ -1257,7 +1397,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     <button
                         type="button"
                         className={styles.sendBtn}
-                        onClick={handleSend}
+                        onClick={handleInitiateSend}
                         disabled={sending || (totalToCount === 0 && ccRecipients.length === 0 && !customCc.trim())}
                     >
                         {sending ? (
@@ -1276,6 +1416,109 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     </button>
                 </div>
             </div>
+
+            {/* ── Pre-Send Confirmation Checkpoint Modal ── */}
+            {showConfirmModal && (
+                <div className={styles.confirmOverlay} onClick={() => setShowConfirmModal(false)}>
+                    <div className={styles.confirmModal} onClick={e => e.stopPropagation()}>
+                        <div className={styles.confirmHeader}>
+                            <div className={styles.confirmHeaderIcon}>
+                                <AlertTriangle size={22} color="#dc2626" />
+                            </div>
+                            <div className={styles.confirmHeaderTexts}>
+                                <h4 className={styles.confirmTitle}>Review Pending Items Before Sending</h4>
+                                <p className={styles.confirmSubtitle}>
+                                    Please confirm you want to proceed with the following missing items:
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.confirmCloseBtn}
+                                onClick={() => setShowConfirmModal(false)}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className={styles.confirmBody}>
+                            {/* Warnings List */}
+                            <div className={styles.warningList}>
+                                {confirmWarnings.map(w => (
+                                    <div
+                                        key={w.id}
+                                        className={`${styles.warningItem} ${w.severity === 'warning' ? styles.warningSevere : styles.warningInfo}`}
+                                    >
+                                        <div className={styles.warningItemIcon}>
+                                            {w.severity === 'warning' ? (
+                                                <AlertCircle size={18} />
+                                            ) : (
+                                                <Info size={18} />
+                                            )}
+                                        </div>
+                                        <div className={styles.warningItemContent}>
+                                            <strong className={styles.warningItemLabel}>{w.label}</strong>
+                                            <span className={styles.warningItemDesc}>{w.desc}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Email Summary Overview */}
+                            <div className={styles.confirmSummaryBox}>
+                                <div className={styles.summaryRow}>
+                                    <span className={styles.sumLabel}>Policy:</span>
+                                    <span className={styles.sumVal}><strong>{term.policy_number}</strong> &bull; {term.named_insured}</span>
+                                </div>
+                                <div className={styles.summaryRow}>
+                                    <span className={styles.sumLabel}>Primary TO:</span>
+                                    <span className={styles.sumVal}>
+                                        {toRecipients.map(r => r.name).concat(customTo ? [customTo] : []).join(', ') || 'None selected'}
+                                    </span>
+                                </div>
+                                <div className={styles.summaryRow}>
+                                    <span className={styles.sumLabel}>Attachments:</span>
+                                    <span className={styles.sumVal}>
+                                        <strong>{selectedAttachmentIds.length} file(s) attached</strong>
+                                        {selectedAttachmentIds.length > 0 && ` (${availableAttachments.filter(a => selectedAttachmentIds.includes(a.id)).map(a => a.badge).join(', ')})`}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={styles.confirmFooter}>
+                            <button
+                                type="button"
+                                className={styles.confirmBackBtn}
+                                onClick={() => setShowConfirmModal(false)}
+                                disabled={sending}
+                            >
+                                Cancel &amp; Edit Details
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.confirmSendAnywayBtn}
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    handleSend();
+                                }}
+                                disabled={sending}
+                            >
+                                {sending ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        <span>Sending...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send size={14} />
+                                        <span>Yes, Send Email Anyway</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

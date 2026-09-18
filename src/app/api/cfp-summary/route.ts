@@ -98,6 +98,10 @@ export interface CFPTermRow {
     cfp_mail_attachments?: string[];
     // Title Pro verification
     title_pro?: TitleProData | null;
+    // Renewal term data if available
+    renewal_annual_premium?: number | null;
+    renewal_effective_date?: string | null;
+    renewal_expiration_date?: string | null;
     // Term type within family (set by API after grouping)
     term_type: 'ORIGINAL' | 'RENEWAL';
     term_index: number;
@@ -665,10 +669,11 @@ export async function GET(req: NextRequest) {
             policy_period_end?: string;
             property_location?: string;
             mailing_address?: string;
+            total_premium?: string | number | null;
             dec_page_submissions?: any;
         }>(
             'dec_pages',
-            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, dec_page_submissions(storage_path, file_name, bucket)',
+            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_premium, dec_page_submissions(storage_path, file_name, bucket)',
             'policy_id',
             policyIds
         ),
@@ -742,6 +747,7 @@ export async function GET(req: NextRequest) {
             file_name: sub?.file_name,
             bucket,
             policy_number: d.policy_number || undefined,
+            total_premium: d.total_premium ? parseFloat(String(d.total_premium).replace(/[^0-9.]/g, '')) : undefined,
         };
         if (sub?.storage_path && d.policy_id) {
             policyDecDocMap[d.policy_id] = docInfo;
@@ -1079,29 +1085,44 @@ export async function GET(req: NextRequest) {
         let renewalDecStoragePath: string | null = null;
         let renewalDecFileName: string | null = null;
         let renewalDecBucket: 'cfp-raw-decpage' | 'cfp-platform-documents' | null = null;
+        let renewalAnnualPremium: number | null = null;
+        let renewalEffectiveDate: string | null = null;
+        let renewalExpirationDate: string | null = null;
 
-        if (!hasDec && polTerms.length > 1) {
+        if (polTerms.length > 1) {
             const renewalTerm = polTerms.find((otherTerm: any) =>
                 otherTerm.id !== t.id &&
-                otherTerm.effective_date && t.expiration_date &&
-                otherTerm.effective_date === t.expiration_date &&
-                termDecDocMap[otherTerm.id]
+                ((otherTerm.effective_date && t.expiration_date && otherTerm.effective_date === t.expiration_date) ||
+                 (otherTerm.expiration_date && t.expiration_date && new Date(otherTerm.expiration_date) > new Date(t.expiration_date)))
             );
             if (renewalTerm) {
                 const rDoc = termDecDocMap[renewalTerm.id];
-                hasRenewalDec = true;
-                renewalDecStoragePath = rDoc?.storage_path || null;
-                renewalDecFileName = rDoc?.file_name || null;
-                renewalDecBucket = rDoc?.bucket || 'cfp-platform-documents';
+                if (rDoc) {
+                    hasRenewalDec = true;
+                    renewalDecStoragePath = rDoc?.storage_path || null;
+                    renewalDecFileName = rDoc?.file_name || null;
+                    renewalDecBucket = rDoc?.bucket || 'cfp-platform-documents';
+                    if ((rDoc as any)?.total_premium) {
+                        renewalAnnualPremium = (rDoc as any).total_premium;
+                    }
+                }
+                if (renewalTerm.annual_premium && !renewalAnnualPremium) {
+                    renewalAnnualPremium = parseFloat(renewalTerm.annual_premium);
+                }
+                renewalEffectiveDate = renewalTerm.effective_date || null;
+                renewalExpirationDate = renewalTerm.expiration_date || null;
             }
         }
 
-        if (!hasDec && !hasRenewalDec && policyRenewalDecDocMap[policyId]) {
+        if (!hasRenewalDec && policyRenewalDecDocMap[policyId]) {
             const rDoc = policyRenewalDecDocMap[policyId];
             hasRenewalDec = true;
             renewalDecStoragePath = rDoc?.storage_path || null;
             renewalDecFileName = rDoc?.file_name || null;
             renewalDecBucket = rDoc?.bucket || 'cfp-platform-documents';
+            if ((rDoc as any)?.total_premium && !renewalAnnualPremium) {
+                renewalAnnualPremium = (rDoc as any).total_premium;
+            }
         }
 
         // If still no direct dec and no renewal dec, check if policy has any dec page on file
@@ -1232,6 +1253,9 @@ export async function GET(req: NextRequest) {
             cfp_mail_attachments: termCfpMailSent?.attachments || [],
             carrier_quotes: termCarrierQuotes,
             title_pro: titleProMap[policyId] || null,
+            renewal_annual_premium: renewalAnnualPremium,
+            renewal_effective_date: renewalEffectiveDate,
+            renewal_expiration_date: renewalExpirationDate,
             term_type: 'ORIGINAL', // Will be recalculated below
             term_index: 0,
         };
