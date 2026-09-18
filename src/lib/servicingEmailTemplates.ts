@@ -80,10 +80,10 @@ export function generateServicingRenewalEmail(params: ServicingRenewalEmailParam
   <title>${subject}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 24px 12px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding: 12px 0; margin: 0; text-align: left;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="100%" style="max-width: 620px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+      <td align="left">
+        <table role="presentation" width="100%" style="max-width: 650px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 0; text-align: left;">
           
           <!-- Header Banner -->
           <tr>

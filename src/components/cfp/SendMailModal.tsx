@@ -532,88 +532,123 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
             return `
             <tr style="border-bottom:1px solid #e2e8f0;">
-              <td style="padding:10px 14px;font-weight:600;color:#0f172a;font-size:13px;">${item.name}</td>
-              <td style="padding:10px 14px;text-align:center;">${badgeHtml}</td>
-              <td style="padding:10px 14px;color:#334155;font-weight:600;font-size:13px;">${item.premium}</td>
-              <td style="padding:10px 14px;color:#475569;font-size:12px;">${item.details}</td>
+              <td style="width:28%;padding:9px 12px;font-weight:600;color:#0f172a;font-size:13px;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${item.name}</td>
+              <td style="width:18%;padding:9px 8px;text-align:center;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${badgeHtml}</td>
+              <td style="width:18%;padding:9px 12px;color:#334155;font-weight:600;font-size:13px;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${item.premium}</td>
+              <td style="width:36%;padding:9px 12px;color:#475569;font-size:12px;line-height:1.4;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${item.details}</td>
             </tr>`;
         }).join('');
 
         const notesBlock = customNotes.trim()
-            ? `<div style="margin-top:16px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:4px;">
-                 <strong style="color:#0f172a;font-size:13px;">Additional Remarks:</strong>
-                 <p style="margin:6px 0 0 0;color:#334155;font-size:13px;line-height:1.5;">${customNotes.replace(/\n/g, '<br/>')}</p>
-               </div>`
+            ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:16px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:4px;">
+                 <tr>
+                   <td style="padding:12px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                     <strong style="color:#0f172a;font-size:13px;">Additional Remarks:</strong>
+                     <p style="margin:6px 0 0 0;color:#334155;font-size:13px;line-height:1.5;">${customNotes.replace(/\n/g, '<br/>')}</p>
+                   </td>
+                 </tr>
+               </table>`
             : '';
 
         const attachmentNoticeHtml = attachedFilesList.length > 0
-            ? `<div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:4px;font-size:12.5px;color:#1e293b;">
-                 <strong>Attached Files (${attachedFilesList.length}):</strong> ${attachedFilesList.join(', ')}
-               </div>`
-            : `<div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #64748b;border-radius:4px;font-size:12.5px;color:#475569;">
-                 <strong>Notice:</strong> No documents attached (Status Summary Only).
-               </div>`;
+            ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:16px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:4px;">
+                 <tr>
+                   <td style="padding:10px 14px;font-size:12.5px;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                     <strong>Attached Files (${attachedFilesList.length}):</strong> ${attachedFilesList.join(', ')}
+                   </td>
+                 </tr>
+               </table>`
+            : `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:16px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #64748b;border-radius:4px;">
+                 <tr>
+                   <td style="padding:10px 14px;font-size:12.5px;color:#475569;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                     <strong>Notice:</strong> No documents attached (Status Summary Only).
+                   </td>
+                 </tr>
+               </table>`;
 
         const urgentBannerHtml = isUrgent
-            ? `<div style="margin-bottom:16px;padding:10px 14px;background:#fef2f2;border:1.5px solid #ef4444;border-left:5px solid #dc2626;border-radius:6px;">
-                 <strong style="color:#b91c1c;font-size:12.5px;letter-spacing:0.04em;text-transform:uppercase;">🚨 URGENT &bull; High Priority Request</strong>
-                 <p style="margin:4px 0 0 0;color:#7f1d1d;font-size:12px;">This policy requires immediate attention / expedited action.</p>
-               </div>`
+            ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-bottom:16px;border-collapse:collapse;background:#fef2f2;border:1.5px solid #ef4444;border-left:5px solid #dc2626;border-radius:6px;">
+                 <tr>
+                   <td style="padding:10px 14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                     <strong style="color:#b91c1c;font-size:12.5px;letter-spacing:0.04em;text-transform:uppercase;">🚨 URGENT &bull; High Priority Request</strong>
+                     <p style="margin:4px 0 0 0;color:#7f1d1d;font-size:12px;">This policy requires immediate attention / expedited action.</p>
+                   </td>
+                 </tr>
+               </table>`
             : '';
 
         return `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;max-width:680px;margin:0 auto;padding:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
-          ${urgentBannerHtml}
-          <div style="border-bottom:2px solid #1e3a8a;padding-bottom:12px;margin-bottom:18px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <h2 style="margin:0;font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;">
-                CFP Policy Document &amp; Quoting Summary
-              </h2>
-              <span style="font-size:12px;color:#1e40af;font-weight:700;background:#eff6ff;border:1px solid #dbeafe;padding:3px 8px;border-radius:4px;">
-                CFP ${cleanPolNum}
-              </span>
-            </div>
-          </div>
-
-          <p style="font-size:14px;color:#334155;margin:0 0 16px 0;">
-            Hello,<br/><br/>
-            Please review the current document verification and companion quote status for policy <strong>CFP ${cleanPolNum}</strong>:
-          </p>
-
-          <table style="width:100%;border-collapse:collapse;background:#f0f7ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;border-radius:6px;margin-bottom:20px;">
+        <div style="margin:0;padding:0;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:680px;width:100%;margin:0;text-align:left;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;">
             <tr>
-              <td style="padding:12px 16px;font-size:13px;color:#1e293b;">
-                <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Named Insured:</strong> ${insured}</div>
-                <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Property Address:</strong> ${addr}</div>
-                <div><strong style="color:#1e40af;">Expiration Date:</strong> ${exp} &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">FAIR Plan Premium:</strong> ${prem}</div>
+              <td align="left" style="padding:0;text-align:left;">
+                ${urgentBannerHtml}
+                
+                <!-- Title Row: Table based for perfect Outlook alignment -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;border-bottom:2px solid #1e3a8a;padding-bottom:10px;margin-bottom:16px;">
+                  <tr>
+                    <td align="left" style="vertical-align:middle;">
+                      <h2 style="margin:0;font-size:16px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                        CFP Policy Document &amp; Quoting Summary
+                      </h2>
+                    </td>
+                    <td align="right" style="vertical-align:middle;white-space:nowrap;padding-left:12px;">
+                      <span style="font-size:12px;color:#1e40af;font-weight:700;background:#eff6ff;border:1px solid #dbeafe;padding:3px 8px;border-radius:4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                        CFP ${cleanPolNum}
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="font-size:14px;color:#334155;margin:0 0 16px 0;line-height:1.5;">
+                  Hello,<br/><br/>
+                  Please review the current document verification and companion quote status for policy <strong>CFP ${cleanPolNum}</strong>:
+                </p>
+
+                <!-- Insured & Property Header Card -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;border-collapse:collapse;background:#f0f7ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;border-radius:6px;margin-bottom:20px;">
+                  <tr>
+                    <td style="padding:12px 16px;font-size:13px;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Named Insured:</strong> ${insured}</div>
+                      <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Property Address:</strong> ${addr}</div>
+                      <div><strong style="color:#1e40af;">Expiration Date:</strong> ${exp} &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">FAIR Plan Premium:</strong> ${prem}</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Quoting & Document Breakdown Table -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;border-collapse:collapse;margin:16px 0;font-size:13px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">
+                  <thead>
+                    <tr style="background:#f8fafc;text-align:left;border-bottom:2px solid #cbd5e1;">
+                      <th style="width:28%;padding:10px 12px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:left;">Item / Carrier</th>
+                      <th style="width:18%;padding:10px 8px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:center;">Status</th>
+                      <th style="width:18%;padding:10px 12px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:left;">Amount / Premium</th>
+                      <th style="width:36%;padding:10px 12px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:left;">Quote # &amp; Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rowsHtml}
+                  </tbody>
+                </table>
+
+                ${attachmentNoticeHtml}
+
+                ${notesBlock}
+
+                <!-- Signature & Footer -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:24px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;">
+                  <tr>
+                    <td style="padding:14px 16px;font-size:13px;color:#334155;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      <div style="font-weight:700;color:#0f172a;font-size:13.5px;">Prepared &amp; Sent by: ${currentUserName || 'Coverage Check Team'}</div>
+                      <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                        Coverage Check &bull; All replies are routed directly to our servicing team
+                      </div>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
-
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">
-            <thead>
-              <tr style="background:#f8fafc;text-align:left;border-bottom:2px solid #cbd5e1;">
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Item / Carrier</th>
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;text-align:center;width:140px;">Status</th>
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Amount / Premium</th>
-                <th style="padding:10px 14px;color:#1e293b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Quote # &amp; Underwriting Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-          </table>
-
-          ${attachmentNoticeHtml}
-
-          ${notesBlock}
-
-          <div style="margin-top:24px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;font-size:13px;color:#334155;">
-            <div style="font-weight:700;color:#0f172a;font-size:13.5px;">Prepared &amp; Sent by: ${currentUserName || 'Coverage Check Team'}</div>
-            <div style="font-size:12px;color:#64748b;margin-top:4px;">
-              Coverage Check &bull; All replies are routed directly to our servicing team
-            </div>
-          </div>
         </div>
         `;
     }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName]);
