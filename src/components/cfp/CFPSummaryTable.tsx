@@ -444,24 +444,27 @@ export function CFPSummaryTable({
         updatedData: CarrierQuoteData | null
     ) => {
         setFamilies(prev =>
-            prev.map(f => ({
-                ...f,
-                terms: f.terms.map(t => {
-                    if (t.policy_id !== policyId) return t;
-                    const updatedQuotes = {
-                        ...(t.carrier_quotes || {}),
-                        [carrierKey]: updatedData,
-                    };
-                    return {
-                        ...t,
-                        carrier_quotes: updatedQuotes as any,
-                        has_bamboo_coverage:
-                            carrierKey === 'bamboo'
-                                ? updatedData?.coverage_type === 'FULL'
-                                : t.has_bamboo_coverage,
-                    };
-                }),
-            }))
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t => {
+                        if (t.policy_id !== policyId && !belongsToFamily) return t;
+                        const updatedQuotes = {
+                            ...(t.carrier_quotes || {}),
+                            [carrierKey]: updatedData,
+                        };
+                        return {
+                            ...t,
+                            carrier_quotes: updatedQuotes as any,
+                            has_bamboo_coverage:
+                                carrierKey === 'bamboo'
+                                    ? updatedData?.coverage_type === 'FULL'
+                                    : t.has_bamboo_coverage,
+                        };
+                    }),
+                };
+            })
         );
     };
 
@@ -470,12 +473,15 @@ export function CFPSummaryTable({
 
     const handleSaveTitleProSuccess = (policyId: string, updatedData: TitleProData | null) => {
         setFamilies(prev =>
-            prev.map(f => ({
-                ...f,
-                terms: f.terms.map(t =>
-                    t.policy_id === policyId ? { ...t, title_pro: updatedData } : t
-                ),
-            }))
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === policyId || belongsToFamily ? { ...t, title_pro: updatedData } : t
+                    ),
+                };
+            })
         );
     };
 
@@ -494,27 +500,30 @@ export function CFPSummaryTable({
         const attachments = isDetailsObj ? details.attachments : [];
 
         setFamilies(prev =>
-            prev.map(f => ({
-                ...f,
-                terms: f.terms.map(t =>
-                    t.policy_id === policyId
-                        ? {
-                              ...t,
-                              in_servicing_email: true,
-                              servicing_status: 'ready',
-                              cfp_mail_sent: true,
-                              cfp_mail_sent_to: sentTo,
-                              cfp_mail_sent_to_names: sentToNames,
-                              cfp_mail_sent_cc: sentCc,
-                              cfp_mail_sent_cc_names: sentCcNames,
-                              cfp_mail_sent_by: sentBy,
-                              cfp_mail_sent_at: sentAt,
-                              cfp_mail_subject: subject,
-                              cfp_mail_attachments: attachments,
-                          }
-                        : t
-                ),
-            }))
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === policyId || belongsToFamily
+                            ? {
+                                  ...t,
+                                  in_servicing_email: true,
+                                  servicing_status: 'ready',
+                                  cfp_mail_sent: true,
+                                  cfp_mail_sent_to: sentTo,
+                                  cfp_mail_sent_to_names: sentToNames,
+                                  cfp_mail_sent_cc: sentCc,
+                                  cfp_mail_sent_cc_names: sentCcNames,
+                                  cfp_mail_sent_by: sentBy,
+                                  cfp_mail_sent_at: sentAt,
+                                  cfp_mail_subject: subject,
+                                  cfp_mail_attachments: attachments,
+                              }
+                            : t
+                    ),
+                };
+            })
         );
     };
 

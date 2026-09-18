@@ -65,16 +65,40 @@ export async function POST(req: NextRequest) {
             verified_at: now,
         };
 
+        // Find sibling policy IDs in the same family to sync across all terms
+        const targetPolicyIds = new Set<string>([policy_id]);
+        const { data: pol } = await admin
+            .from('policies')
+            .select('id, policy_number, client_id')
+            .eq('id', policy_id)
+            .maybeSingle();
+
+        if (pol) {
+            const rawPol = pol.policy_number || '';
+            const basePol = rawPol.replace(/\s+\d+$/, '').replace(/^CFP\s*/i, '').trim();
+            let siblingQuery = admin.from('policies').select('id');
+            if (basePol) {
+                siblingQuery = siblingQuery.or(`policy_number.ilike.%${basePol}%,client_id.eq.${pol.client_id || '00000000-0000-0000-0000-000000000000'}`);
+            } else if (pol.client_id) {
+                siblingQuery = siblingQuery.eq('client_id', pol.client_id);
+            }
+            const { data: siblings } = await siblingQuery.limit(20);
+            if (siblings) {
+                for (const s of siblings) targetPolicyIds.add(s.id);
+            }
+        }
+
         const fieldName = `carrier_quote_${carrier_key}`;
+        const upsertRows = Array.from(targetPolicyIds).map(pid => ({
+            policy_id: pid,
+            field_name: fieldName,
+            new_value: JSON.stringify(quoteData),
+            actor_id: userId,
+            updated_at: now,
+        }));
 
         const { error: upsertError } = await admin.from('manual_overrides').upsert(
-            {
-                policy_id,
-                field_name: fieldName,
-                new_value: JSON.stringify(quoteData),
-                actor_id: userId,
-                updated_at: now,
-            },
+            upsertRows,
             { onConflict: 'policy_id, field_name' }
         );
 
@@ -110,10 +134,32 @@ export async function DELETE(req: NextRequest) {
 
         const fieldName = `carrier_quote_${carrier_key}`;
 
+        const targetPolicyIds = new Set<string>([policy_id]);
+        const { data: pol } = await admin
+            .from('policies')
+            .select('id, policy_number, client_id')
+            .eq('id', policy_id)
+            .maybeSingle();
+
+        if (pol) {
+            const rawPol = pol.policy_number || '';
+            const basePol = rawPol.replace(/\s+\d+$/, '').replace(/^CFP\s*/i, '').trim();
+            let siblingQuery = admin.from('policies').select('id');
+            if (basePol) {
+                siblingQuery = siblingQuery.or(`policy_number.ilike.%${basePol}%,client_id.eq.${pol.client_id || '00000000-0000-0000-0000-000000000000'}`);
+            } else if (pol.client_id) {
+                siblingQuery = siblingQuery.eq('client_id', pol.client_id);
+            }
+            const { data: siblings } = await siblingQuery.limit(20);
+            if (siblings) {
+                for (const s of siblings) targetPolicyIds.add(s.id);
+            }
+        }
+
         const { error } = await admin
             .from('manual_overrides')
             .delete()
-            .eq('policy_id', policy_id)
+            .in('policy_id', Array.from(targetPolicyIds))
             .eq('field_name', fieldName);
 
         if (error) {

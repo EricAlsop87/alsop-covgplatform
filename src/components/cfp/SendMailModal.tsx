@@ -140,6 +140,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [liveTitlePro, setLiveTitlePro] = useState<any>(term?.title_pro || null);
     const [previewMode, setPreviewMode] = useState<'full_email' | 'table_only'>('full_email');
+    const [activeModalTab, setActiveModalTab] = useState<'compose' | 'preview'>('compose');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmWarnings, setConfirmWarnings] = useState<Array<{ id: string; label: string; desc: string; severity: 'warning' | 'info' }>>([]);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
@@ -147,7 +148,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
     // Fetch live Title Pro via API route to guarantee 100% real-time accuracy and bypass client RLS restrictions
     useEffect(() => {
-        setLiveTitlePro(term?.title_pro || null);
+        if (term?.title_pro) {
+            setLiveTitlePro(term.title_pro);
+        }
         if (!isOpen || !term?.policy_id) return;
 
         let isMounted = true;
@@ -161,8 +164,12 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 });
                 if (res.ok) {
                     const json = await res.json();
-                    if (isMounted && json.success) {
-                        setLiveTitlePro(json.title_pro || null);
+                    if (isMounted) {
+                        if (json.title_pro) {
+                            setLiveTitlePro(json.title_pro);
+                        } else if (term?.title_pro) {
+                            setLiveTitlePro(term.title_pro);
+                        }
                     }
                 }
             } catch {
@@ -982,397 +989,490 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     </button>
                 </div>
 
+                {/* Top Navigation Bar: Compose & Attachments vs Live Email Preview */}
+                <div className={styles.topTabBar}>
+                    <button
+                        type="button"
+                        className={`${styles.topTabBtn} ${activeModalTab === 'compose' ? styles.topTabActive : ''}`}
+                        onClick={() => setActiveModalTab('compose')}
+                    >
+                        <Edit3 size={14} />
+                        <span>1. Compose &amp; Documents ({selectedAttachmentIds.length} Attached)</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.topTabBtn} ${activeModalTab === 'preview' ? styles.topTabActive : ''}`}
+                        onClick={() => setActiveModalTab('preview')}
+                    >
+                        <Eye size={14} />
+                        <span>2. Live Email Preview (WYSIWYG)</span>
+                        <span className={styles.liveDot}>● Live</span>
+                    </button>
+                </div>
+
                 {/* Body */}
                 <div className={styles.modalBody}>
-                    {/* Recipient Selection */}
-                    <div className={styles.formSection}>
-                        <label className={styles.fieldLabel}>
-                            <UserCheck size={14} /> Team Recipients (Select TO or CC)
-                        </label>
+                    {activeModalTab === 'compose' ? (
+                        <>
+                            {/* Recipient Selection */}
+                            <div className={styles.formSection}>
+                                <label className={styles.fieldLabel}>
+                                    <UserCheck size={14} /> Team Recipients (Select TO or CC)
+                                </label>
 
-                        {/* Quick Presets */}
-                        <div className={styles.presetButtonsRow}>
-                            <span className={styles.presetLabel}>Quick:</span>
-                            <button
-                                type="button"
-                                className={`${styles.presetBtn} ${recipientRoles.olga === 'to' && recipientRoles.nancy === 'cc' && recipientRoles.johnpaul === 'cc' ? styles.presetActive : ''}`}
-                                onClick={() => applyPreset('olga_to_nancy_cc')}
-                                title="Set Olga as TO, Nancy and JP as CC"
-                            >
-                                ⚡ To Olga (CC Nancy &amp; JP)
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.presetBtn} ${recipientRoles.nancy === 'to' && recipientRoles.olga === 'cc' && recipientRoles.johnpaul === 'cc' ? styles.presetActive : ''}`}
-                                onClick={() => applyPreset('nancy_to_olga_cc')}
-                                title="Set Nancy as TO, Olga and JP as CC"
-                            >
-                                ⚡ To Nancy (CC Olga &amp; JP)
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.presetBtn} ${recipientRoles.olga === 'to' && recipientRoles.nancy === 'to' && recipientRoles.johnpaul === 'none' ? styles.presetActive : ''}`}
-                                onClick={() => applyPreset('olga_nancy_to')}
-                                title="Set both Olga and Nancy as TO"
-                            >
-                                ⚡ To Olga &amp; Nancy
-                            </button>
-                            <button
-                                type="button"
-                                className={`${styles.presetBtn} ${styles.presetClear}`}
-                                onClick={() => applyPreset('clear')}
-                                title="Clear all team recipients"
-                            >
-                                Clear
-                            </button>
-                        </div>
-
-                        {/* Recipient Cards Grid */}
-                        <div className={styles.recipientPillsGrid}>
-                            {TEAM_RECIPIENTS.map(r => {
-                                const role = recipientRoles[r.id] || 'none';
-                                return (
-                                    <div
-                                        key={r.id}
-                                        className={`${styles.recipientCard} ${role === 'to' ? styles.roleTo : role === 'cc' ? styles.roleCc : ''}`}
+                                {/* Quick Presets */}
+                                <div className={styles.presetButtonsRow}>
+                                    <span className={styles.presetLabel}>Quick:</span>
+                                    <button
+                                        type="button"
+                                        className={`${styles.presetBtn} ${recipientRoles.olga === 'to' && recipientRoles.nancy === 'cc' && recipientRoles.johnpaul === 'cc' ? styles.presetActive : ''}`}
+                                        onClick={() => applyPreset('olga_to_nancy_cc')}
+                                        title="Set Olga as TO, Nancy and JP as CC"
                                     >
-                                        <div className={styles.recipientLeft}>
-                                            <span className={styles.avatar}>{r.avatarText}</span>
-                                            <div className={styles.recipientInfo}>
-                                                <span className={styles.name}>{r.name}</span>
-                                                <span className={styles.email}>{r.email}</span>
+                                        ⚡ To Olga (CC Nancy &amp; JP)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.presetBtn} ${recipientRoles.nancy === 'to' && recipientRoles.olga === 'cc' && recipientRoles.johnpaul === 'cc' ? styles.presetActive : ''}`}
+                                        onClick={() => applyPreset('nancy_to_olga_cc')}
+                                        title="Set Nancy as TO, Olga and JP as CC"
+                                    >
+                                        ⚡ To Nancy (CC Olga &amp; JP)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.presetBtn} ${recipientRoles.olga === 'to' && recipientRoles.nancy === 'to' && recipientRoles.johnpaul === 'none' ? styles.presetActive : ''}`}
+                                        onClick={() => applyPreset('olga_nancy_to')}
+                                        title="Set both Olga and Nancy as TO"
+                                    >
+                                        ⚡ To Olga &amp; Nancy
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.presetBtn} ${styles.presetClear}`}
+                                        onClick={() => applyPreset('clear')}
+                                        title="Clear all team recipients"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+
+                                {/* Recipient Cards Grid */}
+                                <div className={styles.recipientPillsGrid}>
+                                    {TEAM_RECIPIENTS.map(r => {
+                                        const role = recipientRoles[r.id] || 'none';
+                                        return (
+                                            <div
+                                                key={r.id}
+                                                className={`${styles.recipientCard} ${role === 'to' ? styles.roleTo : role === 'cc' ? styles.roleCc : ''}`}
+                                            >
+                                                <div className={styles.recipientLeft}>
+                                                    <span className={styles.avatar}>{r.avatarText}</span>
+                                                    <div className={styles.recipientInfo}>
+                                                        <span className={styles.name}>{r.name}</span>
+                                                        <span className={styles.email}>{r.email}</span>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.roleToggleGroup}>
+                                                    <button
+                                                        type="button"
+                                                        className={`${styles.roleBtn} ${role === 'to' ? styles.toActive : ''}`}
+                                                        onClick={() => setMemberRole(r.id, 'to')}
+                                                        title={`Set ${r.name} as primary TO`}
+                                                    >
+                                                        TO
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`${styles.roleBtn} ${role === 'cc' ? styles.ccActive : ''}`}
+                                                        onClick={() => setMemberRole(r.id, 'cc')}
+                                                        title={`Set ${r.name} as copy CC`}
+                                                    >
+                                                        CC
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {/* VA Team Auto-CC Info */}
+                                <div style={{
+                                    marginTop: '10px',
+                                    padding: '8px 12px',
+                                    background: 'rgba(34, 67, 182, 0.06)',
+                                    border: '1px solid rgba(34, 67, 182, 0.2)',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    fontSize: '0.78rem',
+                                    color: '#1e3a8a'
+                                }}>
+                                    <CheckCircle2 size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
+                                    <span>
+                                        {currentUserEmail.includes('paula') || currentUserEmail.includes('alsopva01') ? (
+                                            <><strong>Auto-CC Active:</strong> Phoebe Hernandez (<code>phoebe@coveragechecknow.com</code>) and Danicah Jesoro (<code>danicah@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
+                                        ) : currentUserEmail.includes('phoebe') || currentUserEmail.includes('alsopva02') ? (
+                                            <><strong>Auto-CC Active:</strong> Paula Veloza (<code>paula@coveragechecknow.com</code>) and Danicah Jesoro (<code>danicah@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
+                                        ) : currentUserEmail.includes('danicah') || currentUserEmail.includes('alsopva03') ? (
+                                            <><strong>Auto-CC Active:</strong> Paula Veloza (<code>paula@coveragechecknow.com</code>) and Phoebe Hernandez (<code>phoebe@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
+                                        ) : (
+                                            <><strong>Auto-CC Active:</strong> Support team inboxes (<code>phoebe@coveragechecknow.com</code>, <code>danicah@coveragechecknow.com</code>, <code>paula@coveragechecknow.com</code>) will be auto-CC&apos;d so all team inboxes stay synced.</>
+                                        )}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Custom TO / Additional Primary Emails */}
+                            <div className={styles.formSection}>
+                                <label className={styles.fieldLabel}>
+                                    <Plus size={13} /> Additional TO / Custom Primary Email (Optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    className={styles.textInput}
+                                    placeholder="e.g. producer@allstate.com, csr@allstate.com"
+                                    value={customTo}
+                                    onChange={e => setCustomTo(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Custom CC / Additional Emails */}
+                            <div className={styles.formSection}>
+                                <label className={styles.fieldLabel}>
+                                    <Plus size={13} /> Additional CC / Custom Email (Optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    className={styles.textInput}
+                                    placeholder="e.g. manager@allstate.com, team@agency.com"
+                                    value={customCc}
+                                    onChange={e => setCustomCc(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Subject Line with URGENT Toggle */}
+                            <div className={styles.formSection}>
+                                <div className={styles.subjectHeaderRow}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                        <FileText size={14} /> Subject
+                                    </label>
+                                    <button
+                                        type="button"
+                                        className={`${styles.urgentToggleBtn} ${isUrgent ? styles.urgentActive : ''}`}
+                                        onClick={handleToggleUrgent}
+                                        title={isUrgent ? 'Click to remove URGENT flag' : 'Click to mark this email as URGENT'}
+                                    >
+                                        <AlertTriangle size={12} />
+                                        <span>{isUrgent ? 'URGENT: ON' : 'Mark URGENT'}</span>
+                                    </button>
+                                </div>
+                                <input
+                                    type="text"
+                                    className={`${styles.textInput} ${isUrgent ? styles.urgentSubjectInput : ''}`}
+                                    value={subject}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setSubject(val);
+                                        const hasUrgent = /^URGENT[:\- ]/i.test(val.trim()) || /^\[URGENT\]/i.test(val.trim());
+                                        if (hasUrgent !== isUrgent) {
+                                            setIsUrgent(hasUrgent);
+                                        }
+                                    }}
+                                    placeholder="CFP No - Insured Name - Address"
+                                />
+                            </div>
+
+                            {/* Additional Notes to Include */}
+                            <div className={styles.formSection}>
+                                <label className={styles.fieldLabel}>
+                                    <Edit3 size={14} /> Custom Notes / Remarks to Include (Optional)
+                                </label>
+                                <textarea
+                                    className={styles.textareaInput}
+                                    placeholder="Add any specific instructions or remarks to Nancy, Olga, or the team..."
+                                    rows={2}
+                                    value={customNotes}
+                                    onChange={e => setCustomNotes(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Guardrail: Attachment Pre-Selection & PDF Verification */}
+                            <div className={styles.formSection}>
+                                <div className={styles.attachmentSectionHeader}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                        <Paperclip size={14} /> Attachments &amp; PDF Guardrail (Pre-Select Files)
+                                    </label>
+                                    {availableAttachments.length > 0 && (
+                                        <div className={styles.attachmentQuickActions}>
+                                            <button
+                                                type="button"
+                                                className={styles.quickActionBtn}
+                                                onClick={handleSelectAllAttachments}
+                                            >
+                                                Select All ({availableAttachments.length})
+                                            </button>
+                                            <span className={styles.divider}>&bull;</span>
+                                            <button
+                                                type="button"
+                                                className={styles.quickActionBtn}
+                                                onClick={handleDeselectAllAttachments}
+                                            >
+                                                Clear All
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className={styles.guardrailNotice}>
+                                    <ShieldCheck size={14} className={styles.guardrailIcon} />
+                                    <span>
+                                        <strong>Accuracy Guardrail:</strong> Check the exact documents to attach. Click <strong>Preview</strong> to inspect any PDF before sending so no incorrect Dec page or quote is attached.
+                                    </span>
+                                </div>
+
+                                {availableAttachments.length === 0 ? (
+                                    <div className={styles.noAttachmentsBox}>
+                                        No uploaded PDF documents found for this term. (Email will be sent as status summary only).
+                                    </div>
+                                ) : (
+                                    <div className={styles.attachmentGrid}>
+                                        {availableAttachments.map(att => {
+                                            const isChecked = selectedAttachmentIds.includes(att.id);
+                                            const isPreviewing = previewingId === att.id;
+                                            return (
+                                                <div
+                                                    key={att.id}
+                                                    className={`${styles.attachmentCard} ${isChecked ? styles.checked : ''}`}
+                                                >
+                                                    <div
+                                                        className={styles.attachmentMain}
+                                                        onClick={() => toggleAttachment(att.id)}
+                                                    >
+                                                        <span className={styles.checkboxIcon}>
+                                                            {isChecked ? <CheckSquare size={16} color="#1d4ed8" /> : <Square size={16} color="#94a3b8" />}
+                                                        </span>
+                                                        <div className={styles.attachmentInfo}>
+                                                            <div className={styles.attachmentLabelRow}>
+                                                                <span className={styles.attBadge}>{att.badge}</span>
+                                                                <span className={styles.attLabel}>{att.label}</span>
+                                                            </div>
+                                                            <span className={styles.attFileName} title={att.fileName}>
+                                                                {att.fileName}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.previewBtn}
+                                                        onClick={() => handlePreviewPdf(att)}
+                                                        disabled={isPreviewing}
+                                                        title="Preview PDF in new tab"
+                                                    >
+                                                        {isPreviewing ? (
+                                                            <Loader2 size={12} className="animate-spin" />
+                                                        ) : (
+                                                            <Eye size={12} />
+                                                        )}
+                                                        <span>Preview</span>
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Live Email & Document Preview Section inside scrollable body */}
+                            <div className={styles.previewContainer}>
+                                <div className={styles.previewHeader}>
+                                    <div className={styles.previewHeaderLeft}>
+                                        <span className={styles.previewTitle}>
+                                            <Eye size={14} /> Live Email Preview (What Recipient Sees)
+                                        </span>
+                                        <span className={styles.liveBadge}>● Real-Time</span>
+                                    </div>
+                                    <div className={styles.previewHeaderRight}>
+                                        <button
+                                            type="button"
+                                            className={styles.expandPreviewBtn}
+                                            onClick={() => setActiveModalTab('preview')}
+                                        >
+                                            <Eye size={12} />
+                                            <span>Full Screen Preview</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className={styles.emailMockWrapper}>
+                                    <div className={styles.emailMetaBar}>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>From:</span>
+                                            <span className={styles.metaValue}>
+                                                <strong>{currentUserName || 'Coverage Check Team'}</strong> &lt;admin@coveragechecknow.com&gt;
+                                            </span>
+                                        </div>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>To:</span>
+                                            <div className={styles.metaPills}>
+                                                {toRecipients.map(r => (
+                                                    <span key={r.id} className={styles.toPill}>{r.name} &lt;{r.email}&gt;</span>
+                                                ))}
+                                                {customTo && customTo.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                    <span key={idx} className={styles.toPill}>{e}</span>
+                                                ))}
+                                                {toRecipients.length === 0 && !customTo && (
+                                                    <span className={styles.emptyMetaNotice}>No TO recipient selected</span>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className={styles.roleToggleGroup}>
-                                            <button
-                                                type="button"
-                                                className={`${styles.roleBtn} ${role === 'to' ? styles.toActive : ''}`}
-                                                onClick={() => setMemberRole(r.id, 'to')}
-                                                title={`Set ${r.name} as primary TO`}
-                                            >
-                                                TO
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={`${styles.roleBtn} ${role === 'cc' ? styles.ccActive : ''}`}
-                                                onClick={() => setMemberRole(r.id, 'cc')}
-                                                title={`Set ${r.name} as copy CC`}
-                                            >
-                                                CC
-                                            </button>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>CC:</span>
+                                            <div className={styles.metaPills}>
+                                                {ccRecipients.map(r => (
+                                                    <span key={r.id} className={styles.ccPill}>{r.name} &lt;{r.email}&gt;</span>
+                                                ))}
+                                                {customCc && customCc.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                    <span key={idx} className={styles.ccPill}>{e}</span>
+                                                ))}
+                                                <span className={styles.autoCcNotice}>+ Auto-CC: Support team</span>
+                                            </div>
+                                        </div>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>Subject:</span>
+                                            <span className={styles.subjectValue}>
+                                                {isUrgent && <span className={styles.urgentBadge}>🚨 URGENT</span>}
+                                                {subject || 'No subject'}
+                                            </span>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                        {/* VA Team Auto-CC Info */}
-                        <div style={{
-                            marginTop: '10px',
-                            padding: '8px 12px',
-                            background: 'rgba(34, 67, 182, 0.06)',
-                            border: '1px solid rgba(34, 67, 182, 0.2)',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.78rem',
-                            color: '#1e3a8a'
-                        }}>
-                            <CheckCircle2 size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
-                            <span>
-                                {currentUserEmail.includes('paula') || currentUserEmail.includes('alsopva01') ? (
-                                    <><strong>Auto-CC Active:</strong> Phoebe Hernandez (<code>phoebe@coveragechecknow.com</code>) and Danicah Jesoro (<code>danicah@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
-                                ) : currentUserEmail.includes('phoebe') || currentUserEmail.includes('alsopva02') ? (
-                                    <><strong>Auto-CC Active:</strong> Paula Veloza (<code>paula@coveragechecknow.com</code>) and Danicah Jesoro (<code>danicah@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
-                                ) : currentUserEmail.includes('danicah') || currentUserEmail.includes('alsopva03') ? (
-                                    <><strong>Auto-CC Active:</strong> Paula Veloza (<code>paula@coveragechecknow.com</code>) and Phoebe Hernandez (<code>phoebe@coveragechecknow.com</code>) will be CC&apos;d so all VA inboxes stay synced.</>
-                                ) : (
-                                    <><strong>Auto-CC Active:</strong> Support team inboxes (<code>phoebe@coveragechecknow.com</code>, <code>danicah@coveragechecknow.com</code>, <code>paula@coveragechecknow.com</code>) will be auto-CC&apos;d so all team inboxes stay synced.</>
-                                )}
-                            </span>
-                        </div>
-                    </div>
 
-                    {/* Custom TO / Additional Primary Emails */}
-                    <div className={styles.formSection}>
-                        <label className={styles.fieldLabel}>
-                            <Plus size={13} /> Additional TO / Custom Primary Email (Optional)
-                        </label>
-                        <input
-                            type="text"
-                            className={styles.textInput}
-                            placeholder="e.g. producer@allstate.com, csr@allstate.com"
-                            value={customTo}
-                            onChange={e => setCustomTo(e.target.value)}
-                        />
-                    </div>
+                                    <div className={styles.emailBodyCanvas}>
+                                        <div dangerouslySetInnerHTML={{ __html: htmlBody }} />
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        /* Dedicated Tab: Full Live Preview */
+                        <div className={styles.fullPreviewTabContainer}>
+                            <div className={styles.previewHeader}>
+                                <div className={styles.previewHeaderLeft}>
+                                    <span className={styles.previewTitle}>
+                                        <Eye size={15} /> Exact Email Preview (Live WYSIWYG)
+                                    </span>
+                                    <span className={styles.liveBadge}>● Real-Time Ready</span>
+                                </div>
+                                <div className={styles.previewHeaderRight}>
+                                    <div className={styles.previewTabGroup}>
+                                        <button
+                                            type="button"
+                                            className={`${styles.previewTabBtn} ${previewMode === 'full_email' ? styles.tabActive : ''}`}
+                                            onClick={() => setPreviewMode('full_email')}
+                                        >
+                                            Full Email View
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`${styles.previewTabBtn} ${previewMode === 'table_only' ? styles.tabActive : ''}`}
+                                            onClick={() => setPreviewMode('table_only')}
+                                        >
+                                            Table Only
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
-                    {/* Custom CC / Additional Emails */}
-                    <div className={styles.formSection}>
-                        <label className={styles.fieldLabel}>
-                            <Plus size={13} /> Additional CC / Custom Email (Optional)
-                        </label>
-                        <input
-                            type="text"
-                            className={styles.textInput}
-                            placeholder="e.g. manager@allstate.com, team@agency.com"
-                            value={customCc}
-                            onChange={e => setCustomCc(e.target.value)}
-                        />
-                    </div>
+                            {previewMode === 'full_email' ? (
+                                <div className={styles.emailMockWrapper}>
+                                    <div className={styles.emailMetaBar}>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>From:</span>
+                                            <span className={styles.metaValue}>
+                                                <strong>{currentUserName || 'Coverage Check Team'}</strong> &lt;admin@coveragechecknow.com&gt;
+                                            </span>
+                                        </div>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>To:</span>
+                                            <div className={styles.metaPills}>
+                                                {toRecipients.map(r => (
+                                                    <span key={r.id} className={styles.toPill}>{r.name} &lt;{r.email}&gt;</span>
+                                                ))}
+                                                {customTo && customTo.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                    <span key={idx} className={styles.toPill}>{e}</span>
+                                                ))}
+                                                {toRecipients.length === 0 && !customTo && (
+                                                    <span className={styles.emptyMetaNotice}>No TO recipient selected</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>CC:</span>
+                                            <div className={styles.metaPills}>
+                                                {ccRecipients.map(r => (
+                                                    <span key={r.id} className={styles.ccPill}>{r.name} &lt;{r.email}&gt;</span>
+                                                ))}
+                                                {customCc && customCc.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                    <span key={idx} className={styles.ccPill}>{e}</span>
+                                                ))}
+                                                <span className={styles.autoCcNotice}>+ Auto-CC: Support team</span>
+                                            </div>
+                                        </div>
+                                        <div className={styles.metaRow}>
+                                            <span className={styles.metaLabel}>Subject:</span>
+                                            <span className={styles.subjectValue}>
+                                                {isUrgent && <span className={styles.urgentBadge}>🚨 URGENT</span>}
+                                                {subject || 'No subject'}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                    {/* Subject Line with URGENT Toggle */}
-                    <div className={styles.formSection}>
-                        <div className={styles.subjectHeaderRow}>
-                            <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-                                <FileText size={14} /> Subject
-                            </label>
-                            <button
-                                type="button"
-                                className={`${styles.urgentToggleBtn} ${isUrgent ? styles.urgentActive : ''}`}
-                                onClick={handleToggleUrgent}
-                                title={isUrgent ? 'Click to remove URGENT flag' : 'Click to mark this email as URGENT'}
-                            >
-                                <AlertTriangle size={12} />
-                                <span>{isUrgent ? 'URGENT: ON' : 'Mark URGENT'}</span>
-                            </button>
-                        </div>
-                        <input
-                            type="text"
-                            className={`${styles.textInput} ${isUrgent ? styles.urgentSubjectInput : ''}`}
-                            value={subject}
-                            onChange={e => {
-                                const val = e.target.value;
-                                setSubject(val);
-                                const hasUrgent = /^URGENT[:\- ]/i.test(val.trim()) || /^\[URGENT\]/i.test(val.trim());
-                                if (hasUrgent !== isUrgent) {
-                                    setIsUrgent(hasUrgent);
-                                }
-                            }}
-                            placeholder="CFP No - Insured Name - Address"
-                        />
-                    </div>
-
-                    {/* Additional Notes to Include */}
-                    <div className={styles.formSection}>
-                        <label className={styles.fieldLabel}>
-                            <Edit3 size={14} /> Custom Notes / Remarks to Include (Optional)
-                        </label>
-                        <textarea
-                            className={styles.textareaInput}
-                            placeholder="Add any specific instructions or remarks to Nancy, Olga, or the team..."
-                            rows={2}
-                            value={customNotes}
-                            onChange={e => setCustomNotes(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Guardrail: Attachment Pre-Selection & PDF Verification */}
-                    <div className={styles.formSection}>
-                        <div className={styles.attachmentSectionHeader}>
-                            <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-                                <Paperclip size={14} /> Attachments &amp; PDF Guardrail (Pre-Select Files)
-                            </label>
-                            {availableAttachments.length > 0 && (
-                                <div className={styles.attachmentQuickActions}>
-                                    <button
-                                        type="button"
-                                        className={styles.quickActionBtn}
-                                        onClick={handleSelectAllAttachments}
-                                    >
-                                        Select All ({availableAttachments.length})
-                                    </button>
-                                    <span className={styles.divider}>&bull;</span>
-                                    <button
-                                        type="button"
-                                        className={styles.quickActionBtn}
-                                        onClick={handleDeselectAllAttachments}
-                                    >
-                                        Clear All
-                                    </button>
+                                    <div className={styles.emailBodyCanvas}>
+                                        <div dangerouslySetInnerHTML={{ __html: htmlBody }} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className={styles.tableScroll}>
+                                    <table className={styles.previewTable}>
+                                        <thead>
+                                            <tr>
+                                                <th>Document / Carrier</th>
+                                                <th style={{ textAlign: 'center' }}>Status</th>
+                                                <th>Type / Premium</th>
+                                                <th>Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {docItems.map((item, i) => (
+                                                <tr key={i}>
+                                                    <td className={styles.docName}>{item.name}</td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        {(item.statusType === 'available' || item.statusType === 'quoted') && (
+                                                            <span className={`${styles.statusBadge} ${styles.available}`}>{item.status}</span>
+                                                        )}
+                                                        {item.statusType === 'needs_uw' && (
+                                                            <span className={`${styles.statusBadge} ${styles.needsUw}`}>{item.status}</span>
+                                                        )}
+                                                        {item.statusType === 'declined' && (
+                                                            <span className={`${styles.statusBadge} ${styles.declined}`}>{item.status}</span>
+                                                        )}
+                                                        {item.statusType === 'not_quoted' && (
+                                                            <span className={`${styles.statusBadge} ${styles.notQuoted}`}>{item.status}</span>
+                                                        )}
+                                                        {item.statusType === 'missing' && (
+                                                            <span className={`${styles.statusBadge} ${styles.missing}`}>{item.status}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className={styles.docPremium}>{item.premium}</td>
+                                                    <td className={styles.docDetails}>{item.details}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
                         </div>
-
-                        <div className={styles.guardrailNotice}>
-                            <ShieldCheck size={14} className={styles.guardrailIcon} />
-                            <span>
-                                <strong>Accuracy Guardrail:</strong> Check the exact documents to attach. Click <strong>Preview</strong> to inspect any PDF before sending so no incorrect Dec page or quote is attached.
-                            </span>
-                        </div>
-
-                        {availableAttachments.length === 0 ? (
-                            <div className={styles.noAttachmentsBox}>
-                                No uploaded PDF documents found for this term. (Email will be sent as status summary only).
-                            </div>
-                        ) : (
-                            <div className={styles.attachmentGrid}>
-                                {availableAttachments.map(att => {
-                                    const isChecked = selectedAttachmentIds.includes(att.id);
-                                    const isPreviewing = previewingId === att.id;
-                                    return (
-                                        <div
-                                            key={att.id}
-                                            className={`${styles.attachmentCard} ${isChecked ? styles.checked : ''}`}
-                                        >
-                                            <div
-                                                className={styles.attachmentMain}
-                                                onClick={() => toggleAttachment(att.id)}
-                                            >
-                                                <span className={styles.checkboxIcon}>
-                                                    {isChecked ? <CheckSquare size={16} color="#1d4ed8" /> : <Square size={16} color="#94a3b8" />}
-                                                </span>
-                                                <div className={styles.attachmentInfo}>
-                                                    <div className={styles.attachmentLabelRow}>
-                                                        <span className={styles.attBadge}>{att.badge}</span>
-                                                        <span className={styles.attLabel}>{att.label}</span>
-                                                    </div>
-                                                    <span className={styles.attFileName} title={att.fileName}>
-                                                        {att.fileName}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className={styles.previewBtn}
-                                                onClick={() => handlePreviewPdf(att)}
-                                                disabled={isPreviewing}
-                                                title="Preview PDF in new tab"
-                                            >
-                                                {isPreviewing ? (
-                                                    <Loader2 size={12} className="animate-spin" />
-                                                ) : (
-                                                    <Eye size={12} />
-                                                )}
-                                                <span>Preview</span>
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Live Email & Document Preview */}
-                    <div className={styles.previewContainer}>
-                        <div className={styles.previewHeader}>
-                            <div className={styles.previewHeaderLeft}>
-                                <span className={styles.previewTitle}>
-                                    <Eye size={14} /> Live Email Preview (What Recipient Sees)
-                                </span>
-                                <span className={styles.liveBadge}>● Real-Time</span>
-                            </div>
-                            <div className={styles.previewHeaderRight}>
-                                <div className={styles.previewTabGroup}>
-                                    <button
-                                        type="button"
-                                        className={`${styles.previewTabBtn} ${previewMode === 'full_email' ? styles.tabActive : ''}`}
-                                        onClick={() => setPreviewMode('full_email')}
-                                    >
-                                        Full Email Preview
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`${styles.previewTabBtn} ${previewMode === 'table_only' ? styles.tabActive : ''}`}
-                                        onClick={() => setPreviewMode('table_only')}
-                                    >
-                                        Table Only
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {previewMode === 'full_email' ? (
-                            <div className={styles.emailMockWrapper}>
-                                {/* Email Client Mock Header */}
-                                <div className={styles.emailMetaBar}>
-                                    <div className={styles.metaRow}>
-                                        <span className={styles.metaLabel}>From:</span>
-                                        <span className={styles.metaValue}>
-                                            <strong>{currentUserName || 'Coverage Check Team'}</strong> &lt;admin@coveragechecknow.com&gt;
-                                        </span>
-                                    </div>
-                                    <div className={styles.metaRow}>
-                                        <span className={styles.metaLabel}>To:</span>
-                                        <div className={styles.metaPills}>
-                                            {toRecipients.map(r => (
-                                                <span key={r.id} className={styles.toPill}>{r.name} &lt;{r.email}&gt;</span>
-                                            ))}
-                                            {customTo && customTo.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
-                                                <span key={idx} className={styles.toPill}>{e}</span>
-                                            ))}
-                                            {toRecipients.length === 0 && !customTo && (
-                                                <span className={styles.emptyMetaNotice}>No TO recipient selected</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className={styles.metaRow}>
-                                        <span className={styles.metaLabel}>CC:</span>
-                                        <div className={styles.metaPills}>
-                                            {ccRecipients.map(r => (
-                                                <span key={r.id} className={styles.ccPill}>{r.name} &lt;{r.email}&gt;</span>
-                                            ))}
-                                            {customCc && customCc.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
-                                                <span key={idx} className={styles.ccPill}>{e}</span>
-                                            ))}
-                                            <span className={styles.autoCcNotice}>+ Auto-CC: Support team</span>
-                                        </div>
-                                    </div>
-                                    <div className={styles.metaRow}>
-                                        <span className={styles.metaLabel}>Subject:</span>
-                                        <span className={styles.subjectValue}>
-                                            {isUrgent && <span className={styles.urgentBadge}>🚨 URGENT</span>}
-                                            {subject || 'No subject'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Live Rendered Email HTML */}
-                                <div className={styles.emailBodyCanvas}>
-                                    <div dangerouslySetInnerHTML={{ __html: htmlBody }} />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className={styles.tableScroll}>
-                                <table className={styles.previewTable}>
-                                    <thead>
-                                        <tr>
-                                            <th>Document / Carrier</th>
-                                            <th style={{ textAlign: 'center' }}>Status</th>
-                                            <th>Type / Premium</th>
-                                            <th>Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {docItems.map((item, i) => (
-                                            <tr key={i}>
-                                                <td className={styles.docName}>{item.name}</td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    {(item.statusType === 'available' || item.statusType === 'quoted') && (
-                                                        <span className={`${styles.statusBadge} ${styles.available}`}>{item.status}</span>
-                                                    )}
-                                                    {item.statusType === 'needs_uw' && (
-                                                        <span className={`${styles.statusBadge} ${styles.needsUw}`}>{item.status}</span>
-                                                    )}
-                                                    {item.statusType === 'declined' && (
-                                                        <span className={`${styles.statusBadge} ${styles.declined}`}>{item.status}</span>
-                                                    )}
-                                                    {item.statusType === 'not_quoted' && (
-                                                        <span className={`${styles.statusBadge} ${styles.notQuoted}`}>{item.status}</span>
-                                                    )}
-                                                    {item.statusType === 'missing' && (
-                                                        <span className={`${styles.statusBadge} ${styles.missing}`}>{item.status}</span>
-                                                    )}
-                                                </td>
-                                                <td className={styles.docPremium}>{item.premium}</td>
-                                                <td className={styles.docDetails}>{item.details}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
+                    )}
 
                     {/* Error / Success Notifications */}
                     {error && (
@@ -1391,29 +1491,52 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
                 {/* Footer */}
                 <div className={styles.modalFooter}>
-                    <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={sending}>
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        className={styles.sendBtn}
-                        onClick={handleInitiateSend}
-                        disabled={sending || (totalToCount === 0 && ccRecipients.length === 0 && !customCc.trim())}
-                    >
-                        {sending ? (
-                            <>
-                                <Loader2 size={15} className="animate-spin" />
-                                <span>Sending...</span>
-                            </>
+                    <div className={styles.footerLeft}>
+                        {activeModalTab === 'compose' ? (
+                            <button
+                                type="button"
+                                className={styles.togglePreviewBtn}
+                                onClick={() => setActiveModalTab('preview')}
+                            >
+                                <Eye size={14} />
+                                <span>Preview Email (WYSIWYG)</span>
+                            </button>
                         ) : (
-                            <>
-                                <Send size={15} />
-                                <span>
-                                    Send Mail ({totalToCount} TO{ccRecipients.length > 0 ? `, ${ccRecipients.length} CC` : ''} &bull; {selectedAttachmentIds.length} Attached)
-                                </span>
-                            </>
+                            <button
+                                type="button"
+                                className={styles.togglePreviewBtn}
+                                onClick={() => setActiveModalTab('compose')}
+                            >
+                                <Edit3 size={14} />
+                                <span>Back to Edit Details</span>
+                            </button>
                         )}
-                    </button>
+                    </div>
+                    <div className={styles.footerRight}>
+                        <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={sending}>
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.sendBtn}
+                            onClick={handleInitiateSend}
+                            disabled={sending || (totalToCount === 0 && ccRecipients.length === 0 && !customCc.trim())}
+                        >
+                            {sending ? (
+                                <>
+                                    <Loader2 size={15} className="animate-spin" />
+                                    <span>Sending...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Send size={15} />
+                                    <span>
+                                        Send Mail ({totalToCount} TO{ccRecipients.length > 0 ? `, ${ccRecipients.length} CC` : ''} &bull; {selectedAttachmentIds.length} Attached)
+                                    </span>
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1428,7 +1551,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                             <div className={styles.confirmHeaderTexts}>
                                 <h4 className={styles.confirmTitle}>Review Pending Items Before Sending</h4>
                                 <p className={styles.confirmSubtitle}>
-                                    Please confirm you want to proceed with the following missing items:
+                                    Please confirm you want to proceed with the following missing items for <strong>CFP {term.policy_number?.replace(/^CFP\s*/i, '')}</strong>:
                                 </p>
                             </div>
                             <button
@@ -1463,10 +1586,43 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                 ))}
                             </div>
 
+                            {/* Live Table Breakdown Checkpoint */}
+                            <div className={styles.confirmTablePreviewBox}>
+                                <div className={styles.confirmTableTitleRow}>
+                                    <span className={styles.confirmTableTitle}>
+                                        <Eye size={13} /> Email Content Summary Breakdown
+                                    </span>
+                                </div>
+                                <table className={styles.confirmMiniTable}>
+                                    <thead>
+                                        <tr>
+                                            <th>Item / Carrier</th>
+                                            <th style={{ textAlign: 'center' }}>Status</th>
+                                            <th>Amount / Premium</th>
+                                            <th>Quote # &amp; Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {docItems.map((it, idx) => (
+                                            <tr key={idx}>
+                                                <td className={styles.itemCell}><strong>{it.name}</strong></td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span className={`${styles.miniStatusBadge} ${styles[it.statusType] || styles.notQuoted}`}>
+                                                        {it.status}
+                                                    </span>
+                                                </td>
+                                                <td className={styles.premCell}>{it.premium}</td>
+                                                <td className={styles.detailCell}>{it.details}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
                             {/* Email Summary Overview */}
                             <div className={styles.confirmSummaryBox}>
                                 <div className={styles.summaryRow}>
-                                    <span className={styles.sumLabel}>Policy:</span>
+                                    <span className={styles.sumLabel}>Policy &amp; Insured:</span>
                                     <span className={styles.sumVal}><strong>{term.policy_number}</strong> &bull; {term.named_insured}</span>
                                 </div>
                                 <div className={styles.summaryRow}>

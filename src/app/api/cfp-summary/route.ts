@@ -1300,7 +1300,7 @@ export async function GET(req: NextRequest) {
         familyMap[row.base_policy].push(row);
     }
 
-    // Sort terms within each family by effective_date, label ORIGINAL/RENEWAL
+    // Sort terms within each family by effective_date, label ORIGINAL/RENEWAL, and unify family-wide metadata
     const families: CFPFamily[] = Object.entries(familyMap).map(([base_policy, termRows]) => {
         // Sort by effective_date asc (oldest = ORIGINAL)
         const sorted = [...termRows].sort((a, b) => {
@@ -1309,9 +1309,42 @@ export async function GET(req: NextRequest) {
             return da.localeCompare(db);
         });
 
+        // 1. Find family-wide Title Pro (if any term was verified)
+        const familyTitlePro = sorted.find(t => !!t.title_pro)?.title_pro || null;
+
+        // 2. Merge family-wide carrier quotes
+        const familyCarrierQuotes: any = {
+            bamboo: sorted.find(t => !!t.carrier_quotes?.bamboo)?.carrier_quotes?.bamboo || null,
+            aegis: sorted.find(t => !!t.carrier_quotes?.aegis)?.carrier_quotes?.aegis || null,
+            am: sorted.find(t => !!t.carrier_quotes?.am)?.carrier_quotes?.am || null,
+            sagesure: sorted.find(t => !!t.carrier_quotes?.sagesure)?.carrier_quotes?.sagesure || null,
+            psic: sorted.find(t => !!t.carrier_quotes?.psic)?.carrier_quotes?.psic || null,
+        };
+
+        // 3. Find family-wide Renewal Dec & Renewal Premium
+        const renewalTerm = sorted.find(t => t.has_renewal_dec || t.term_type === 'RENEWAL' || t.renewal_annual_premium);
+        const familyRenewalPremium = renewalTerm?.renewal_annual_premium || (sorted.length > 1 && sorted[1].annual_premium ? sorted[1].annual_premium : null);
+        const familyRenewalExp = renewalTerm?.renewal_expiration_date || (sorted.length > 1 && sorted[1].expiration_date ? sorted[1].expiration_date : null);
+
         sorted.forEach((row, i) => {
             row.term_index = i;
             row.term_type = i === 0 ? 'ORIGINAL' : 'RENEWAL';
+            if (!row.title_pro && familyTitlePro) {
+                row.title_pro = familyTitlePro;
+            }
+            if (row.carrier_quotes) {
+                if (!row.carrier_quotes.bamboo && familyCarrierQuotes.bamboo) row.carrier_quotes.bamboo = familyCarrierQuotes.bamboo;
+                if (!row.carrier_quotes.aegis && familyCarrierQuotes.aegis) row.carrier_quotes.aegis = familyCarrierQuotes.aegis;
+                if (!row.carrier_quotes.am && familyCarrierQuotes.am) row.carrier_quotes.am = familyCarrierQuotes.am;
+                if (!row.carrier_quotes.sagesure && familyCarrierQuotes.sagesure) row.carrier_quotes.sagesure = familyCarrierQuotes.sagesure;
+                if (!row.carrier_quotes.psic && familyCarrierQuotes.psic) row.carrier_quotes.psic = familyCarrierQuotes.psic;
+            }
+            if (!row.renewal_annual_premium && familyRenewalPremium && row.annual_premium !== familyRenewalPremium) {
+                row.renewal_annual_premium = familyRenewalPremium;
+            }
+            if (!row.renewal_expiration_date && familyRenewalExp && row.expiration_date !== familyRenewalExp) {
+                row.renewal_expiration_date = familyRenewalExp;
+            }
         });
 
         return { base_policy, terms: sorted };

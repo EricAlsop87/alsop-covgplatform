@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+        // 1. Direct query for policy_id
         const { data, error } = await admin
             .from('manual_overrides')
             .select('new_value')
@@ -35,7 +36,54 @@ export async function GET(req: NextRequest) {
             } catch {}
         }
 
-        return NextResponse.json({ success: true, title_pro: titleData });
+        if (titleData) {
+            return NextResponse.json({ success: true, title_pro: titleData });
+        }
+
+        // 2. Family / Sibling fallback: look up base policy or client_id to find any matching Title Pro override
+        const { data: pol } = await admin
+            .from('policies')
+            .select('id, policy_number, client_id')
+            .eq('id', policy_id)
+            .maybeSingle();
+
+        if (pol) {
+            const rawPol = pol.policy_number || '';
+            const basePol = rawPol.replace(/\s+\d+$/, '').replace(/^CFP\s*/i, '').trim();
+
+            let siblingQuery = admin
+                .from('policies')
+                .select('id')
+                .neq('id', policy_id);
+
+            if (basePol) {
+                siblingQuery = siblingQuery.or(`policy_number.ilike.%${basePol}%,client_id.eq.${pol.client_id || '00000000-0000-0000-0000-000000000000'}`);
+            } else if (pol.client_id) {
+                siblingQuery = siblingQuery.eq('client_id', pol.client_id);
+            }
+
+            const { data: siblings } = await siblingQuery.limit(10);
+            if (siblings && siblings.length > 0) {
+                const siblingIds = siblings.map(s => s.id);
+                const { data: sibOverrides } = await admin
+                    .from('manual_overrides')
+                    .select('new_value')
+                    .in('policy_id', siblingIds)
+                    .eq('field_name', 'title_pro')
+                    .limit(1);
+
+                if (sibOverrides && sibOverrides.length > 0 && sibOverrides[0].new_value) {
+                    try {
+                        const parsed = typeof sibOverrides[0].new_value === 'string'
+                            ? JSON.parse(sibOverrides[0].new_value)
+                            : sibOverrides[0].new_value;
+                        return NextResponse.json({ success: true, title_pro: parsed });
+                    } catch {}
+                }
+            }
+        }
+
+        return NextResponse.json({ success: true, title_pro: null });
     } catch (err: any) {
         return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
     }
@@ -76,14 +124,39 @@ export async function POST(req: NextRequest) {
             verified_at: now,
         };
 
+        // Find sibling policy IDs in the same family to sync across all terms
+        const targetPolicyIds = new Set<string>([policy_id]);
+        const { data: pol } = await admin
+            .from('policies')
+            .select('id, policy_number, client_id')
+            .eq('id', policy_id)
+            .maybeSingle();
+
+        if (pol) {
+            const rawPol = pol.policy_number || '';
+            const basePol = rawPol.replace(/\s+\d+$/, '').replace(/^CFP\s*/i, '').trim();
+            let siblingQuery = admin.from('policies').select('id');
+            if (basePol) {
+                siblingQuery = siblingQuery.or(`policy_number.ilike.%${basePol}%,client_id.eq.${pol.client_id || '00000000-0000-0000-0000-000000000000'}`);
+            } else if (pol.client_id) {
+                siblingQuery = siblingQuery.eq('client_id', pol.client_id);
+            }
+            const { data: siblings } = await siblingQuery.limit(20);
+            if (siblings) {
+                for (const s of siblings) targetPolicyIds.add(s.id);
+            }
+        }
+
+        const upsertRows = Array.from(targetPolicyIds).map(pid => ({
+            policy_id: pid,
+            field_name: 'title_pro',
+            new_value: JSON.stringify(titleData),
+            actor_id: userId,
+            updated_at: now,
+        }));
+
         const { error: upsertError } = await admin.from('manual_overrides').upsert(
-            {
-                policy_id,
-                field_name: 'title_pro',
-                new_value: JSON.stringify(titleData),
-                actor_id: userId,
-                updated_at: now,
-            },
+            upsertRows,
             { onConflict: 'policy_id, field_name' }
         );
 
@@ -116,10 +189,32 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'policy_id is required' }, { status: 400 });
         }
 
+        const targetPolicyIds = new Set<string>([policy_id]);
+        const { data: pol } = await admin
+            .from('policies')
+            .select('id, policy_number, client_id')
+            .eq('id', policy_id)
+            .maybeSingle();
+
+        if (pol) {
+            const rawPol = pol.policy_number || '';
+            const basePol = rawPol.replace(/\s+\d+$/, '').replace(/^CFP\s*/i, '').trim();
+            let siblingQuery = admin.from('policies').select('id');
+            if (basePol) {
+                siblingQuery = siblingQuery.or(`policy_number.ilike.%${basePol}%,client_id.eq.${pol.client_id || '00000000-0000-0000-0000-000000000000'}`);
+            } else if (pol.client_id) {
+                siblingQuery = siblingQuery.eq('client_id', pol.client_id);
+            }
+            const { data: siblings } = await siblingQuery.limit(20);
+            if (siblings) {
+                for (const s of siblings) targetPolicyIds.add(s.id);
+            }
+        }
+
         const { error } = await admin
             .from('manual_overrides')
             .delete()
-            .eq('policy_id', policy_id)
+            .in('policy_id', Array.from(targetPolicyIds))
             .eq('field_name', 'title_pro');
 
         if (error) {
