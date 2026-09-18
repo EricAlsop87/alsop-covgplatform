@@ -98,24 +98,26 @@ class GmailSmtpProvider implements EmailProvider {
         const fromEmail = (typeof message.from === 'string' ? message.from : message.from?.email || '').toLowerCase();
         const replyToEmail = (message.replyTo || '').toLowerCase();
 
+        // Primary sender is Google Workspace admin@coveragechecknow.com
         let user = process.env.GMAIL_ADMIN_USER || process.env.GMAIL_USER || 'admin@coveragechecknow.com';
-        let pass = (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || '';
+        let pass = (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || 'fffsiotkfjplihkg';
         let defaultSenderName = 'Coverage Check Team';
 
-        if (fromEmail.includes('alsopva01') || fromEmail.includes('paula') || replyToEmail.includes('alsopva01') || replyToEmail.includes('paula')) {
+        // Only route to individual legacy accounts if explicitly targeting @gmail.com
+        if (fromEmail.includes('alsopva01@gmail.com') || replyToEmail.includes('alsopva01@gmail.com')) {
             user = process.env.GMAIL_VA01_USER || 'alsopva01@gmail.com';
             pass = process.env.GMAIL_VA01_APP_PASSWORD?.replace(/\s+/g, '') || 'gultgbnkhkdkosvq';
             defaultSenderName = 'Paula Andrea Veloza';
-        } else if (fromEmail.includes('alsopva03') || fromEmail.includes('danicah') || replyToEmail.includes('alsopva03') || replyToEmail.includes('danicah')) {
+        } else if (fromEmail.includes('alsopva03@gmail.com') || replyToEmail.includes('alsopva03@gmail.com')) {
             user = process.env.GMAIL_VA03_USER || 'alsopva03@gmail.com';
             pass = process.env.GMAIL_VA03_APP_PASSWORD?.replace(/\s+/g, '') || 'yolktbaamzeoxhiu';
             defaultSenderName = 'Danicah Jesoro';
-        } else if (fromEmail.includes('alsopva02') || fromEmail.includes('phoebe') || replyToEmail.includes('alsopva02') || replyToEmail.includes('phoebe')) {
+        } else if (fromEmail.includes('alsopva02@gmail.com') || replyToEmail.includes('alsopva02@gmail.com')) {
             user = process.env.GMAIL_VA02_USER || 'alsopva02@gmail.com';
             pass = process.env.GMAIL_VA02_APP_PASSWORD?.replace(/\s+/g, '') || 'waihnqinahtlkbdh';
             defaultSenderName = 'Phoebe Hernandez';
         } else {
-            user = process.env.GMAIL_ADMIN_USER || process.env.GMAIL_USER || 'admin@coveragechecknow.com';
+            user = process.env.GMAIL_ADMIN_USER || 'admin@coveragechecknow.com';
             pass = (process.env.GMAIL_ADMIN_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)?.replace(/\s+/g, '') || 'fffsiotkfjplihkg';
             defaultSenderName = 'Coverage Check Team';
         }
@@ -134,11 +136,11 @@ class GmailSmtpProvider implements EmailProvider {
             },
         });
 
-        // For Gmail SMTP, ensure From header aligns with the authenticated Gmail account so SPF/DKIM pass 100% into Primary Inbox
+        // For Google Workspace SMTP, From header uses admin@coveragechecknow.com with staff member name
         const rawName = typeof message.from === 'string'
-            ? message.from.split('<')[0].replace(/via Coverage Check|Coverage Check Now/gi, '').trim().replace(/"/g, '')
+            ? message.from.split('<')[0].replace(/via Coverage Check|Coverage Check Now|\(Coverage Check\)/gi, '').trim().replace(/"/g, '')
             : message.from?.name;
-        const displayName = rawName && rawName !== 'Coverage Check Team' ? `${rawName} (Coverage Check)` : `${defaultSenderName} (Coverage Check)`;
+        const displayName = rawName && rawName !== 'Coverage Check Team' ? `${rawName} via Coverage Check` : `${defaultSenderName} via Coverage Check`;
         const fromStr = `${displayName} <${user}>`;
 
         const toStr = Array.isArray(message.to)
