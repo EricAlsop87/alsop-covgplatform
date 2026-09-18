@@ -71,17 +71,28 @@ export async function POST(req: NextRequest) {
             'alsopva03@gmail.com': 'Danicah Jesoro',
         };
 
-        // Determine user/operator display name
-        const userEmail = (user.email || 'admin@coveragechecknow.com').toLowerCase();
+        // VA Gmail Account Mapping
+        const VA_GMAIL_MAP: Record<string, string> = {
+            'alsopva01@gmail.com': 'alsopva01@gmail.com',
+            'paula@coveragechecknow.com': 'alsopva01@gmail.com',
+            'alsopva02@gmail.com': 'alsopva02@gmail.com',
+            'phoebe@coveragechecknow.com': 'alsopva02@gmail.com',
+            'admin@coveragechecknow.com': 'alsopva02@gmail.com',
+            'alsopva03@gmail.com': 'alsopva03@gmail.com',
+            'danicah@coveragechecknow.com': 'alsopva03@gmail.com',
+        };
+
+        // Determine user/operator display name and direct Gmail sender
+        const userEmail = (user.email || 'alsopva02@gmail.com').toLowerCase();
         const operatorName = VA_NAMES[userEmail] || (
             user.user_metadata?.first_name && user.user_metadata?.last_name
                 ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
                 : user.user_metadata?.name || 'Coverage Check Team'
         );
 
-        // Official main sender is always admin@coveragechecknow.com connected to CCN Website
-        const senderEmail = 'admin@coveragechecknow.com';
-        const senderName = `${operatorName} via Coverage Check`;
+        // Sender email is the direct VA Gmail account
+        const senderEmail = VA_GMAIL_MAP[userEmail] || 'alsopva02@gmail.com';
+        const senderName = `${operatorName} (Coverage Check)`;
 
         // Deduplicate Primary Recipients (Modal selections + custom TO entries)
         const deduplicatedTo = Array.from(new Set([...rawTo, ...extraTos])).filter(Boolean);
