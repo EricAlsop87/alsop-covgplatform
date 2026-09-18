@@ -485,17 +485,32 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         const effectiveTitlePro = liveTitlePro || term.title_pro;
 
-        const titleStatus = effectiveTitlePro
-            ? (effectiveTitlePro.match_status === 'matched' ? 'Verified' : effectiveTitlePro.match_status === 'partial' ? 'Trust / LLC' : effectiveTitlePro.match_status === 'mismatch' ? 'Mismatch' : 'Verified')
-            : 'Pending';
-        const titleStatusType = !effectiveTitlePro
-            ? ('not_quoted' as const)
-            : effectiveTitlePro.match_status === 'matched' || effectiveTitlePro.match_status === 'partial'
-                ? ('available' as const)
-                : ('declined' as const);
-        const titleDetails = effectiveTitlePro
-            ? `${effectiveTitlePro.title_name ? `Owner on Record: ${effectiveTitlePro.title_name}` : 'Verified on Title'}${effectiveTitlePro.notes ? ` • Note: ${effectiveTitlePro.notes}` : ''}`
-            : 'Pending title record match';
+        let titleStatus = 'Pending';
+        let titleStatusType: 'available' | 'needs_uw' | 'declined' | 'not_quoted' | 'missing' = 'not_quoted';
+        let titleDetails = 'Pending title record match & verification';
+
+        if (effectiveTitlePro) {
+            const ownerName = effectiveTitlePro.title_name ? `Owner on Record: ${effectiveTitlePro.title_name}` : 'Verified on Title';
+            const noteSuffix = effectiveTitlePro.notes ? ` • Note: ${effectiveTitlePro.notes}` : '';
+
+            if (effectiveTitlePro.match_status === 'matched') {
+                titleStatus = 'MATCHED';
+                titleStatusType = 'available';
+                titleDetails = `✓ Title Matches Insured • ${ownerName}${noteSuffix}`;
+            } else if (effectiveTitlePro.match_status === 'partial') {
+                titleStatus = 'TRUST / LLC';
+                titleStatusType = 'needs_uw';
+                titleDetails = `⚠️ Trust / LLC Entity Match • ${ownerName}${noteSuffix}`;
+            } else if (effectiveTitlePro.match_status === 'mismatch') {
+                titleStatus = 'MISMATCH';
+                titleStatusType = 'declined';
+                titleDetails = `✕ Name Mismatch on Title • ${ownerName}${noteSuffix}`;
+            } else {
+                titleStatus = 'MATCHED';
+                titleStatusType = 'available';
+                titleDetails = `✓ Verified on Title • ${ownerName}${noteSuffix}`;
+            }
+        }
 
         const isDecAttached = selectedAttachmentIds.includes('dec');
         const isRenewalAttached = selectedAttachmentIds.includes('renewal_dec');
