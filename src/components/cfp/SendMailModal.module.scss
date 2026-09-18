@@ -24,8 +24,8 @@
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     width: 100%;
-    max-width: 820px;
-    max-height: 92vh;
+    max-width: 860px;
+    max-height: 94vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -44,6 +44,7 @@
     padding: 1.125rem 1.35rem;
     background: var(--bg-surface-raised, #f8fafc);
     border-bottom: 1px solid var(--border-default, #e2e8f0);
+    flex-shrink: 0;
 }
 
 .modalHeaderInfo {
@@ -101,13 +102,15 @@
 }
 
 .modalBody {
-    padding: 1.25rem 1.35rem 2.5rem 1.35rem;
+    padding: 1.25rem 1.35rem 1.75rem 1.35rem;
     overflow-y: auto;
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 1.1rem;
+    gap: 1.15rem;
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #f1f5f9;
 
     /* Visible & styled scrollbar */
     &::-webkit-scrollbar {
@@ -578,10 +581,11 @@
 }
 
 .previewContainer {
-    border: 1px solid var(--border-default, #e2e8f0);
+    border: 1px solid var(--border-default, #cbd5e1);
     border-radius: 8px;
     overflow: hidden;
     background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .previewHeader {
@@ -591,6 +595,62 @@
     padding: 0.55rem 0.85rem;
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
+    gap: 0.5rem;
+}
+
+.previewHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.previewHeaderRight {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.liveBadge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #16a34a;
+    background: #dcfce7;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid #bbf7d0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.previewTabGroup {
+    display: flex;
+    background: #e2e8f0;
+    padding: 2px;
+    border-radius: 6px;
+    gap: 2px;
+}
+
+.previewTabBtn {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: #475569;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: #0f172a;
+    }
+
+    &.tabActive {
+        background: #ffffff;
+        color: #1e40af;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        font-weight: 700;
+    }
 }
 
 .previewTitle {
@@ -599,7 +659,7 @@
     gap: 0.35rem;
     font-size: 0.72rem;
     font-weight: 700;
-    color: #475569;
+    color: #334155;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -610,10 +670,133 @@
     font-weight: 600;
 }
 
+.emailMockWrapper {
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+}
+
+.emailMetaBar {
+    padding: 0.75rem 1rem;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.76rem;
+}
+
+.metaRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.metaLabel {
+    width: 48px;
+    font-weight: 700;
+    color: #64748b;
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    margin-top: 1px;
+}
+
+.metaValue {
+    color: #1e293b;
+    word-break: break-all;
+    font-size: 0.75rem;
+}
+
+.metaPills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+    flex: 1;
+}
+
+.toPill {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.ccPill {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.autoCcNotice {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-style: italic;
+    margin-left: 0.2rem;
+}
+
+.emptyMetaNotice {
+    font-size: 0.7rem;
+    color: #dc2626;
+    font-style: italic;
+}
+
+.subjectValue {
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+}
+
+.urgentBadge {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    letter-spacing: 0.02em;
+}
+
+.emailBodyCanvas {
+    padding: 1.25rem;
+    background: #ffffff;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 420px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
+
+    &::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
+    &::-webkit-scrollbar-track {
+        background: #f8fafc;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+        &:hover {
+            background: #94a3b8;
+        }
+    }
+}
+
 .tableScroll {
     overflow-x: auto;
     overflow-y: auto;
-    max-height: 280px;
+    max-height: 320px;
 
     &::-webkit-scrollbar {
         width: 6px;
@@ -688,6 +871,12 @@
         border: 1px solid #bfdbfe;
     }
 
+    &.needsUw {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+
     &.declined {
         background: #f8fafc;
         color: #475569;
@@ -740,6 +929,10 @@
     padding: 0.85rem 1.35rem;
     background: var(--bg-surface-raised, #f8fafc);
     border-top: 1px solid var(--border-default, #e2e8f0);
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
 }
 
 .cancelBtn {

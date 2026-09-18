@@ -136,8 +136,33 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const [liveTitlePro, setLiveTitlePro] = useState<any>(term?.title_pro || null);
+    const [previewMode, setPreviewMode] = useState<'full_email' | 'table_only'>('full_email');
     const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
     const [currentUserName, setCurrentUserName] = useState<string>('');
+
+    // Fetch live manual_overrides for title_pro to guarantee real-time accuracy
+    useEffect(() => {
+        setLiveTitlePro(term?.title_pro || null);
+        if (!isOpen || !term?.policy_id) return;
+
+        supabase
+            .from('manual_overrides')
+            .select('new_value')
+            .eq('policy_id', term.policy_id)
+            .eq('field_name', 'title_pro')
+            .maybeSingle()
+            .then(({ data, error }) => {
+                if (!error && data?.new_value) {
+                    try {
+                        const parsed = typeof data.new_value === 'string' ? JSON.parse(data.new_value) : data.new_value;
+                        setLiveTitlePro(parsed);
+                    } catch {
+                        // ignore JSON parse error
+                    }
+                }
+            });
+    }, [isOpen, term?.policy_id, term?.title_pro]);
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
@@ -440,16 +465,18 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const sagesure = formatQuote('SageSure', 'sagesure', term.carrier_quotes?.sagesure);
         const psic = formatQuote('PSIC', 'psic', term.carrier_quotes?.psic);
 
-        const titleStatus = term.title_pro
-            ? (term.title_pro.match_status === 'matched' ? 'Verified' : term.title_pro.match_status === 'partial' ? 'Trust / LLC' : 'Mismatch')
+        const effectiveTitlePro = liveTitlePro || term.title_pro;
+
+        const titleStatus = effectiveTitlePro
+            ? (effectiveTitlePro.match_status === 'matched' ? 'Verified' : effectiveTitlePro.match_status === 'partial' ? 'Trust / LLC' : effectiveTitlePro.match_status === 'mismatch' ? 'Mismatch' : 'Verified')
             : 'Pending';
-        const titleStatusType = !term.title_pro
+        const titleStatusType = !effectiveTitlePro
             ? ('not_quoted' as const)
-            : term.title_pro.match_status === 'matched' || term.title_pro.match_status === 'partial'
+            : effectiveTitlePro.match_status === 'matched' || effectiveTitlePro.match_status === 'partial'
                 ? ('available' as const)
                 : ('declined' as const);
-        const titleDetails = term.title_pro
-            ? `${term.title_pro.title_name || 'Verified'}${term.title_pro.notes ? ` (${term.title_pro.notes})` : ''}`
+        const titleDetails = effectiveTitlePro
+            ? `${effectiveTitlePro.title_name ? `Owner on Record: ${effectiveTitlePro.title_name}` : 'Verified on Title'}${effectiveTitlePro.notes ? ` • Note: ${effectiveTitlePro.notes}` : ''}`
             : 'Pending title record match';
 
         const isDecAttached = selectedAttachmentIds.includes('dec');
@@ -500,7 +527,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 details: titleDetails,
             },
         ];
-    }, [term, selectedAttachmentIds]);
+    }, [term, selectedAttachmentIds, liveTitlePro]);
 
     // Build the executive HTML Email Body with professional blue theme
     const htmlBody = useMemo(() => {
@@ -1086,52 +1113,125 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         )}
                     </div>
 
-                    {/* Document Status Table Preview */}
+                    {/* Live Email & Document Preview */}
                     <div className={styles.previewContainer}>
                         <div className={styles.previewHeader}>
-                            <span className={styles.previewTitle}>
-                                <Eye size={13} /> Document Summary Table (Included in Email)
-                            </span>
-                            <span className={styles.replyNotice}>
-                                ↩ Replies will go directly to your inbox
-                            </span>
+                            <div className={styles.previewHeaderLeft}>
+                                <span className={styles.previewTitle}>
+                                    <Eye size={14} /> Live Email Preview (What Recipient Sees)
+                                </span>
+                                <span className={styles.liveBadge}>● Real-Time</span>
+                            </div>
+                            <div className={styles.previewHeaderRight}>
+                                <div className={styles.previewTabGroup}>
+                                    <button
+                                        type="button"
+                                        className={`${styles.previewTabBtn} ${previewMode === 'full_email' ? styles.tabActive : ''}`}
+                                        onClick={() => setPreviewMode('full_email')}
+                                    >
+                                        Full Email Preview
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.previewTabBtn} ${previewMode === 'table_only' ? styles.tabActive : ''}`}
+                                        onClick={() => setPreviewMode('table_only')}
+                                    >
+                                        Table Only
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className={styles.tableScroll}>
-                            <table className={styles.previewTable}>
-                                <thead>
-                                    <tr>
-                                        <th>Document / Carrier</th>
-                                        <th style={{ textAlign: 'center' }}>Status</th>
-                                        <th>Type / Premium</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {docItems.map((item, i) => (
-                                        <tr key={i}>
-                                            <td className={styles.docName}>{item.name}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                {(item.statusType === 'available' || item.statusType === 'quoted') && (
-                                                    <span className={`${styles.statusBadge} ${styles.available}`}>{item.status}</span>
-                                                )}
-                                                {item.statusType === 'declined' && (
-                                                    <span className={`${styles.statusBadge} ${styles.declined}`}>{item.status}</span>
-                                                )}
-                                                {item.statusType === 'not_quoted' && (
-                                                    <span className={`${styles.statusBadge} ${styles.notQuoted}`}>{item.status}</span>
-                                                )}
-                                                {item.statusType === 'missing' && (
-                                                    <span className={`${styles.statusBadge} ${styles.missing}`}>{item.status}</span>
-                                                )}
-                                            </td>
-                                            <td className={styles.docPremium}>{item.premium}</td>
-                                            <td className={styles.docDetails}>{item.details}</td>
+                        {previewMode === 'full_email' ? (
+                            <div className={styles.emailMockWrapper}>
+                                {/* Email Client Mock Header */}
+                                <div className={styles.emailMetaBar}>
+                                    <div className={styles.metaRow}>
+                                        <span className={styles.metaLabel}>From:</span>
+                                        <span className={styles.metaValue}>
+                                            <strong>{currentUserName || 'Coverage Check Team'}</strong> &lt;admin@coveragechecknow.com&gt;
+                                        </span>
+                                    </div>
+                                    <div className={styles.metaRow}>
+                                        <span className={styles.metaLabel}>To:</span>
+                                        <div className={styles.metaPills}>
+                                            {toRecipients.map(r => (
+                                                <span key={r.id} className={styles.toPill}>{r.name} &lt;{r.email}&gt;</span>
+                                            ))}
+                                            {customTo && customTo.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                <span key={idx} className={styles.toPill}>{e}</span>
+                                            ))}
+                                            {toRecipients.length === 0 && !customTo && (
+                                                <span className={styles.emptyMetaNotice}>No TO recipient selected</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={styles.metaRow}>
+                                        <span className={styles.metaLabel}>CC:</span>
+                                        <div className={styles.metaPills}>
+                                            {ccRecipients.map(r => (
+                                                <span key={r.id} className={styles.ccPill}>{r.name} &lt;{r.email}&gt;</span>
+                                            ))}
+                                            {customCc && customCc.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                <span key={idx} className={styles.ccPill}>{e}</span>
+                                            ))}
+                                            <span className={styles.autoCcNotice}>+ Auto-CC: Support team</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.metaRow}>
+                                        <span className={styles.metaLabel}>Subject:</span>
+                                        <span className={styles.subjectValue}>
+                                            {isUrgent && <span className={styles.urgentBadge}>🚨 URGENT</span>}
+                                            {subject || 'No subject'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Live Rendered Email HTML */}
+                                <div className={styles.emailBodyCanvas}>
+                                    <div dangerouslySetInnerHTML={{ __html: htmlBody }} />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={styles.tableScroll}>
+                                <table className={styles.previewTable}>
+                                    <thead>
+                                        <tr>
+                                            <th>Document / Carrier</th>
+                                            <th style={{ textAlign: 'center' }}>Status</th>
+                                            <th>Type / Premium</th>
+                                            <th>Notes</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {docItems.map((item, i) => (
+                                            <tr key={i}>
+                                                <td className={styles.docName}>{item.name}</td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    {(item.statusType === 'available' || item.statusType === 'quoted') && (
+                                                        <span className={`${styles.statusBadge} ${styles.available}`}>{item.status}</span>
+                                                    )}
+                                                    {item.statusType === 'needs_uw' && (
+                                                        <span className={`${styles.statusBadge} ${styles.needsUw}`}>{item.status}</span>
+                                                    )}
+                                                    {item.statusType === 'declined' && (
+                                                        <span className={`${styles.statusBadge} ${styles.declined}`}>{item.status}</span>
+                                                    )}
+                                                    {item.statusType === 'not_quoted' && (
+                                                        <span className={`${styles.statusBadge} ${styles.notQuoted}`}>{item.status}</span>
+                                                    )}
+                                                    {item.statusType === 'missing' && (
+                                                        <span className={`${styles.statusBadge} ${styles.missing}`}>{item.status}</span>
+                                                    )}
+                                                </td>
+                                                <td className={styles.docPremium}>{item.premium}</td>
+                                                <td className={styles.docDetails}>{item.details}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* Error / Success Notifications */}
