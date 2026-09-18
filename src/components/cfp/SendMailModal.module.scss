@@ -1105,8 +1105,8 @@
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
     width: 100%;
-    max-width: 680px;
-    max-height: 90vh;
+    max-width: 840px;
+    max-height: 92vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1117,8 +1117,8 @@
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
-    padding: 1.15rem 1.25rem;
-    background: #fef2f2;
+    padding: 1.15rem 1.35rem;
+    background: #fff1f2;
     border-bottom: 1px solid #fee2e2;
 }
 
@@ -1165,26 +1165,52 @@
 }
 
 .confirmBody {
-    padding: 1rem 1.25rem;
+    padding: 1rem 1.35rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
+    gap: 1rem;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.guardrailHeaderLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #991b1b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.2rem;
+}
+
+.allClearedBanner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #166534;
 }
 
 .warningList {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.45rem;
 }
 
 .warningItem {
     display: flex;
     align-items: flex-start;
     gap: 0.6rem;
-    padding: 0.6rem 0.8rem;
+    padding: 0.55rem 0.8rem;
     border-radius: 6px;
     font-size: 0.76rem;
 }
@@ -1235,7 +1261,7 @@
 .warningItemContent {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.12rem;
     min-width: 0;
     flex: 1;
 }
@@ -1250,163 +1276,129 @@
     line-height: 1.35;
 }
 
-.confirmTablePreviewBox {
+/* Checkpoint Email Preview */
+.confirmEmailPreviewContainer {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
-.confirmTableTitleRow {
-    padding: 0.45rem 0.75rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+.confirmEmailPreviewHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.85rem;
+    background: #f1f5f9;
+    border-bottom: 1px solid #cbd5e1;
 }
 
-.confirmTableTitle {
+.confirmEmailPreviewTitle {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.74rem;
+    gap: 0.4rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: #1e293b;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
-.confirmMiniTable {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.74rem;
-
-    th {
-        padding: 0.4rem 0.65rem;
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-        color: #475569;
-        font-weight: 700;
-        font-size: 0.68rem;
-        text-align: left;
-    }
-
-    td {
-        padding: 0.45rem 0.65rem;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-
-    tr:last-child td {
-        border-bottom: none;
-    }
-}
-
-.itemCell {
-    color: #0f172a;
-    width: 30%;
-}
-
-.premCell {
-    color: #1e293b;
-    font-weight: 600;
-    width: 20%;
-}
-
-.detailCell {
-    color: #64748b;
+.confirmEmailPreviewBadge {
+    display: inline-flex;
+    align-items: center;
     font-size: 0.7rem;
-    width: 34%;
-}
-
-.miniStatusBadge {
-    display: inline-block;
-    padding: 0.12rem 0.45rem;
-    border-radius: 4px;
-    font-size: 0.64rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-
-    &.available,
-    &.quoted {
-        background: #eff6ff;
-        color: #1d4ed8;
-        border: 1px solid #bfdbfe;
-    }
-
-    &.needs_uw,
-    &.needsUw {
-        background: #fef3c7;
-        color: #b45309;
-        border: 1px solid #fde68a;
-    }
-
-    &.declined {
-        background: #f8fafc;
-        color: #475569;
-        border: 1px solid #cbd5e1;
-    }
-
-    &.not_quoted,
-    &.notQuoted {
-        background: #f8fafc;
-        color: #94a3b8;
-        border: 1px solid #e2e8f0;
-    }
-
-    &.missing {
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-    }
+    color: #16a34a;
+    background: #f0fdf4;
+    padding: 0.1rem 0.45rem;
+    border-radius: 10px;
+    border: 1px solid #bbf7d0;
 }
 
-.confirmSummaryBox {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+.confirmEmailMock {
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+.confirmEmailMetaBar {
     padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     font-size: 0.75rem;
 }
 
-.summaryRow {
+.confirmMetaRow {
     display: flex;
-    gap: 0.5rem;
     align-items: baseline;
+    gap: 0.5rem;
 }
 
-.sumLabel {
-    width: 100px;
+.confirmMetaLabel {
+    width: 60px;
     font-weight: 700;
     color: #64748b;
     flex-shrink: 0;
     font-size: 0.72rem;
 }
 
-.sumVal {
+.confirmMetaVal {
     color: #1e293b;
-    flex: 1;
-    word-break: break-all;
+    font-size: 0.75rem;
+}
+
+.confirmMetaPills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.confirmSubjectVal {
+    font-weight: 600;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.76rem;
+}
+
+.confirmFilesVal {
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 0.72rem;
+}
+
+.confirmEmailCanvas {
+    padding: 1.25rem 1.5rem;
+    max-height: 420px;
+    overflow-y: auto;
+    background: #ffffff;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
 }
 
 .confirmFooter {
-    padding: 0.85rem 1.25rem;
+    padding: 0.9rem 1.35rem;
     background: var(--bg-surface-raised, #f8fafc);
     border-top: 1px solid var(--border-default, #e2e8f0);
     display: flex;
     justify-content: flex-end;
-    gap: 0.6rem;
+    gap: 0.65rem;
 }
 
 .confirmBackBtn {
-    padding: 0.45rem 0.85rem;
+    padding: 0.5rem 0.95rem;
     border-radius: 6px;
     border: 1px solid #cbd5e1;
     background: #ffffff;
     color: #475569;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -1421,18 +1413,19 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.45rem 1rem;
+    padding: 0.5rem 1.15rem;
     border-radius: 6px;
-    border: 1px solid #b91c1c;
-    background: #dc2626;
+    border: 1px solid #1e40af;
+    background: #2563eb;
     color: #ffffff;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
     transition: all 0.15s ease;
 
     &:hover:not(:disabled) {
-        background: #b91c1c;
+        background: #1d4ed8;
     }
 
     &:disabled {

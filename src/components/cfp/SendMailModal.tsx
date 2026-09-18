@@ -430,8 +430,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     name: `${carrierName} Quote`,
                     status: 'Not Quoted',
                     statusType: 'not_quoted' as const,
-                    premium: '—',
-                    details: '—',
+                    premium: '$0',
+                    details: 'No companion quote generated',
                 };
             }
 
@@ -440,13 +440,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     name: `${carrierName} Quote`,
                     status: 'Unable to Quote',
                     statusType: 'declined' as const,
-                    premium: '—',
+                    premium: '$0',
                     details: q.notes ? `Reason: ${q.notes}` : '✕ Ineligible / No Option',
                 };
             }
 
             if (q.coverage_type === 'AGENT_REVIEW') {
-                const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : '—';
+                const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : '$0';
                 const quoteStr = q.quote_number ? `Quote #: ${q.quote_number}` : 'Quote # Pending';
                 const remarksStr = q.notes ? `UW Remarks: ${q.notes}` : 'Needs agent review in carrier portal';
                 return {
@@ -458,7 +458,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 };
             }
 
-            const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : (q.coverage_type || 'Quoted');
+            const premStr = q.premium ? `$${Number(q.premium).toLocaleString()}` : '$0';
             const quotePart = q.quote_number ? `Quote #: ${q.quote_number}` : null;
             const typePart = q.coverage_type && q.coverage_type !== 'QUOTE' ? `Type: ${q.coverage_type}` : null;
             const remarksPart = q.notes ? `Remarks: ${q.notes}` : null;
@@ -485,9 +485,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         const effectiveTitlePro = liveTitlePro || term.title_pro;
 
-        let titleStatus = 'Pending';
-        let titleStatusType: 'available' | 'needs_uw' | 'declined' | 'not_quoted' | 'missing' = 'not_quoted';
-        let titleDetails = 'Pending title record match & verification';
+        let titleStatus = 'UNMATCHED';
+        let titleStatusType: 'available' | 'needs_uw' | 'declined' | 'not_quoted' | 'missing' = 'missing';
+        let titleDetails = '✕ Pending title record verification • Not verified';
 
         if (effectiveTitlePro) {
             const ownerName = effectiveTitlePro.title_name ? `Owner on Record: ${effectiveTitlePro.title_name}` : 'Verified on Title';
@@ -496,13 +496,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             if (effectiveTitlePro.match_status === 'matched') {
                 titleStatus = 'MATCHED';
                 titleStatusType = 'available';
-                titleDetails = `✓ Title Matches Insured • ${ownerName}${noteSuffix}`;
+                titleDetails = `✓ Title Matches Named Insured • ${ownerName}${noteSuffix}`;
             } else if (effectiveTitlePro.match_status === 'partial') {
                 titleStatus = 'TRUST / LLC';
                 titleStatusType = 'needs_uw';
                 titleDetails = `⚠️ Trust / LLC Entity Match • ${ownerName}${noteSuffix}`;
             } else if (effectiveTitlePro.match_status === 'mismatch') {
-                titleStatus = 'MISMATCH';
+                titleStatus = 'UNMATCHED';
                 titleStatusType = 'declined';
                 titleDetails = `✕ Name Mismatch on Title • ${ownerName}${noteSuffix}`;
             } else {
@@ -522,7 +522,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const currentPremStr = currentPremVal ? `$${Math.round(currentPremVal).toLocaleString()}` : null;
         const renewalPremStr = renewalPremVal ? `$${Math.round(renewalPremVal).toLocaleString()}` : null;
 
-        let displayPrem = '—';
+        let displayPrem = '$0';
         if (currentPremStr && renewalPremStr && currentPremStr !== renewalPremStr) {
             displayPrem = `${currentPremStr} (Current) / ${renewalPremStr} (Renewal)`;
         } else if (renewalPremStr) {
@@ -564,7 +564,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         const rceValueStr = term.rce_replacement_cost
             ? `$${Math.round(Number(term.rce_replacement_cost)).toLocaleString()}`
-            : (term.has_rce ? (term.rce_carrier || 'Available') : '—');
+            : '$0';
 
         return [
             {
@@ -610,7 +610,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const currentPremStr = currentPremVal ? `$${Math.round(currentPremVal).toLocaleString()}` : null;
         const renewalPremStr = renewalPremVal ? `$${Math.round(renewalPremVal).toLocaleString()}` : null;
 
-        let displayPrem = '—';
+        let displayPrem = '$0';
         if (currentPremStr && renewalPremStr && currentPremStr !== renewalPremStr) {
             displayPrem = `${currentPremStr} (Current) &bull; ${renewalPremStr} (Renewal)`;
         } else if (renewalPremStr) {
@@ -831,72 +831,132 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const effectiveTitlePro = liveTitlePro || term?.title_pro;
         const warnings: Array<{ id: string; label: string; desc: string; severity: 'warning' | 'info' }> = [];
 
-        // 1. Missing Title Pro
+        // 1. Missing Title Pro Verification
         if (!effectiveTitlePro) {
             warnings.push({
                 id: 'title_pro',
-                label: 'Missing Title Pro Report',
+                label: 'Missing Title Pro',
                 desc: 'Title Pro record has not been matched or verified for this property.',
                 severity: 'warning',
             });
         } else if (effectiveTitlePro.match_status === 'mismatch') {
             warnings.push({
                 id: 'title_pro_mismatch',
-                label: 'Title Pro Name Mismatch',
-                desc: `Title Pro shows a name mismatch (${effectiveTitlePro.title_name || 'Mismatch'}).`,
+                label: 'Title Pro Unmatched',
+                desc: `Owner on record does not match insured: ${effectiveTitlePro.title_name || 'Mismatch'}.`,
                 severity: 'warning',
             });
         }
 
-        // 2. Missing Companion Quotes
-        const carriers: Array<{ key: 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic'; name: string }> = [
-            { key: 'bamboo', name: 'Bamboo' },
-            { key: 'aegis', name: 'Aegis' },
-            { key: 'am', name: 'American Modern (AM)' },
-            { key: 'sagesure', name: 'SageSure' },
-            { key: 'psic', name: 'Pacific Specialty (PSIC)' },
-        ];
-
-        const unquotedCarriers = carriers.filter(c => {
-            const q = term?.carrier_quotes?.[c.key];
-            return !q || (!q.premium && !q.coverage_type && !q.quote_number);
-        });
-
-        if (unquotedCarriers.length > 0) {
+        // 2. Missing FAIR Plan Premium Amount
+        const curPrem = term?.annual_premium ? Number(term.annual_premium) : 0;
+        const renPrem = term?.renewal_annual_premium ? Number(term.renewal_annual_premium) : 0;
+        if (!curPrem && !renPrem) {
             warnings.push({
-                id: 'quotes',
-                label: `Missing Companion Quotes (${unquotedCarriers.length} of 5 Missing)`,
-                desc: `${unquotedCarriers.map(c => c.name).join(', ')} companion quote(s) are not generated or attached.`,
+                id: 'fair_plan_amount',
+                label: 'Missing Fair Plan Amount',
+                desc: 'FAIR Plan premium amount is $0 or missing from dec page / renewal.',
                 severity: 'warning',
             });
         }
 
-        // 3. Missing Dec Page / Renewal Offer
+        // 3. Missing FAIR Plan Dec Page / Renewal PDF
         if (!term?.has_dec && !term?.has_renewal_dec) {
             warnings.push({
                 id: 'dec_page',
-                label: 'Missing FAIR Plan Dec Page',
-                desc: 'No current FAIR Plan Dec Page or Renewal Offer is on file.',
+                label: 'Missing Fair Plan Dec Page',
+                desc: 'No current FAIR Plan Dec Page or Renewal Offer PDF is on file.',
                 severity: 'warning',
             });
         }
 
-        // 4. Missing RCE Valuation
-        if (!term?.has_rce) {
+        // 4. Missing Bamboo Quote Amount
+        const bambooQ = term?.carrier_quotes?.bamboo;
+        if (!bambooQ || (!bambooQ.premium && bambooQ.coverage_type !== 'AGENT_REVIEW')) {
+            warnings.push({
+                id: 'bamboo_quote',
+                label: 'Missing Bamboo Quote Amount',
+                desc: bambooQ?.coverage_type === 'UNAVAILABLE'
+                    ? `Unable to Quote ($0) - ${bambooQ.notes || 'Ineligible'}`
+                    : 'Bamboo companion quote amount is $0 / not quoted.',
+                severity: 'warning',
+            });
+        }
+
+        // 5. Missing Aegis Quote Amount
+        const aegisQ = term?.carrier_quotes?.aegis;
+        if (!aegisQ || (!aegisQ.premium && aegisQ.coverage_type !== 'AGENT_REVIEW')) {
+            warnings.push({
+                id: 'aegis_quote',
+                label: 'Missing Aegis Quote Amount',
+                desc: aegisQ?.coverage_type === 'UNAVAILABLE'
+                    ? `Unable to Quote ($0) - ${aegisQ.notes || 'Ineligible'}`
+                    : 'Aegis companion quote amount is $0 / not quoted.',
+                severity: 'warning',
+            });
+        }
+
+        // 6. Missing American Modern Quote Amount
+        const amQ = term?.carrier_quotes?.am;
+        if (!amQ || (!amQ.premium && amQ.coverage_type !== 'AGENT_REVIEW')) {
+            warnings.push({
+                id: 'am_quote',
+                label: 'Missing American Modern Quote Amount',
+                desc: amQ?.coverage_type === 'UNAVAILABLE'
+                    ? `Unable to Quote ($0) - ${amQ.notes || 'Ineligible'}`
+                    : 'American Modern quote amount is $0 / not quoted.',
+                severity: 'warning',
+            });
+        }
+
+        // 7. Missing SageSure Quote Amount
+        const sagesureQ = term?.carrier_quotes?.sagesure;
+        if (!sagesureQ || (!sagesureQ.premium && sagesureQ.coverage_type !== 'AGENT_REVIEW')) {
+            warnings.push({
+                id: 'sagesure_quote',
+                label: 'Missing SageSure Quote Amount',
+                desc: sagesureQ?.coverage_type === 'UNAVAILABLE'
+                    ? `Unable to Quote ($0) - ${sagesureQ.notes || 'Ineligible'}`
+                    : 'SageSure companion quote amount is $0 / not quoted.',
+                severity: 'warning',
+            });
+        }
+
+        // 8. Missing PSIC Quote Amount
+        const psicQ = term?.carrier_quotes?.psic;
+        if (!psicQ || (!psicQ.premium && psicQ.coverage_type !== 'AGENT_REVIEW')) {
+            warnings.push({
+                id: 'psic_quote',
+                label: 'Missing PSIC Quote Amount',
+                desc: psicQ?.coverage_type === 'UNAVAILABLE'
+                    ? `Unable to Quote ($0) - ${psicQ.notes || 'Ineligible'}`
+                    : 'Pacific Specialty (PSIC) quote amount is $0 / not quoted.',
+                severity: 'warning',
+            });
+        }
+
+        // 9. Missing RCE Valuation Amount
+        if (!term?.rce_replacement_cost) {
             warnings.push({
                 id: 'rce',
-                label: 'Missing RCE Valuation Report',
-                desc: 'No replacement cost valuation is on file.',
+                label: 'Missing RCE Valuation Amount',
+                desc: 'RCE Replacement Cost valuation is $0 / not calculated.',
                 severity: 'info',
             });
         }
 
-        if (warnings.length > 0) {
-            setConfirmWarnings(warnings);
-            setShowConfirmModal(true);
-        } else {
-            handleSend();
+        // 10. No Attachments Selected
+        if (selectedAttachmentIds.length === 0) {
+            warnings.push({
+                id: 'no_attachments',
+                label: 'No Attached PDFs',
+                desc: 'Email will be sent as a status summary only with no attached PDF documents.',
+                severity: 'info',
+            });
         }
+
+        setConfirmWarnings(warnings);
+        setShowConfirmModal(true);
     };
 
     const handleSend = async () => {
@@ -1561,12 +1621,18 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     <div className={styles.confirmModal} onClick={e => e.stopPropagation()}>
                         <div className={styles.confirmHeader}>
                             <div className={styles.confirmHeaderIcon}>
-                                <AlertTriangle size={22} color="#dc2626" />
+                                {confirmWarnings.length > 0 ? (
+                                    <AlertTriangle size={22} color="#dc2626" />
+                                ) : (
+                                    <ShieldCheck size={22} color="#16a34a" />
+                                )}
                             </div>
                             <div className={styles.confirmHeaderTexts}>
-                                <h4 className={styles.confirmTitle}>Review Pending Items Before Sending</h4>
+                                <h4 className={styles.confirmTitle}>Are you sure you want to send this email?</h4>
                                 <p className={styles.confirmSubtitle}>
-                                    Please confirm you want to proceed with the following missing items for <strong>CFP {term.policy_number?.replace(/^CFP\s*/i, '')}</strong>:
+                                    {confirmWarnings.length > 0
+                                        ? `Please review the guardrail checklist and email preview below before sending for CFP ${term.policy_number?.replace(/^CFP\s*/i, '')}:`
+                                        : `Review the email preview below before sending for CFP ${term.policy_number?.replace(/^CFP\s*/i, '')}:`}
                                 </p>
                             </div>
                             <button
@@ -1579,79 +1645,97 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                         </div>
 
                         <div className={styles.confirmBody}>
-                            {/* Warnings List */}
-                            <div className={styles.warningList}>
-                                {confirmWarnings.map(w => (
-                                    <div
-                                        key={w.id}
-                                        className={`${styles.warningItem} ${w.severity === 'warning' ? styles.warningSevere : styles.warningInfo}`}
-                                    >
-                                        <div className={styles.warningItemIcon}>
-                                            {w.severity === 'warning' ? (
-                                                <AlertCircle size={18} />
-                                            ) : (
-                                                <Info size={18} />
-                                            )}
+                            {/* Guardrail Checklist / Warnings */}
+                            {confirmWarnings.length > 0 ? (
+                                <div className={styles.warningList}>
+                                    <div className={styles.guardrailHeaderLabel}>
+                                        <AlertCircle size={14} />
+                                        <span>Guardrail Alerts &bull; Incomplete or Missing Items ({confirmWarnings.length})</span>
+                                    </div>
+                                    {confirmWarnings.map(w => (
+                                        <div
+                                            key={w.id}
+                                            className={`${styles.warningItem} ${w.severity === 'warning' ? styles.warningSevere : styles.warningInfo}`}
+                                        >
+                                            <div className={styles.warningItemIcon}>
+                                                {w.severity === 'warning' ? (
+                                                    <AlertCircle size={17} />
+                                                ) : (
+                                                    <Info size={17} />
+                                                )}
+                                            </div>
+                                            <div className={styles.warningItemContent}>
+                                                <strong className={styles.warningItemLabel}>{w.label}</strong>
+                                                <span className={styles.warningItemDesc}>{w.desc}</span>
+                                            </div>
                                         </div>
-                                        <div className={styles.warningItemContent}>
-                                            <strong className={styles.warningItemLabel}>{w.label}</strong>
-                                            <span className={styles.warningItemDesc}>{w.desc}</span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className={styles.allClearedBanner}>
+                                    <CheckCircle2 size={18} />
+                                    <span>All Guardrails Cleared &bull; Quotes, amounts, Title Pro &amp; attachments are ready!</span>
+                                </div>
+                            )}
+
+                            {/* Live WYSIWYG Email Preview Checkpoint Container */}
+                            <div className={styles.confirmEmailPreviewContainer}>
+                                <div className={styles.confirmEmailPreviewHeader}>
+                                    <span className={styles.confirmEmailPreviewTitle}>
+                                        <Eye size={13} /> Live WYSIWYG Email Preview
+                                    </span>
+                                    <span className={styles.confirmEmailPreviewBadge}>● Live Output</span>
+                                </div>
+
+                                <div className={styles.confirmEmailMock}>
+                                    <div className={styles.confirmEmailMetaBar}>
+                                        <div className={styles.confirmMetaRow}>
+                                            <span className={styles.confirmMetaLabel}>From:</span>
+                                            <span className={styles.confirmMetaVal}>
+                                                <strong>{currentUserName || 'Coverage Check Team'}</strong> &lt;admin@coveragechecknow.com&gt;
+                                            </span>
+                                        </div>
+                                        <div className={styles.confirmMetaRow}>
+                                            <span className={styles.confirmMetaLabel}>To:</span>
+                                            <div className={styles.confirmMetaPills}>
+                                                {toRecipients.map(r => (
+                                                    <span key={r.id} className={styles.toPill}>{r.name} &lt;{r.email}&gt;</span>
+                                                ))}
+                                                {customTo && customTo.split(/[,;\s]+/).filter(e => e.includes('@')).map((e, idx) => (
+                                                    <span key={idx} className={styles.toPill}>{e}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {ccRecipients.length > 0 && (
+                                            <div className={styles.confirmMetaRow}>
+                                                <span className={styles.confirmMetaLabel}>CC:</span>
+                                                <div className={styles.confirmMetaPills}>
+                                                    {ccRecipients.map(r => (
+                                                        <span key={r.id} className={styles.ccPill}>{r.name} &lt;{r.email}&gt;</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className={styles.confirmMetaRow}>
+                                            <span className={styles.confirmMetaLabel}>Subject:</span>
+                                            <span className={styles.confirmSubjectVal}>
+                                                {isUrgent && <span className={styles.urgentBadge}>🚨 URGENT</span>}
+                                                {subject || 'No subject'}
+                                            </span>
+                                        </div>
+                                        <div className={styles.confirmMetaRow}>
+                                            <span className={styles.confirmMetaLabel}>Files:</span>
+                                            <span className={styles.confirmFilesVal}>
+                                                {selectedAttachmentIds.length > 0
+                                                    ? `${selectedAttachmentIds.length} PDF(s) attached (${availableAttachments.filter(a => selectedAttachmentIds.includes(a.id)).map(a => a.badge).join(', ')})`
+                                                    : 'No PDFs attached (Status summary only)'}
+                                            </span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
 
-                            {/* Live Table Breakdown Checkpoint */}
-                            <div className={styles.confirmTablePreviewBox}>
-                                <div className={styles.confirmTableTitleRow}>
-                                    <span className={styles.confirmTableTitle}>
-                                        <Eye size={13} /> Email Content Summary Breakdown
-                                    </span>
-                                </div>
-                                <table className={styles.confirmMiniTable}>
-                                    <thead>
-                                        <tr>
-                                            <th>Item / Carrier</th>
-                                            <th style={{ textAlign: 'center' }}>Status</th>
-                                            <th>Amount / Premium</th>
-                                            <th>Quote # &amp; Remarks</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {docItems.map((it, idx) => (
-                                            <tr key={idx}>
-                                                <td className={styles.itemCell}><strong>{it.name}</strong></td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <span className={`${styles.miniStatusBadge} ${styles[it.statusType] || styles.notQuoted}`}>
-                                                        {it.status}
-                                                    </span>
-                                                </td>
-                                                <td className={styles.premCell}>{it.premium}</td>
-                                                <td className={styles.detailCell}>{it.details}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Email Summary Overview */}
-                            <div className={styles.confirmSummaryBox}>
-                                <div className={styles.summaryRow}>
-                                    <span className={styles.sumLabel}>Policy &amp; Insured:</span>
-                                    <span className={styles.sumVal}><strong>{term.policy_number}</strong> &bull; {term.named_insured}</span>
-                                </div>
-                                <div className={styles.summaryRow}>
-                                    <span className={styles.sumLabel}>Primary TO:</span>
-                                    <span className={styles.sumVal}>
-                                        {toRecipients.map(r => r.name).concat(customTo ? [customTo] : []).join(', ') || 'None selected'}
-                                    </span>
-                                </div>
-                                <div className={styles.summaryRow}>
-                                    <span className={styles.sumLabel}>Attachments:</span>
-                                    <span className={styles.sumVal}>
-                                        <strong>{selectedAttachmentIds.length} file(s) attached</strong>
-                                        {selectedAttachmentIds.length > 0 && ` (${availableAttachments.filter(a => selectedAttachmentIds.includes(a.id)).map(a => a.badge).join(', ')})`}
-                                    </span>
+                                    <div className={styles.confirmEmailCanvas}>
+                                        <div dangerouslySetInnerHTML={{ __html: htmlBody }} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1682,7 +1766,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                 ) : (
                                     <>
                                         <Send size={14} />
-                                        <span>Yes, Send Email Anyway</span>
+                                        <span>Yes, Send Email Now</span>
                                     </>
                                 )}
                             </button>
