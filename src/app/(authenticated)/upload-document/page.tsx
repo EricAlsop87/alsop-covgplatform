@@ -298,52 +298,100 @@ export default function UploadDocumentPage() {
         })();
     }, [searchParams]);
 
-    // ── Reassign mode: auto-search for candidate policies by insured name ──
+    // ── Reassign mode: auto-search for candidate policies by insured name, address, and policy number ──
     useEffect(() => {
         if (!reassignDocInfo || reassignAutoSearchRef.current) return;
         reassignAutoSearchRef.current = true;
 
         const insuredName = reassignDocInfo.insured_name;
-        if (!insuredName) {
-            setReassignAutoSearchDone(true);
-            return;
+        const address = reassignDocInfo.property_address;
+        const fileName = reassignDocInfo.file_name;
+
+        if (!searchQuery) {
+            setSearchQuery(insuredName || address || reassignDocInfo.policy_number || '');
         }
 
         (async () => {
             try {
-                const stopWords = new Set(['trust', 'family', 'the', 'and', 'of', 'for', 'inc', 'llc', 'ltd']);
-                const terms = insuredName
-                    .replace(/[^a-zA-Z\s-]/g, '')
-                    .split(/\s+/)
-                    .filter(w => w.length >= 3 && !stopWords.has(w.toLowerCase()))
-                    .slice(0, 3);
-
                 const allResults: any[] = [];
                 const seenIds = new Set<string>();
-                const currentPolicyId = reassignDocInfo.policy_id;
 
-                for (const term of terms) {
-                    const { data } = await supabase
+                // 1. Search by CFP policy number in filename (e.g. CFP 0102001819)
+                const cfpMatch = fileName ? fileName.match(/CFP\s*\d{9,10}/i) : null;
+                if (cfpMatch) {
+                    const rawNum = cfpMatch[0].replace(/[^0-9]/g, '');
+                    const { data: polData } = await supabase
                         .from('policies')
-                        .select(`id, policy_number, property_address_raw, carrier_name, client_id, clients!inner (id, named_insured)`)
-                        .ilike('clients.named_insured', `%${term}%`)
-                        .limit(8);
-                    if (data) {
-                        for (const row of data) {
-                            if (!seenIds.has(row.id) && row.id !== currentPolicyId) {
+                        .select(`id, policy_number, property_address_raw, carrier_name, client_id, clients (id, named_insured)`)
+                        .ilike('policy_number', `%${rawNum}%`)
+                        .limit(5);
+                    if (polData) {
+                        for (const row of polData) {
+                            if (!seenIds.has(row.id)) {
                                 seenIds.add(row.id);
+                                (row as any)._match_source = 'both';
                                 allResults.push(row);
                             }
                         }
                     }
                 }
+
+                // 2. Search by insured name terms
+                if (insuredName) {
+                    const stopWords = new Set(['trust', 'family', 'the', 'and', 'of', 'for', 'inc', 'llc', 'ltd']);
+                    const terms = insuredName
+                        .replace(/[^a-zA-Z\s-]/g, '')
+                        .split(/\s+/)
+                        .filter(w => w.length >= 3 && !stopWords.has(w.toLowerCase()))
+                        .slice(0, 3);
+
+                    for (const term of terms) {
+                        const { data } = await supabase
+                            .from('policies')
+                            .select(`id, policy_number, property_address_raw, carrier_name, client_id, clients!inner (id, named_insured)`)
+                            .ilike('clients.named_insured', `%${term}%`)
+                            .limit(8);
+                        if (data) {
+                            for (const row of data) {
+                                if (!seenIds.has(row.id)) {
+                                    seenIds.add(row.id);
+                                    (row as any)._match_source = (row as any)._match_source || 'name';
+                                    allResults.push(row);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Search by street address if available
+                if (address) {
+                    const streetNumMatch = address.match(/^\d+/);
+                    if (streetNumMatch) {
+                        const streetNum = streetNumMatch[0];
+                        const { data: addrData } = await supabase
+                            .from('policies')
+                            .select(`id, policy_number, property_address_raw, carrier_name, client_id, clients (id, named_insured)`)
+                            .ilike('property_address_raw', `${streetNum} %`)
+                            .limit(8);
+                        if (addrData) {
+                            for (const row of addrData) {
+                                if (!seenIds.has(row.id)) {
+                                    seenIds.add(row.id);
+                                    (row as any)._match_source = (row as any)._match_source || 'address';
+                                    allResults.push(row);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 setReassignCandidates(allResults.slice(0, 8));
             } catch {
                 // Best effort
             }
             setReassignAutoSearchDone(true);
         })();
-    }, [reassignDocInfo]);
+    }, [reassignDocInfo, searchQuery]);
 
     // ── Timer updater for in-progress queue items ──
     useEffect(() => {
@@ -1414,18 +1462,21 @@ export default function UploadDocumentPage() {
                     </div>
 
                     <div style={{ padding: '1.25rem' }}>
-                        {/* Auto Recommendations */}
-                        {autoRecommendations.length > 0 && (
+                        {/* Auto Recommendations / Reassign Candidates */}
+                        {((isReassignMode ? reassignCandidates : autoRecommendations).length > 0) && (
                             <div style={{ marginBottom: '1.25rem' }}>
                                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
-                                    Possible Matches ({autoRecommendations.length})
+                                    Suggested Matches ({(isReassignMode ? reassignCandidates : autoRecommendations).length})
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                    {autoRecommendations.map(p => (
+                                    {(isReassignMode ? reassignCandidates : autoRecommendations).map(p => (
                                         <CandidateCard
                                             key={p.id}
                                             policy={p}
-                                            docStatus={activeReviewItem?.docStatus || null}
+                                            docStatus={isReassignMode && reassignDocInfo ? {
+                                                extracted_owner_name: reassignDocInfo.insured_name,
+                                                extracted_address: reassignDocInfo.property_address,
+                                            } as any : activeReviewItem?.docStatus || null}
                                             isAssigning={isAssigning}
                                             onAssign={() => handleAssign(p.id)}
                                         />
@@ -1464,7 +1515,10 @@ export default function UploadDocumentPage() {
                                         <CandidateCard
                                             key={p.id}
                                             policy={p}
-                                            docStatus={activeReviewItem?.docStatus || null}
+                                            docStatus={isReassignMode && reassignDocInfo ? {
+                                                extracted_owner_name: reassignDocInfo.insured_name,
+                                                extracted_address: reassignDocInfo.property_address,
+                                            } as any : activeReviewItem?.docStatus || null}
                                             isAssigning={isAssigning}
                                             onAssign={() => handleAssign(p.id)}
                                         />

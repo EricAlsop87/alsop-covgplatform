@@ -296,6 +296,7 @@ function DocumentReviewTab() {
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
+    const [isConfirmingAll, setIsConfirmingAll] = useState(false);
 
     const loadDocs = useCallback(async () => {
         setLoading(true);
@@ -333,6 +334,33 @@ function DocumentReviewTab() {
             alert('An error occurred while confirming the document.');
         } finally {
             setConfirmingId(null);
+        }
+    };
+
+    const handleConfirmAll = async () => {
+        const confirmable = docs.filter(d => d.policy_id && d.match_status === 'needs_review');
+        if (confirmable.length === 0) return;
+        if (!confirm(`Confirm and approve all ${confirmable.length} matched documents?`)) return;
+
+        setIsConfirmingAll(true);
+        try {
+            const ids = confirmable.map(d => d.id);
+            const { error } = await supabase
+                .from('platform_documents')
+                .update({ match_status: 'manual', parse_status: 'parsed', error_message: null })
+                .in('id', ids);
+
+            if (!error) {
+                setDocs(prev => prev.filter(d => !ids.includes(d.id)));
+            } else {
+                console.error('Failed to batch confirm documents:', error);
+                alert('Failed to confirm some documents. Please try again.');
+            }
+        } catch (err) {
+            console.error('Error batch confirming:', err);
+            alert('An error occurred while confirming documents.');
+        } finally {
+            setIsConfirmingAll(false);
         }
     };
 
@@ -383,11 +411,12 @@ function DocumentReviewTab() {
     const needsReview = docs.filter(d => d.match_status === 'needs_review');
     const noMatch = docs.filter(d => d.match_status === 'no_match');
     const failed = docs.filter(d => d.parse_status === 'failed' && d.match_status !== 'needs_review' && d.match_status !== 'no_match');
+    const confirmableCount = needsReview.filter(d => d.policy_id).length;
 
     return (
         <div>
             {/* Summary strip */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 {[
                     { label: 'Needs Review', count: needsReview.length, color: 'var(--status-warning)', bg: 'var(--bg-warning-subtle)' },
                     { label: 'No Match', count: noMatch.length, color: 'var(--status-error)', bg: 'var(--bg-error-subtle)' },
@@ -404,6 +433,25 @@ function DocumentReviewTab() {
                     </div>
                 ))}
                 <div style={{ flex: 1 }} />
+                {confirmableCount > 0 && (
+                    <button
+                        type="button"
+                        onClick={handleConfirmAll}
+                        disabled={isConfirmingAll}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.375rem',
+                            padding: '0.5rem 1rem', borderRadius: '8px',
+                            background: '#16a34a', color: '#fff', border: 'none',
+                            fontSize: '0.78rem', fontWeight: 600,
+                            cursor: isConfirmingAll ? 'wait' : 'pointer',
+                            boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                            transition: 'all 0.15s',
+                        }}
+                    >
+                        {isConfirmingAll ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle size={13} />}
+                        Confirm All Matched ({confirmableCount})
+                    </button>
+                )}
                 <button
                     onClick={loadDocs}
                     style={{
