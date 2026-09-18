@@ -140,6 +140,7 @@ interface CFPSummaryTableProps {
 
 type DocFilterType =
     | 'all'
+    | 'bamboo_policies'
     | 'missing_dec'
     | 'has_renewal_offer'
     | 'missing_rce'
@@ -824,6 +825,12 @@ export function CFPSummaryTable({
         if (docFilter !== 'all') {
             result = result.filter(t => {
                 switch (docFilter) {
+                    case 'bamboo_policies':
+                        return (
+                            t.is_pending_dec || 
+                            t.policy_number?.toUpperCase().startsWith('BAM') || 
+                            t.carrier_name?.toLowerCase().includes('bamboo')
+                        );
                     case 'missing_dec':
                         return !t.has_dec && !t.has_renewal_dec;
                     case 'has_renewal_offer':
@@ -868,9 +875,26 @@ export function CFPSummaryTable({
 
         // 2. Column-specific filters
         if (columnFilters.policy) {
-            if (columnFilters.policy === 'available') {
+            if (columnFilters.policy === 'bamboo') {
+                result = result.filter(t => 
+                    t.is_pending_dec || 
+                    t.policy_number?.toUpperCase().startsWith('BAM') || 
+                    t.carrier_name?.toLowerCase().includes('bamboo')
+                );
+            } else if (columnFilters.policy === 'cfp') {
                 result = result.filter(t => 
                     !t.is_pending_dec && 
+                    !t.policy_number?.toUpperCase().startsWith('BAM') && 
+                    !t.carrier_name?.toLowerCase().includes('bamboo') &&
+                    !!t.policy_number && 
+                    !t.policy_number.toLowerCase().includes('pending') && 
+                    t.policy_number.trim() !== '' && 
+                    t.policy_number.trim() !== '—'
+                );
+            } else if (columnFilters.policy === 'available') {
+                result = result.filter(t => 
+                    !t.is_pending_dec && 
+                    !t.policy_number?.toUpperCase().startsWith('BAM') &&
                     !!t.policy_number && 
                     !t.policy_number.toLowerCase().includes('pending') && 
                     t.policy_number.trim() !== '' && 
@@ -1708,8 +1732,10 @@ export function CFPSummaryTable({
                         onChange={e => handleColumnFilterChange('policy', e.target.value)}
                         className={`${styles.columnFilterSelect} ${columnFilters.policy ? styles.activeFilter : ''}`}
                     >
-                        <option value="">All CFP #</option>
-                        <option value="available">Available</option>
+                        <option value="">All Policies</option>
+                        <option value="bamboo">Bamboo Policies</option>
+                        <option value="cfp">CFP Policies</option>
+                        <option value="available">Available CFP #</option>
                         <option value="not_available">Not Available</option>
                     </select>
                 );
@@ -2226,6 +2252,14 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('all'); setCurrentPage(1); }}
                     >
                         All
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${docFilter === 'bamboo_policies' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('bamboo_policies'); setCurrentPage(1); }}
+                        style={docFilter === 'bamboo_policies' ? { background: 'rgba(16, 185, 129, 0.15)', color: '#059669', borderColor: '#059669' } : {}}
+                    >
+                        🌿 Bamboo Policies
                     </button>
                     <button
                         type="button"
