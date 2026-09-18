@@ -332,24 +332,12 @@ export function getEmailSystemStatus(): EmailSystemStatus {
 // ---------------------------------------------------------------------------
 
 function getProvider(message?: EmailMessage): EmailProvider {
-    const fromEmail = (typeof message?.from === 'string' ? message.from : message?.from?.email || '').toLowerCase();
-    const replyToEmail = (message?.replyTo || '').toLowerCase();
-
-    // Prefer Postmark for all @coveragechecknow.com domain communications
+    // Primary: Route all emails through Gmail SMTP using the assigned VA accounts (alsopva01, alsopva02, alsopva03)
     if (
-        (fromEmail.includes('@coveragechecknow.com') || replyToEmail.includes('@coveragechecknow.com')) &&
-        process.env.POSTMARK_SERVER_TOKEN &&
-        process.env.POSTMARK_SERVER_TOKEN !== 'your_postmark_token_here'
-    ) {
-        return new PostmarkProvider();
-    }
-
-    // If message is from or replied to by any legacy VA account or any @gmail.com address, route via Gmail SMTP
-    if (
-        fromEmail.includes('alsopva') ||
-        replyToEmail.includes('alsopva') ||
-        fromEmail.includes('@gmail.com') ||
-        replyToEmail.includes('@gmail.com')
+        process.env.GMAIL_APP_PASSWORD ||
+        process.env.GMAIL_VA01_APP_PASSWORD ||
+        process.env.GMAIL_VA02_APP_PASSWORD ||
+        process.env.GMAIL_VA03_APP_PASSWORD
     ) {
         return new GmailSmtpProvider();
     }
@@ -358,11 +346,7 @@ function getProvider(message?: EmailMessage): EmailProvider {
         return new PostmarkProvider();
     }
 
-    if (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_VA01_APP_PASSWORD || process.env.GMAIL_VA02_APP_PASSWORD || process.env.GMAIL_VA03_APP_PASSWORD) {
-        return new GmailSmtpProvider();
-    }
-
-    return new PostmarkProvider();
+    return new GmailSmtpProvider();
 }
 
 // ---------------------------------------------------------------------------
