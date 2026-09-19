@@ -154,6 +154,7 @@ def upsert_policy(client_id: str, account_id: str, policy_number: str, property_
             )
 
         sb.table("policies").update(payload).eq("id", policy_id).execute()
+        _reconcile_and_merge_bamboo(sb, policy_id, property_address)
         return policy_id
 
     # Strategy 3: Check for pending_dec Bamboo placeholder matching this property address
@@ -175,13 +176,111 @@ def upsert_policy(client_id: str, account_id: str, policy_number: str, property_
             # Update status to active and assign the official CFP policy number
             payload["status"] = "active"
             sb.table("policies").update(payload).eq("id", policy_id).execute()
+            _reconcile_and_merge_bamboo(sb, policy_id, property_address)
             return policy_id
 
     # No match at all — insert new policy
     result = sb.table("policies").insert(payload).execute()
     if not result.data:
         raise RuntimeError(f"Failed to insert policy {base_policy_num}")
-    return result.data[0]["id"]
+    policy_id = result.data[0]["id"]
+    _reconcile_and_merge_bamboo(sb, policy_id, property_address)
+    return policy_id
+
+
+def _reconcile_and_merge_bamboo(sb, policy_id: str, property_address: str | None):
+    """
+    Search for pending_dec Bamboo policies matching property_address.
+    Reassigns terms, documents, notes, updates has_bamboo_coverage=true,
+    and removes the placeholder Bamboo policy from the pipeline.
+    """
+    if not property_address:
+        return
+    norm_address = normalize_address(property_address)
+    if not norm_address:
+        return
+
+    try:
+        pending = (
+            sb.table("policies")
+            .select("id, policy_number, client_id, property_address_raw, property_address_norm")
+            .eq("status", "pending_dec")
+            .execute()
+        )
+        if not pending.data:
+            return
+
+        target_policy = sb.table("policies").select("id, policy_number, client_id").eq("id", policy_id).single().execute()
+        target_policy_number = target_policy.data.get("policy_number", "") if target_policy.data else ""
+        target_client_id = target_policy.data.get("client_id") if target_policy.data else None
+
+        for bp in pending.data:
+            b_norm = bp.get("property_address_norm") or normalize_address(bp.get("property_address_raw"))
+            if not b_norm:
+                continue
+
+            # Check match: exact norm or substring
+            if b_norm == norm_address or (len(b_norm) > 10 and (b_norm in norm_address or norm_address in b_norm)):
+                bamboo_id = bp["id"]
+                bamboo_pol_num = bp.get("policy_number", "")
+                bamboo_client_id = bp.get("client_id")
+
+                logger.info(
+                    "BambooAutoMerge: Merging pending Bamboo %s (%s) into CFP %s (%s)",
+                    bamboo_pol_num, bamboo_id, target_policy_number, policy_id
+                )
+
+                # Reassign docs, dec_pages, notes; delete placeholder terms
+                sb.table("platform_documents").update({"policy_id": policy_id}).eq("policy_id", bamboo_id).execute()
+                sb.table("dec_pages").update({"policy_id": policy_id}).eq("policy_id", bamboo_id).execute()
+                sb.table("policy_terms").delete().eq("policy_id", bamboo_id).execute()
+                sb.table("notes").update({"policy_id": policy_id}).eq("policy_id", bamboo_id).execute()
+
+                # Set manual_overrides has_bamboo_coverage = true
+                existing_override = (
+                    sb.table("manual_overrides")
+                    .select("id")
+                    .eq("policy_id", policy_id)
+                    .eq("field_name", "has_bamboo_coverage")
+                    .limit(1)
+                    .execute()
+                )
+                now_iso = datetime.now(timezone.utc).isoformat()
+                if existing_override.data:
+                    sb.table("manual_overrides").update({"new_value": "true", "updated_at": now_iso}).eq("id", existing_override.data[0]["id"]).execute()
+                else:
+                    sb.table("manual_overrides").insert({
+                        "policy_id": policy_id,
+                        "field_name": "has_bamboo_coverage",
+                        "new_value": "true",
+                        "created_at": now_iso
+                    }).execute()
+
+                # Delete duplicate Bamboo placeholder
+                sb.table("policies").delete().eq("id", bamboo_id).execute()
+
+                # Delete orphan client if separate
+                if bamboo_client_id and bamboo_client_id != target_client_id:
+                    rem = sb.table("policies").select("id", count="exact").eq("client_id", bamboo_client_id).execute()
+                    if not rem.count or rem.count == 0:
+                        sb.table("clients").delete().eq("id", bamboo_client_id).execute()
+
+                # Log merge
+                sb.table("merge_logs").insert({
+                    "entity_type": "policy",
+                    "survivor_id": policy_id,
+                    "merged_id": bamboo_id,
+                    "merge_details": {
+                        "action": "bamboo_auto_merge_on_dec_available",
+                        "survivingPolicyNumber": target_policy_number,
+                        "bambooPolicyNumber": bamboo_pol_num,
+                        "address": property_address
+                    },
+                    "performed_by": "worker_auto_bamboo_reconciler",
+                    "created_at": now_iso
+                }).execute()
+    except Exception as e:
+        logger.warning("BambooAutoMerge: Warning during auto-reconciliation: %s", str(e))
 
 
 def _manage_is_current(sb, policy_id: str, new_term_id: str):

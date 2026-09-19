@@ -1399,17 +1399,19 @@ export function CFPSummaryTable({
                 );
             }
 
-            case 'premium':
+            case 'premium': {
+                const premVal = term.annual_premium ?? term.renewal_annual_premium;
                 return (
                     <span className={styles.cellText}>
-                        {term.annual_premium
-                            ? `$${term.annual_premium.toLocaleString(undefined, {
+                        {premVal
+                            ? `$${premVal.toLocaleString(undefined, {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                               })}`
                             : '—'}
                     </span>
                 );
+            }
 
             case 'dec': {
                 let decNode;
@@ -1593,18 +1595,18 @@ export function CFPSummaryTable({
                 if (tp) {
                     let badgeClass = styles.matched;
                     let icon = <Check size={12} />;
-                    let label = 'Title';
+                    let label = 'Match';
                     let titleText = `Title Pro: "${tp.title_name || 'Matched'}"\nStatus: Matched\nVerified by: ${tp.verified_by || 'Staff'}`;
 
                     if (tp.match_status === 'partial') {
                         badgeClass = styles.partial;
                         icon = <AlertTriangle size={12} />;
-                        label = 'Title';
+                        label = 'Trust/LLC';
                         titleText = `Title Pro: "${tp.title_name || 'Trust / LLC'}"\nStatus: Trust / LLC (Partial)\nNotes: ${tp.notes || 'None'}\nVerified by: ${tp.verified_by || 'Staff'}`;
                     } else if (tp.match_status === 'mismatch') {
                         badgeClass = styles.mismatch;
                         icon = <X size={12} />;
-                        label = 'Title';
+                        label = 'Unmatched';
                         titleText = `Title Pro: "${tp.title_name}" (Mismatch)\nNamed Insured: "${term.named_insured}"\nNotes: ${tp.notes || 'None'}\nVerified by: ${tp.verified_by || 'Staff'}`;
                     }
 

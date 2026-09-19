@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
+import { reconcileAndMergeBambooForPolicy } from '@/lib/bambooAutoMerge';
 
 function normalizeAddress(raw: string | null): string | null {
     if (!raw) return null;
@@ -142,6 +143,15 @@ export async function POST(request: NextRequest) {
 
             if (jobError) {
                 logger.warn('CreateAndAssign', 'Failed to queue ingestion job', { error: jobError.message, documentId });
+            }
+        }
+
+        // ── 7. Reconcile matching pending Bamboo policies automatically ──
+        if (policyId) {
+            try {
+                await reconcileAndMergeBambooForPolicy(policyId, propertyAddress, ownerName, supabaseAdmin);
+            } catch (mergeErr: any) {
+                logger.warn('CreateAndAssign', 'Bamboo auto-merge check warning', { error: mergeErr?.message });
             }
         }
 

@@ -669,11 +669,11 @@ export async function GET(req: NextRequest) {
             policy_period_end?: string;
             property_location?: string;
             mailing_address?: string;
-            total_premium?: string | number | null;
+            total_annual_premium?: string | number | null;
             dec_page_submissions?: any;
         }>(
             'dec_pages',
-            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_premium, dec_page_submissions(storage_path, file_name, bucket)',
+            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, dec_page_submissions(storage_path, file_name, bucket)',
             'policy_id',
             policyIds
         ),
@@ -724,9 +724,9 @@ export async function GET(req: NextRequest) {
         termsByPolicy[t.policy_id].push(t);
     }
 
-    const termDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
-    const policyDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
-    const policyRenewalDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string }> = {};
+    const termDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string; total_premium?: number }> = {};
+    const policyDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string; total_premium?: number }> = {};
+    const policyRenewalDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string; total_premium?: number }> = {};
     const policyAddressMap: Record<string, string> = {};
     const termAddressMap: Record<string, string> = {};
 
@@ -747,7 +747,7 @@ export async function GET(req: NextRequest) {
             file_name: sub?.file_name,
             bucket,
             policy_number: d.policy_number || undefined,
-            total_premium: d.total_premium ? parseFloat(String(d.total_premium).replace(/[^0-9.]/g, '')) : undefined,
+            total_premium: d.total_annual_premium ? parseFloat(String(d.total_annual_premium).replace(/[^0-9.]/g, '')) : undefined,
         };
         if (sub?.storage_path && d.policy_id) {
             policyDecDocMap[d.policy_id] = docInfo;
@@ -1200,7 +1200,9 @@ export async function GET(req: NextRequest) {
             policy_term_id: t.id,
             effective_date: t.effective_date,
             expiration_date: t.expiration_date,
-            annual_premium: t.annual_premium ? parseFloat(t.annual_premium) : null,
+            annual_premium: t.annual_premium
+                ? parseFloat(t.annual_premium)
+                : (termDec?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
             payment_status: t.payment_status,
             payment_plan: t.payment_plan,
             is_current: t.is_current,

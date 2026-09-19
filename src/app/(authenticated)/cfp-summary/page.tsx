@@ -106,11 +106,16 @@ function CFPSummaryContent() {
     }, []);
 
     // Fetch Stats with caching
-    const fetchStats = useCallback(async () => {
-        if (globalCFPStats && Date.now() - globalCFPStatsTime < CACHE_TTL_MS) {
+    const fetchStats = useCallback(async (forceRefresh = false) => {
+        if (!forceRefresh && globalCFPStats && Date.now() - globalCFPStatsTime < CACHE_TTL_MS) {
             setStats(globalCFPStats);
             setStatsLoading(false);
             return;
+        }
+
+        if (forceRefresh) {
+            globalCFPStats = null;
+            globalCFPStatsTime = 0;
         }
 
         if (!globalCFPStats) setStatsLoading(true);
@@ -138,11 +143,15 @@ function CFPSummaryContent() {
     }, []);
 
     // Fetch Data with cancellation, SWR cache, and sequence tracking
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (forceRefresh = false) => {
         const cacheKey = `${year}_${month}_${search}_${view}`;
         const cached = globalCFPCache.get(cacheKey);
 
-        if (cached) {
+        if (forceRefresh) {
+            globalCFPCache.delete(cacheKey);
+        }
+
+        if (!forceRefresh && cached) {
             setFamilies(cached.families);
             setTotalTerms(cached.total_terms);
             setTotalFamilies(cached.total_families);
@@ -260,8 +269,8 @@ function CFPSummaryContent() {
                 onSearchChange={setSearch}
                 onViewChange={setView}
                 onRefresh={() => {
-                    fetchStats();
-                    fetchData();
+                    fetchStats(true);
+                    fetchData(true);
                 }}
                 totalTerms={totalTerms}
                 totalFamilies={totalFamilies}

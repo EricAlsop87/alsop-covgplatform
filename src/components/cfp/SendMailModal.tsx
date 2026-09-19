@@ -123,7 +123,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [recipientRoles, setRecipientRoles] = useState<Record<string, RecipientRole>>({
         nancy: 'to',
         olga: 'to',
-        johnpaul: 'none',
+        johnpaul: 'to',
         esmeralda: 'none',
         eric: 'none',
         phoebe: 'none',
@@ -353,7 +353,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         setRecipientRoles({
             nancy: 'to',
             olga: 'to',
-            johnpaul: 'none',
+            johnpaul: 'to',
             esmeralda: 'none',
             eric: 'none',
             phoebe: 'none',
@@ -494,7 +494,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             const noteSuffix = effectiveTitlePro.notes ? ` • Note: ${effectiveTitlePro.notes}` : '';
 
             if (effectiveTitlePro.match_status === 'matched') {
-                titleStatus = 'MATCHED';
+                titleStatus = 'MATCH';
                 titleStatusType = 'available';
                 titleDetails = `✓ Title Matches Named Insured • ${ownerName}${noteSuffix}`;
             } else if (effectiveTitlePro.match_status === 'partial') {
@@ -506,7 +506,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 titleStatusType = 'declined';
                 titleDetails = `✕ Name Mismatch on Title • ${ownerName}${noteSuffix}`;
             } else {
-                titleStatus = 'MATCHED';
+                titleStatus = 'MATCH';
                 titleStatusType = 'available';
                 titleDetails = `✓ Verified on Title • ${ownerName}${noteSuffix}`;
             }
@@ -635,6 +635,15 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;font-weight:600;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
             } else {
                 badgeHtml = `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:700;font-size:11px;letter-spacing:0.02em;text-transform:uppercase;">${item.status}</span>`;
+            }
+
+            if (item.name === 'Title Pro Report') {
+                return `
+            <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+              <td style="width:28%;padding:9px 12px;font-weight:600;color:#0f172a;font-size:13px;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${item.name}</td>
+              <td style="width:18%;padding:9px 8px;text-align:center;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${badgeHtml}</td>
+              <td colspan="2" style="width:54%;padding:9px 12px;color:#334155;font-size:12px;line-height:1.4;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${item.details}</td>
+            </tr>`;
             }
 
             return `
@@ -870,70 +879,61 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         }
 
-        // 4. Missing Bamboo Quote Amount
+        // 4. Missing Bamboo Quote (SOP Mandatory Carrier 1 of 3)
         const bambooQ = term?.carrier_quotes?.bamboo;
-        if (!bambooQ || (!bambooQ.premium && bambooQ.coverage_type !== 'AGENT_REVIEW')) {
+        if (!bambooQ) {
             warnings.push({
                 id: 'bamboo_quote',
-                label: 'Missing Bamboo Quote Amount',
-                desc: bambooQ?.coverage_type === 'UNAVAILABLE'
-                    ? `Unable to Quote ($0) - ${bambooQ.notes || 'Ineligible'}`
-                    : 'Bamboo companion quote amount is $0 / not quoted.',
+                label: 'Missing Bamboo Quote',
+                desc: 'No Bamboo quote or ineligibility notation recorded. (Mandatory SOP Carrier)',
+                severity: 'warning',
+            });
+        } else if (!bambooQ.premium && bambooQ.coverage_type !== 'AGENT_REVIEW' && bambooQ.coverage_type !== 'UNAVAILABLE') {
+            warnings.push({
+                id: 'bamboo_quote',
+                label: 'Missing Bamboo Premium',
+                desc: 'Bamboo quote is missing premium amount or ineligibility notation.',
                 severity: 'warning',
             });
         }
 
-        // 5. Missing Aegis Quote Amount
+        // 5. Missing Aegis Quote (SOP Mandatory Carrier 2 of 3)
         const aegisQ = term?.carrier_quotes?.aegis;
-        if (!aegisQ || (!aegisQ.premium && aegisQ.coverage_type !== 'AGENT_REVIEW')) {
+        if (!aegisQ) {
             warnings.push({
                 id: 'aegis_quote',
-                label: 'Missing Aegis Quote Amount',
-                desc: aegisQ?.coverage_type === 'UNAVAILABLE'
-                    ? `Unable to Quote ($0) - ${aegisQ.notes || 'Ineligible'}`
-                    : 'Aegis companion quote amount is $0 / not quoted.',
+                label: 'Missing Aegis Quote',
+                desc: 'No Aegis quote or ineligibility notation recorded. (Mandatory SOP Carrier)',
                 severity: 'warning',
             });
-        }
-
-        // 6. Missing American Modern Quote Amount
-        const amQ = term?.carrier_quotes?.am;
-        if (!amQ || (!amQ.premium && amQ.coverage_type !== 'AGENT_REVIEW')) {
+        } else if (!aegisQ.premium && aegisQ.coverage_type !== 'AGENT_REVIEW' && aegisQ.coverage_type !== 'UNAVAILABLE') {
             warnings.push({
-                id: 'am_quote',
-                label: 'Missing American Modern Quote Amount',
-                desc: amQ?.coverage_type === 'UNAVAILABLE'
-                    ? `Unable to Quote ($0) - ${amQ.notes || 'Ineligible'}`
-                    : 'American Modern quote amount is $0 / not quoted.',
+                id: 'aegis_quote',
+                label: 'Missing Aegis Premium',
+                desc: 'Aegis quote is missing premium amount or ineligibility notation.',
                 severity: 'warning',
             });
         }
 
-        // 7. Missing SageSure Quote Amount
-        const sagesureQ = term?.carrier_quotes?.sagesure;
-        if (!sagesureQ || (!sagesureQ.premium && sagesureQ.coverage_type !== 'AGENT_REVIEW')) {
-            warnings.push({
-                id: 'sagesure_quote',
-                label: 'Missing SageSure Quote Amount',
-                desc: sagesureQ?.coverage_type === 'UNAVAILABLE'
-                    ? `Unable to Quote ($0) - ${sagesureQ.notes || 'Ineligible'}`
-                    : 'SageSure companion quote amount is $0 / not quoted.',
-                severity: 'warning',
-            });
-        }
-
-        // 8. Missing PSIC Quote Amount
+        // 6. Missing PSIC Quote (SOP Mandatory Carrier 3 of 3)
         const psicQ = term?.carrier_quotes?.psic;
-        if (!psicQ || (!psicQ.premium && psicQ.coverage_type !== 'AGENT_REVIEW')) {
+        if (!psicQ) {
             warnings.push({
                 id: 'psic_quote',
-                label: 'Missing PSIC Quote Amount',
-                desc: psicQ?.coverage_type === 'UNAVAILABLE'
-                    ? `Unable to Quote ($0) - ${psicQ.notes || 'Ineligible'}`
-                    : 'Pacific Specialty (PSIC) quote amount is $0 / not quoted.',
+                label: 'Missing PSIC Quote',
+                desc: 'No Pacific Specialty (PSIC) quote or ineligibility notation recorded. (Mandatory SOP Carrier)',
+                severity: 'warning',
+            });
+        } else if (!psicQ.premium && psicQ.coverage_type !== 'AGENT_REVIEW' && psicQ.coverage_type !== 'UNAVAILABLE') {
+            warnings.push({
+                id: 'psic_quote',
+                label: 'Missing PSIC Premium',
+                desc: 'Pacific Specialty (PSIC) quote is missing premium amount or ineligibility notation.',
                 severity: 'warning',
             });
         }
+
+        // Note: American Modern (AM) and SageSure are supplemental/optional companion carriers per SOP and do not block sending.
 
         // 9. Missing RCE Valuation Amount
         if (!term?.rce_replacement_cost) {
@@ -1538,8 +1538,14 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                                             <span className={`${styles.statusBadge} ${styles.missing}`}>{item.status}</span>
                                                         )}
                                                     </td>
-                                                    <td className={styles.docPremium}>{item.premium}</td>
-                                                    <td className={styles.docDetails}>{item.details}</td>
+                                                    {item.name === 'Title Pro Report' ? (
+                                                        <td colSpan={2} className={styles.docDetails} style={{ color: '#1e293b' }}>{item.details}</td>
+                                                    ) : (
+                                                        <>
+                                                            <td className={styles.docPremium}>{item.premium}</td>
+                                                            <td className={styles.docDetails}>{item.details}</td>
+                                                        </>
+                                                    )}
                                                 </tr>
                                             ))}
                                         </tbody>
