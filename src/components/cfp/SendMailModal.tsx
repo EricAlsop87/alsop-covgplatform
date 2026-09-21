@@ -285,20 +285,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         }
 
-        // 6. American Modern (AM) Quote
-        if (term.carrier_quotes?.am?.storage_path) {
-            addCandidate({
-                id: 'am',
-                label: 'American Modern Quote',
-                badge: 'AM QUOTE',
-                fileName: term.carrier_quotes.am.file_name || term.carrier_quotes.am.doc_file_name || 'American_Modern_Quote.pdf',
-                storagePath: term.carrier_quotes.am.storage_path,
-                bucket: 'cfp-platform-documents',
-                docCategory: 'quote',
-            });
-        }
-
-        // 7. PSIC Quote
+        // 6. PSIC Quote
         if (term.carrier_quotes?.psic?.storage_path) {
             addCandidate({
                 id: 'psic',
@@ -466,7 +453,6 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         const bamboo = formatQuote('Bamboo', 'bamboo', term.carrier_quotes?.bamboo);
         const aegis = formatQuote('Aegis', 'aegis', term.carrier_quotes?.aegis);
-        const am = formatQuote('American Modern (AM)', 'am', term.carrier_quotes?.am);
         const psic = formatQuote('PSIC', 'psic', term.carrier_quotes?.psic);
 
         const effectiveTitlePro = liveTitlePro || term.title_pro;
@@ -569,7 +555,6 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             },
             bamboo,
             aegis,
-            am,
             psic,
             {
                 name: 'Title Pro Report',

@@ -109,7 +109,6 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'rce', label: 'RCE', width: 95, minWidth: 75, align: 'center' },
     { key: 'bamboo', label: 'Bamboo', width: 105, minWidth: 80, align: 'center' },
     { key: 'aegis', label: 'Aegis', width: 105, minWidth: 80, align: 'center' },
-    { key: 'am', label: 'AM', width: 105, minWidth: 80, align: 'center' },
     { key: 'psic', label: 'PSIC', width: 105, minWidth: 80, align: 'center' },
     { key: 'title_pro', label: 'Title Pro', width: 95, minWidth: 75, align: 'center' },
     { key: 'servicing', label: 'Send Mail', width: 115, minWidth: 85, align: 'center' },
@@ -973,7 +972,7 @@ export function CFPSummaryTable({
             }
         }
 
-        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'am', 'psic'];
+        const carrierFilterKeys: CarrierKey[] = ['bamboo', 'aegis', 'psic'];
         for (const cKey of carrierFilterKeys) {
             const filterVal = columnFilters[cKey];
             if (filterVal) {
