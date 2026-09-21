@@ -39,6 +39,8 @@ import { exportCFPToExcel } from '@/lib/cfpExport';
 import { DocCommentPopover } from './DocCommentPopover';
 import { TitleProModal } from './TitleProModal';
 import { CarrierQuoteModal } from './CarrierQuoteModal';
+import { RceValuationModal } from './RceValuationModal';
+import type { RceValuationData } from '@/app/api/cfp-summary/rce-valuation/route';
 import { SendMailModal, type SentMailDetails } from './SendMailModal';
 import { SentMailInfoPopover } from './SentMailInfoPopover';
 
@@ -171,9 +173,10 @@ function renderCarrierBadge(
     docName: 'RCE' | 'DIC',
     policyId?: string,
     onPreview?: () => void,
-    rceAmount?: number | null
+    rceAmount?: number | null,
+    onEdit?: () => void
 ) {
-    if (!carrier) {
+    if (!carrier && !rceAmount) {
         return (
             <Link
                 href={`/upload-document?policy_id=${policyId || ''}&doc_type=${docName.toLowerCase()}`}
@@ -186,7 +189,7 @@ function renderCarrierBadge(
         );
     }
 
-    const cLower = carrier.toLowerCase();
+    const cLower = (carrier || 'Other').toLowerCase();
     let badgeClass = styles.other;
     if (cLower === 'bamboo') badgeClass = styles.bamboo;
     else if (cLower === 'am' || cLower === 'american modern') badgeClass = styles.am;
@@ -194,9 +197,11 @@ function renderCarrierBadge(
     else if (cLower === 'sagesure') badgeClass = styles.sagesure;
     else if (cLower === 'psic') badgeClass = styles.psic;
 
-    const displayLabel = carrier === 'AM' ? 'AM' : carrier;
-    const amountStr = rceAmount ? ` • Est: $${Math.round(Number(rceAmount)).toLocaleString()}` : '';
-    const tooltip = `Click to preview ${docName} (${displayLabel}${amountStr})`;
+    const displayLabel = carrier === 'AM' ? 'AM' : (carrier || 'RCE');
+    const amountStr = rceAmount ? ` • $${Math.round(Number(rceAmount)).toLocaleString()}` : '';
+    const tooltip = docName === 'RCE'
+        ? `RCE Valuation: ${displayLabel}${amountStr}\nClick to view / edit valuation details or preview PDF`
+        : `Click to preview ${docName} (${displayLabel}${amountStr})`;
 
     return (
         <button
@@ -204,11 +209,15 @@ function renderCarrierBadge(
             className={`${styles.carrierBadge} ${badgeClass} ${styles.clickableBadge}`}
             onClick={(e) => {
                 e.stopPropagation();
-                onPreview?.();
+                if (onEdit) {
+                    onEdit();
+                } else if (onPreview) {
+                    onPreview();
+                }
             }}
             title={tooltip}
         >
-            <Check size={12} /> {displayLabel}
+            <Check size={12} /> {displayLabel}{amountStr}
         </button>
     );
 }
@@ -459,6 +468,31 @@ export function CFPSummaryTable({
                                 carrierKey === 'bamboo'
                                     ? updatedData?.coverage_type === 'FULL'
                                     : t.has_bamboo_coverage,
+                        };
+                    }),
+                };
+            })
+        );
+    };
+
+    // ── RCE Valuation Modal State ─────────────────────────────────────────
+    const [activeRceModalTerm, setActiveRceModalTerm] = useState<CFPTermRow | null>(null);
+
+    const handleSaveRceSuccess = (policyId: string, updatedData: RceValuationData | null) => {
+        setFamilies(prev =>
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t => {
+                        if (t.policy_id !== policyId && !belongsToFamily) return t;
+                        return {
+                            ...t,
+                            has_rce: !!updatedData?.replacement_cost || t.has_rce,
+                            rce_carrier: updatedData?.carrier || t.rce_carrier || 'Bamboo',
+                            rce_replacement_cost: updatedData ? updatedData.replacement_cost : null,
+                            rce_sq_feet: updatedData ? (updatedData.sq_feet ?? t.rce_sq_feet) : null,
+                            rce_cost_per_sqft: updatedData ? (updatedData.cost_per_sqft ?? t.rce_cost_per_sqft) : null,
                         };
                     }),
                 };
@@ -1501,7 +1535,10 @@ export function CFPSummaryTable({
                             policyId: term.policy_id,
                         });
                     },
-                    term.rce_replacement_cost
+                    term.rce_replacement_cost,
+                    () => {
+                        setActiveRceModalTerm(term);
+                    }
                 );
                 return (
                     <div className={styles.cellWithComment}>
@@ -2649,6 +2686,16 @@ export function CFPSummaryTable({
                     carrierKey={activeCarrierModal.carrierKey}
                     onClose={() => setActiveCarrierModal(null)}
                     onSaveSuccess={handleSaveCarrierQuoteSuccess}
+                    onPreviewDoc={handlePreviewDoc}
+                />
+            )}
+
+            {/* ── RCE Valuation Modal ── */}
+            {activeRceModalTerm && (
+                <RceValuationModal
+                    term={activeRceModalTerm}
+                    onClose={() => setActiveRceModalTerm(null)}
+                    onSaveSuccess={handleSaveRceSuccess}
                     onPreviewDoc={handlePreviewDoc}
                 />
             )}

@@ -366,7 +366,7 @@ interface ServerCacheEntry {
     };
     timestamp: number;
 }
-const serverSummaryCache = new Map<string, ServerCacheEntry>();
+export const serverSummaryCache = new Map<string, ServerCacheEntry>();
 const SERVER_CACHE_TTL_MS = 25_000;
 
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
@@ -702,7 +702,7 @@ export async function GET(req: NextRequest) {
             doc_data_rce?: any;
         }>(
             'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
             'policy_id',
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
@@ -712,7 +712,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost'])
         ),
         chunkedInQuery<{
             id: string;
@@ -856,19 +856,32 @@ export async function GET(req: NextRequest) {
             if (!policyDocTypes[pid]) policyDocTypes[pid] = new Set<string>();
             policyDocTypes[pid].add(doc.doc_type);
 
-            if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || rce) {
-                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source, rce?.created_by);
+            const extractedRceCost = rce?.replacement_cost || dic?.rce_replacement_cost || (doc.doc_type === 'rce' && dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null) || null;
+            const extractedRceSqft = rce?.sq_feet || dic?.rce_living_area || null;
+            const extractedRceCostPerSqft = rce?.cost_per_sqft || (extractedRceCost && extractedRceSqft && extractedRceSqft > 0 ? Math.round((extractedRceCost / extractedRceSqft) * 100) / 100 : null);
+            const isRceDoc = doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || !!rce || !!dic?.rce_replacement_cost;
+
+            if (isRceDoc) {
+                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
                 if (c && !policyRceCarrier[pid]) policyRceCarrier[pid] = c;
                 if (doc.storage_path && !policyRceDoc[pid]) {
                     policyRceDoc[pid] = {
                         storage_path: doc.storage_path,
                         file_name: doc.file_name,
-                        replacement_cost: rce?.replacement_cost || null,
-                        sq_feet: rce?.sq_feet || null,
-                        cost_per_sqft: rce?.cost_per_sqft || null,
+                        replacement_cost: extractedRceCost,
+                        sq_feet: extractedRceSqft,
+                        cost_per_sqft: extractedRceCostPerSqft,
                     };
-                } else if (policyRceDoc[pid] && !policyRceDoc[pid].replacement_cost && rce?.replacement_cost) {
-                    policyRceDoc[pid].replacement_cost = rce.replacement_cost;
+                } else if (policyRceDoc[pid]) {
+                    if (!policyRceDoc[pid].replacement_cost && extractedRceCost) {
+                        policyRceDoc[pid].replacement_cost = extractedRceCost;
+                    }
+                    if (!policyRceDoc[pid].sq_feet && extractedRceSqft) {
+                        policyRceDoc[pid].sq_feet = extractedRceSqft;
+                    }
+                    if (!policyRceDoc[pid].cost_per_sqft && extractedRceCostPerSqft) {
+                        policyRceDoc[pid].cost_per_sqft = extractedRceCostPerSqft;
+                    }
                 }
             } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
@@ -897,19 +910,32 @@ export async function GET(req: NextRequest) {
             }
             termDocTypes[t.id].add(doc.doc_type);
 
-            if (doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || rce) {
-                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source, rce?.created_by);
+            const extractedRceCost = rce?.replacement_cost || dic?.rce_replacement_cost || (doc.doc_type === 'rce' && dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : null) || null;
+            const extractedRceSqft = rce?.sq_feet || dic?.rce_living_area || null;
+            const extractedRceCostPerSqft = rce?.cost_per_sqft || (extractedRceCost && extractedRceSqft && extractedRceSqft > 0 ? Math.round((extractedRceCost / extractedRceSqft) * 100) / 100 : null);
+            const isRceDoc = doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || !!rce || !!dic?.rce_replacement_cost;
+
+            if (isRceDoc) {
+                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
                 if (c && !termRceCarrier[t.id]) termRceCarrier[t.id] = c;
                 if (doc.storage_path && !termRceDoc[t.id]) {
                     termRceDoc[t.id] = {
                         storage_path: doc.storage_path,
                         file_name: doc.file_name,
-                        replacement_cost: rce?.replacement_cost || null,
-                        sq_feet: rce?.sq_feet || null,
-                        cost_per_sqft: rce?.cost_per_sqft || null,
+                        replacement_cost: extractedRceCost,
+                        sq_feet: extractedRceSqft,
+                        cost_per_sqft: extractedRceCostPerSqft,
                     };
-                } else if (termRceDoc[t.id] && !termRceDoc[t.id].replacement_cost && rce?.replacement_cost) {
-                    termRceDoc[t.id].replacement_cost = rce.replacement_cost;
+                } else if (termRceDoc[t.id]) {
+                    if (!termRceDoc[t.id].replacement_cost && extractedRceCost) {
+                        termRceDoc[t.id].replacement_cost = extractedRceCost;
+                    }
+                    if (!termRceDoc[t.id].sq_feet && extractedRceSqft) {
+                        termRceDoc[t.id].sq_feet = extractedRceSqft;
+                    }
+                    if (!termRceDoc[t.id].cost_per_sqft && extractedRceCostPerSqft) {
+                        termRceDoc[t.id].cost_per_sqft = extractedRceCostPerSqft;
+                    }
                 }
             } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
@@ -945,6 +971,13 @@ export async function GET(req: NextRequest) {
     }> = {};
     const titleProMap: Record<string, TitleProData> = {};
     const manualCarrierQuotes: Record<string, Partial<Record<CarrierKey, CarrierQuoteData>>> = {};
+    const manualRceValuationMap: Record<string, {
+        replacement_cost: number | null;
+        carrier?: string | null;
+        sq_feet?: number | null;
+        cost_per_sqft?: number | null;
+        notes?: string | null;
+    }> = {};
 
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
@@ -986,6 +1019,20 @@ export async function GET(req: NextRequest) {
                 }
                 manualCarrierQuotes[ov.policy_id][carrierKey] = parsed;
             } catch {}
+        } else if (ov.field_name === 'rce_valuation' && ov.new_value) {
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                manualRceValuationMap[ov.policy_id] = parsed;
+            } catch {}
+        } else if (ov.field_name === 'rce_replacement_cost' && ov.new_value) {
+            const num = parseFloat(ov.new_value.replace(/[^0-9.]/g, ''));
+            if (!isNaN(num)) {
+                if (!manualRceValuationMap[ov.policy_id]) {
+                    manualRceValuationMap[ov.policy_id] = { replacement_cost: num };
+                } else if (!manualRceValuationMap[ov.policy_id].replacement_cost) {
+                    manualRceValuationMap[ov.policy_id].replacement_cost = num;
+                }
+            }
         }
     }
 
@@ -1075,8 +1122,13 @@ export async function GET(req: NextRequest) {
         const { basePolicy, suffix } = normalizePolicyNumber(termPolicyNum);
 
         const rceDoc = termRceDoc[t.id] || policyRceDoc[policyId] || null;
-        const hasRce = docSet.has('rce') || (policyDocTypes[policyId]?.has('rce') ?? false) || !!rceDoc;
-        const rceCarrier = termRceCarrier[t.id] || policyRceCarrier[policyId] || (hasRce ? 'Bamboo' : null);
+        const manualRce = manualRceValuationMap[policyId];
+        const finalRceReplacementCost = manualRce?.replacement_cost ?? rceDoc?.replacement_cost ?? null;
+        const finalRceCarrier = manualRce?.carrier || termRceCarrier[t.id] || policyRceCarrier[policyId] || (rceDoc ? 'Bamboo' : null);
+        const finalRceSqFeet = manualRce?.sq_feet ?? rceDoc?.sq_feet ?? null;
+        const finalRceCostPerSqft = manualRce?.cost_per_sqft ?? rceDoc?.cost_per_sqft ?? null;
+        const hasRce = docSet.has('rce') || (policyDocTypes[policyId]?.has('rce') ?? false) || !!rceDoc || manualRce?.replacement_cost != null;
+        const rceCarrier = finalRceCarrier;
 
         const dicDoc = termDicDoc[t.id] || policyDicDoc[policyId] || null;
         const hasDic = docSet.has('dic_dec_page') || (policyDocTypes[policyId]?.has('dic_dec_page') ?? false) || !!t.dic_exists || !!dicDoc;
@@ -1230,9 +1282,9 @@ export async function GET(req: NextRequest) {
             rce_carrier: rceCarrier,
             rce_storage_path: rceDoc?.storage_path || null,
             rce_file_name: rceDoc?.file_name || null,
-            rce_replacement_cost: rceDoc?.replacement_cost || null,
-            rce_sq_feet: rceDoc?.sq_feet || null,
-            rce_cost_per_sqft: rceDoc?.cost_per_sqft || null,
+            rce_replacement_cost: finalRceReplacementCost,
+            rce_sq_feet: finalRceSqFeet,
+            rce_cost_per_sqft: finalRceCostPerSqft,
             has_dic: hasDic,
             dic_carrier: dicCarrier,
             dic_storage_path: dicDoc?.storage_path || null,

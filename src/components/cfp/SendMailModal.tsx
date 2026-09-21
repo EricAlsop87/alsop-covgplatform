@@ -20,6 +20,7 @@ import {
     Square,
     AlertCircle,
     Info,
+    DollarSign,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './SendMailModal.module.scss';
@@ -145,6 +146,39 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [confirmWarnings, setConfirmWarnings] = useState<Array<{ id: string; label: string; desc: string; severity: 'warning' | 'info' }>>([]);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
     const [currentUserName, setCurrentUserName] = useState<string>('');
+    const [rceReplacementCost, setRceReplacementCost] = useState<number | null>(term?.rce_replacement_cost || null);
+    const [rceCarrier, setRceCarrier] = useState<string>(term?.rce_carrier || 'Bamboo');
+
+    useEffect(() => {
+        if (term) {
+            setRceReplacementCost(term.rce_replacement_cost || null);
+            setRceCarrier(term.rce_carrier || 'Bamboo');
+        }
+    }, [term]);
+
+    const saveRceValuationAsync = async (cost: number | null, carrierName: string) => {
+        if (!term?.policy_id) return;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            await fetch('/api/cfp-summary/rce-valuation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    policy_id: term.policy_id,
+                    replacement_cost: cost,
+                    carrier: carrierName,
+                    storage_path: term.rce_storage_path || null,
+                    file_name: term.rce_file_name || null,
+                }),
+            });
+        } catch (err) {
+            console.error('Failed to auto-save RCE valuation in SendMailModal:', err);
+        }
+    };
 
     // Fetch live Title Pro via API route to guarantee 100% real-time accuracy and bypass client RLS restrictions
     useEffect(() => {
@@ -246,11 +280,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         }
 
         // 3. RCE Valuation
-        if (term.has_rce && term.rce_storage_path) {
-            const rceValuationStr = term.rce_replacement_cost ? ` - $${Math.round(Number(term.rce_replacement_cost)).toLocaleString()}` : '';
+        const effectiveRceCost = rceReplacementCost ?? term.rce_replacement_cost;
+        const effectiveRceCarrier = rceCarrier || term.rce_carrier || 'Bamboo';
+        if ((term.has_rce || effectiveRceCost) && term.rce_storage_path) {
+            const rceValuationStr = effectiveRceCost ? ` - $${Math.round(Number(effectiveRceCost)).toLocaleString()}` : '';
             addCandidate({
                 id: 'rce',
-                label: `RCE Valuation (${term.rce_carrier || '360Value'}${rceValuationStr})`,
+                label: `RCE Valuation (${effectiveRceCarrier}${rceValuationStr})`,
                 badge: 'RCE REPORT',
                 fileName: term.rce_file_name || 'RCE_Valuation_Report.pdf',
                 storagePath: term.rce_storage_path,
@@ -530,12 +566,16 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             decDetails = `FAIR Plan Dec ${isDecAttached ? '(Attached)' : '(Not Attached)'}${expPart ? ` • ${expPart}` : ''}`;
         }
 
-        const rceDetails = term.has_rce
-            ? `${term.rce_carrier || '360Value'} Valuation ${isRceAttached ? '(Attached)' : '(Not Attached)'}`
+        const effectiveRceCost = rceReplacementCost ?? term.rce_replacement_cost;
+        const effectiveRceCarrier = rceCarrier || term.rce_carrier || 'Bamboo';
+        const hasEffectiveRce = term.has_rce || !!effectiveRceCost;
+
+        const rceDetails = hasEffectiveRce
+            ? `${effectiveRceCarrier} Valuation ${isRceAttached ? '(Attached)' : '(Not Attached)'}`
             : 'No RCE uploaded';
 
-        const rceValueStr = term.rce_replacement_cost
-            ? `$${Math.round(Number(term.rce_replacement_cost)).toLocaleString()}`
+        const rceValueStr = effectiveRceCost
+            ? `$${Math.round(Number(effectiveRceCost)).toLocaleString()}`
             : '$0';
 
         return [
@@ -548,8 +588,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             },
             {
                 name: 'RCE Valuation Report',
-                status: term.has_rce ? 'Available' : 'Missing',
-                statusType: term.has_rce ? ('available' as const) : ('missing' as const),
+                status: hasEffectiveRce ? 'Available' : 'Missing',
+                statusType: hasEffectiveRce ? ('available' as const) : ('missing' as const),
                 premium: rceValueStr,
                 details: rceDetails,
             },
@@ -564,7 +604,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 details: titleDetails,
             },
         ];
-    }, [term, selectedAttachmentIds, liveTitlePro]);
+    }, [term, selectedAttachmentIds, liveTitlePro, rceReplacementCost, rceCarrier]);
 
     // Build the executive HTML Email Body with professional blue theme
     const htmlBody = useMemo(() => {
@@ -906,7 +946,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         // Note: American Modern (AM) and SageSure are supplemental/optional companion carriers per SOP and do not block sending.
 
         // 9. Missing RCE Valuation Amount
-        if (!term?.rce_replacement_cost) {
+        const effectiveRceCost = rceReplacementCost ?? term?.rce_replacement_cost;
+        if (!effectiveRceCost) {
             warnings.push({
                 id: 'rce',
                 label: 'Missing RCE Valuation Amount',
@@ -1239,7 +1280,62 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     rows={2}
                                     value={customNotes}
                                     onChange={e => setCustomNotes(e.target.value)}
-                                />
+                                    />
+                            </div>
+
+                            {/* RCE Valuation Amount Entry / Override */}
+                            <div className={styles.formSection}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                        <DollarSign size={14} /> RCE Valuation Amount (Replacement Cost)
+                                    </label>
+                                    {term.rce_storage_path && (
+                                        <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 600 }}>
+                                            {term.rce_file_name || 'RCE PDF Attached'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.875rem', fontWeight: 600 }}>$</span>
+                                        <input
+                                            type="text"
+                                            className={styles.textInput}
+                                            style={{ paddingLeft: '24px' }}
+                                            placeholder="e.g. 625183"
+                                            value={rceReplacementCost ? String(Math.round(Number(rceReplacementCost))) : ''}
+                                            onChange={e => {
+                                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                                const num = raw ? parseFloat(raw) : null;
+                                                setRceReplacementCost(num);
+                                                if (num) {
+                                                    saveRceValuationAsync(num, rceCarrier);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <select
+                                        className={styles.textInput}
+                                        style={{ width: '130px', flexShrink: 0 }}
+                                        value={rceCarrier}
+                                        onChange={e => {
+                                            const newCarrier = e.target.value;
+                                            setRceCarrier(newCarrier);
+                                            if (rceReplacementCost) {
+                                                saveRceValuationAsync(rceReplacementCost, newCarrier);
+                                            }
+                                        }}
+                                    >
+                                        <option value="Bamboo">Bamboo</option>
+                                        <option value="Aegis">Aegis</option>
+                                        <option value="AM">AM</option>
+                                        <option value="360Value">360Value</option>
+                                        <option value="CoreLogic">CoreLogic</option>
+                                        <option value="SageSure">SageSure</option>
+                                        <option value="PSIC">PSIC</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
                             </div>
 
                             {/* Guardrail: Attachment Pre-Selection & PDF Verification */}
