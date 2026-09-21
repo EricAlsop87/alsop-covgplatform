@@ -340,20 +340,7 @@ export function getEmailSystemStatus(): EmailSystemStatus {
 // ---------------------------------------------------------------------------
 
 function getProvider(message?: EmailMessage): EmailProvider {
-    // Primary: Route all emails through Gmail SMTP using the assigned VA accounts (alsopva01, alsopva02, alsopva03)
-    if (
-        process.env.GMAIL_APP_PASSWORD ||
-        process.env.GMAIL_VA01_APP_PASSWORD ||
-        process.env.GMAIL_VA02_APP_PASSWORD ||
-        process.env.GMAIL_VA03_APP_PASSWORD
-    ) {
-        return new GmailSmtpProvider();
-    }
-
-    if (process.env.POSTMARK_SERVER_TOKEN && process.env.POSTMARK_SERVER_TOKEN !== 'your_postmark_token_here') {
-        return new PostmarkProvider();
-    }
-
+    // Primary & Exclusive: Route all emails directly through Google Workspace SMTP (admin@coveragechecknow.com)
     return new GmailSmtpProvider();
 }
 
