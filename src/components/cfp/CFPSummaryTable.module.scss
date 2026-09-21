@@ -2129,8 +2129,43 @@
     background: rgba(245, 158, 11, 0.15) !important;
 }
 
+.readyForSendingPill {
+    border-color: #10b981 !important;
+    color: #047857 !important;
+    background: #ecfdf5 !important;
+    font-weight: 700 !important;
+
+    &.active {
+        background: #059669 !important;
+        color: #ffffff !important;
+        border-color: #059669 !important;
+    }
+}
+
+:global([data-theme='dark']) .readyForSendingPill {
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    color: #6ee7b7 !important;
+    background: rgba(16, 185, 129, 0.15) !important;
+
+    &.active {
+        background: #059669 !important;
+        color: #ffffff !important;
+        border-color: #059669 !important;
+    }
+}
+
 .pillCountAlert {
     background: #f59e0b;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    margin-left: 0.35rem;
+}
+
+.pillCountSuccess {
+    background: #10b981;
     color: #ffffff;
     font-size: 0.65rem;
     font-weight: 700;

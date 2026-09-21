@@ -140,6 +140,7 @@ interface CFPSummaryTableProps {
 
 type DocFilterType =
     | 'all'
+    | 'ready_for_sending'
     | 'bamboo_policies'
     | 'missing_dec'
     | 'has_renewal_offer'
@@ -151,6 +152,39 @@ type DocFilterType =
     | 'has_unavailable'
     | 'has_comments'
     | 'returned_from_se';
+
+export function isTermReadyForSending(t: CFPTermRow): boolean {
+    // 1. Must have DEC page or Renewal DEC page with a valid premium amount (not $0 / None)
+    const hasDecWithAmount = (
+        (t.has_dec || t.has_renewal_dec || !!t.dec_storage_path || !!t.renewal_dec_storage_path) &&
+        ((t.annual_premium != null && t.annual_premium > 0) || (t.renewal_annual_premium != null && t.renewal_annual_premium > 0))
+    );
+    if (!hasDecWithAmount) return false;
+
+    // 2. Must have RCE with replacement cost valuation amount (not $0 / None)
+    const hasRceWithAmount = (
+        (t.has_rce || !!t.rce_carrier || !!t.rce_storage_path) &&
+        t.rce_replacement_cost != null &&
+        Number(t.rce_replacement_cost) > 0
+    );
+    if (!hasRceWithAmount) return false;
+
+    // 3. Must have 3 quotes either full, quote, or marked unavailable/ineligible (none remaining as unquoted +Quote)
+    const resolvedCarriers = new Set<string>();
+    if (t.carrier_quotes?.bamboo || t.has_bamboo_coverage) resolvedCarriers.add('bamboo');
+    if (t.carrier_quotes?.aegis) resolvedCarriers.add('aegis');
+    if (t.carrier_quotes?.psic) resolvedCarriers.add('psic');
+    if (t.carrier_quotes?.am) resolvedCarriers.add('am');
+    if (t.carrier_quotes?.sagesure) resolvedCarriers.add('sagesure');
+
+    const hasCore3Resolved = (
+        (t.carrier_quotes?.bamboo || t.has_bamboo_coverage) &&
+        !!t.carrier_quotes?.aegis &&
+        !!t.carrier_quotes?.psic
+    );
+
+    return hasCore3Resolved || resolvedCarriers.size >= 3;
+}
 
 const MONTH_NAMES = [
     { value: '', label: 'All Months' },
@@ -866,6 +900,8 @@ export function CFPSummaryTable({
         if (docFilter !== 'all') {
             result = result.filter(t => {
                 switch (docFilter) {
+                    case 'ready_for_sending':
+                        return isTermReadyForSending(t);
                     case 'bamboo_policies':
                         return (
                             t.is_pending_dec || 
@@ -1067,6 +1103,7 @@ export function CFPSummaryTable({
     // Quick summary statistics for the filtered month & year
     const periodStats = useMemo(() => {
         const total = allTerms.length;
+        let readyForSending = 0;
         let decAvailable = 0;
         let rceAvailable = 0;
         let dicAvailable = 0;
@@ -1076,6 +1113,7 @@ export function CFPSummaryTable({
         let returnedFromSe = 0;
 
         for (const t of allTerms) {
+            if (isTermReadyForSending(t)) readyForSending++;
             if (t.has_dec || t.has_renewal_dec) decAvailable++;
             if (t.has_rce || t.rce_carrier) rceAvailable++;
             const quotes = Object.values(t.carrier_quotes || {});
@@ -1092,6 +1130,7 @@ export function CFPSummaryTable({
 
         return {
             total,
+            readyForSending,
             decAvailable,
             decMissing: Math.max(0, total - decAvailable),
             rceAvailable,
@@ -2298,6 +2337,17 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('all'); setCurrentPage(1); }}
                     >
                         All
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${styles.readyForSendingPill} ${docFilter === 'ready_for_sending' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('ready_for_sending'); setCurrentPage(1); }}
+                        title="Has Dec with amount, RCE with amount, and 3 quotes (Full/DIC/Quote or marked Unavailable)"
+                    >
+                        🚀 Ready for Sending
+                        {periodStats.readyForSending > 0 && (
+                            <span className={styles.pillCountSuccess}>{periodStats.readyForSending}</span>
+                        )}
                     </button>
                     <button
                         type="button"
