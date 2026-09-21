@@ -2351,26 +2351,10 @@ export function CFPSummaryTable({
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'bamboo_policies' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('bamboo_policies'); setCurrentPage(1); }}
-                        style={docFilter === 'bamboo_policies' ? { background: 'rgba(16, 185, 129, 0.15)', color: '#059669', borderColor: '#059669' } : {}}
-                    >
-                        🌿 Bamboo Policies
-                    </button>
-                    <button
-                        type="button"
                         className={`${styles.filterPill} ${docFilter === 'missing_dec' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
                     >
                         Missing DEC
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.filterPill} ${docFilter === 'has_renewal_offer' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('has_renewal_offer'); setCurrentPage(1); }}
-                        style={docFilter === 'has_renewal_offer' ? { background: 'rgba(14, 165, 233, 0.15)', color: '#0284c7', borderColor: '#0284c7' } : {}}
-                    >
-                        Renewal Offer (✔)
                     </button>
                     <button
                         type="button"
@@ -2413,18 +2397,6 @@ export function CFPSummaryTable({
                         onClick={() => { setDocFilter('has_unavailable'); setCurrentPage(1); }}
                     >
                         Has Unavailable (✕)
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.filterPill} ${docFilter === 'returned_from_se' ? styles.active : ''} ${periodStats.returnedFromSe > 0 ? styles.returnedAlertPill : ''}`}
-                        onClick={() => { setDocFilter('returned_from_se'); setCurrentPage(1); }}
-                        title="Policies returned from Servicing that need document upload or revisions"
-                    >
-                        <AlertTriangle size={11} style={{ display: 'inline', marginRight: '3px' }} />
-                        Returned from SE
-                        {periodStats.returnedFromSe > 0 && (
-                            <span className={styles.pillCountAlert}>{periodStats.returnedFromSe}</span>
-                        )}
                     </button>
                     <button
                         type="button"
