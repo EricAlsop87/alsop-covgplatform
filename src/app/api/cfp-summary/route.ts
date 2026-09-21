@@ -595,6 +595,18 @@ export async function GET(req: NextRequest) {
 
     let terms = allFetchedTerms;
 
+    // Filter by month across all years when year is "All Years" or unconstrained, but a specific Month is selected
+    if (view !== 'campaign_91_address' && view !== 'campaign_92_address') {
+        if ((!year || year === 'all') && month && month !== 'all' && month !== '') {
+            const targetMonthStr = month.toString().padStart(2, '0');
+            terms = terms.filter(t => {
+                if (!t.expiration_date) return false;
+                const parts = String(t.expiration_date).split('-');
+                return parts.length >= 2 && parts[1] === targetMonthStr;
+            });
+        }
+    }
+
     // For campaign views, show exactly 1 latest active row per target property (91 total)
     if (view === 'campaign_91_address' || view === 'campaign_92_address') {
         const termsByPolicyMap = new Map<string, any[]>();
