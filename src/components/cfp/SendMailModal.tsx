@@ -298,20 +298,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         }
 
-        // 7. SageSure Quote
-        if (term.carrier_quotes?.sagesure?.storage_path) {
-            addCandidate({
-                id: 'sagesure',
-                label: 'SageSure Quote',
-                badge: 'SAGESURE QUOTE',
-                fileName: term.carrier_quotes.sagesure.file_name || term.carrier_quotes.sagesure.doc_file_name || 'SageSure_Quote.pdf',
-                storagePath: term.carrier_quotes.sagesure.storage_path,
-                bucket: 'cfp-platform-documents',
-                docCategory: 'quote',
-            });
-        }
-
-        // 8. PSIC Quote
+        // 7. PSIC Quote
         if (term.carrier_quotes?.psic?.storage_path) {
             addCandidate({
                 id: 'psic',
@@ -480,7 +467,6 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const bamboo = formatQuote('Bamboo', 'bamboo', term.carrier_quotes?.bamboo);
         const aegis = formatQuote('Aegis', 'aegis', term.carrier_quotes?.aegis);
         const am = formatQuote('American Modern (AM)', 'am', term.carrier_quotes?.am);
-        const sagesure = formatQuote('SageSure', 'sagesure', term.carrier_quotes?.sagesure);
         const psic = formatQuote('PSIC', 'psic', term.carrier_quotes?.psic);
 
         const effectiveTitlePro = liveTitlePro || term.title_pro;
@@ -584,7 +570,6 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             bamboo,
             aegis,
             am,
-            sagesure,
             psic,
             {
                 name: 'Title Pro Report',
