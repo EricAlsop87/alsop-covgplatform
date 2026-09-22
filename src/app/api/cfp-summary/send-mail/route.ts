@@ -113,27 +113,60 @@ export async function POST(req: NextRequest) {
         try {
             // If the VA explicitly pre-selected specific attachments via the guardrail checklist:
             if (Array.isArray(selectedAttachments)) {
+                // Fetch all active platform_documents for this policy to support fallback resolution
+                const { data: policyPlatformDocs } = await adminClient
+                    .from('platform_documents')
+                    .select('id, file_name, storage_path, doc_type')
+                    .eq('policy_id', policyId);
+
                 for (const item of selectedAttachments) {
-                    if (!item.storagePath) continue;
-                    const cleanPath = item.storagePath.replace(/^\/+/, '');
+                    const safeName = item.fileName || 'Document.pdf';
+                    if (attachedNames.includes(safeName)) continue;
+
+                    const candidatePaths: string[] = [];
+                    if (item.storagePath) {
+                        candidatePaths.push(item.storagePath.replace(/^\/+/, ''));
+                    }
+
+                    // Fallback 1: Match by exact file_name in policy's platform_documents
+                    const matchByName = policyPlatformDocs?.find(d => d.file_name && d.file_name === item.fileName && d.storage_path);
+                    if (matchByName?.storage_path) {
+                        candidatePaths.push(matchByName.storage_path.replace(/^\/+/, ''));
+                    }
+
+                    // Fallback 2: Match by partial filename or doc category
+                    if (item.fileName) {
+                        const baseSearch = item.fileName.toLowerCase().replace(/[-_.\s]/g, '');
+                        const matchFuzzy = policyPlatformDocs?.find(d => {
+                            if (!d.storage_path || !d.file_name) return false;
+                            const dName = d.file_name.toLowerCase().replace(/[-_.\s]/g, '');
+                            return dName.includes(baseSearch) || baseSearch.includes(dName);
+                        });
+                        if (matchFuzzy?.storage_path) {
+                            candidatePaths.push(matchFuzzy.storage_path.replace(/^\/+/, ''));
+                        }
+                    }
+
                     const buckets = item.bucket
                         ? [item.bucket, 'cfp-raw-decpage', 'cfp-platform-documents']
                         : ['cfp-platform-documents', 'cfp-raw-decpage'];
-                    const safeName = item.fileName || 'Document.pdf';
 
-                    if (attachedNames.includes(safeName)) continue;
-
-                    for (const b of buckets) {
-                        const { data: fileBlob } = await adminClient.storage.from(b).download(cleanPath);
-                        if (fileBlob) {
-                            const buffer = Buffer.from(await fileBlob.arrayBuffer());
-                            attachments.push({
-                                name: safeName,
-                                content: buffer.toString('base64'),
-                                contentType: 'application/pdf',
-                            });
-                            attachedNames.push(safeName);
-                            break;
+                    let attached = false;
+                    for (const path of Array.from(new Set(candidatePaths))) {
+                        if (attached) break;
+                        for (const b of buckets) {
+                            const { data: fileBlob } = await adminClient.storage.from(b).download(path);
+                            if (fileBlob) {
+                                const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                                attachments.push({
+                                    name: safeName,
+                                    content: buffer.toString('base64'),
+                                    contentType: 'application/pdf',
+                                });
+                                attachedNames.push(safeName);
+                                attached = true;
+                                break;
+                            }
                         }
                     }
                 }
