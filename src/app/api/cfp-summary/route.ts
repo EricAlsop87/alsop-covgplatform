@@ -257,7 +257,7 @@ export function detectCarrierQuoteInfo(
 
 function detectDocCarrier(fileName?: string | null, rawText?: string | null, docType?: string | null, rceSource?: string | null, rceCreatedBy?: string | null): string | null {
     const fn = (fileName || '').toLowerCase();
-    const txt = (rawText || '').toLowerCase().slice(0, 3000);
+    const txt = (rawText || '').toLowerCase().slice(0, 5000);
     const src = (rceSource || '').toLowerCase();
     const createdBy = (rceCreatedBy || '').toLowerCase();
     const combined = `${fn} ${txt} ${src} ${createdBy}`;
@@ -309,31 +309,41 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'PSIC';
     }
 
-    // 3. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, Q5 quotes)
+    // 3. Aegis (including Obsidian Pacific, Aegis Security, Aegis General, webservices@aegis, Q5 quotes)
     if (
         createdBy.includes('aegis') ||
+        createdBy.includes('webservices@aegis') ||
         combined.includes('aegis') ||
         combined.includes('obsidian') ||
+        combined.includes('webservices@aegis') ||
         /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
     ) {
         return 'Aegis';
     }
 
-    // 4. Bamboo (Bamboo, CASNH, 360Value, Q100)
+    // 4. SageSure
+    if (
+        createdBy.includes('sagesure') ||
+        combined.includes('sagesure')
+    ) {
+        return 'SageSure';
+    }
+
+    // 5. Bamboo (Bamboo, CASNH, guidewire@bamboo, bambooinsurance, Q100 quotes)
     if (
         createdBy.includes('bamboo') ||
+        createdBy.includes('guidewire@bamboo') ||
         combined.includes('bamboo') ||
         combined.includes('guidewire@bamboo') ||
+        combined.includes('bambooinsurance') ||
         combined.includes('casnh') ||
-        combined.includes('360value') ||
-        combined.includes('360 value') ||
         /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
     ) {
         return 'Bamboo';
     }
 
-    if (docType === 'rce') {
-        return 'Bamboo';
+    if (docType === 'rce' && (combined.includes('360value') || combined.includes('360 value'))) {
+        return '360Value';
     }
 
     return null;
@@ -698,11 +708,12 @@ export async function GET(req: NextRequest) {
             storage_path?: string;
             bucket?: string;
             extracted_address?: string;
+            raw_text?: string;
             doc_data_dic?: any;
             doc_data_rce?: any;
         }>(
             'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id)',
+            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, raw_text, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)',
             'policy_id',
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
@@ -862,7 +873,7 @@ export async function GET(req: NextRequest) {
             const isRceDoc = doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || !!rce || !!dic?.rce_replacement_cost;
 
             if (isRceDoc) {
-                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
+                const c = detectDocCarrier(doc.file_name, doc.raw_text, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
                 if (c && !policyRceCarrier[pid]) policyRceCarrier[pid] = c;
                 if (doc.storage_path && !policyRceDoc[pid]) {
                     policyRceDoc[pid] = {
@@ -886,7 +897,7 @@ export async function GET(req: NextRequest) {
             } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
                 if (!isQuoteDoc) {
-                    const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
+                    const c = detectDocCarrier(doc.file_name, doc.raw_text, 'dic_dec_page');
                     if (c && c !== 'California FAIR Plan' && !policyDicCarrier[pid]) policyDicCarrier[pid] = c;
                     if (doc.storage_path && !policyDicDoc[pid]) {
                         policyDicDoc[pid] = { storage_path: doc.storage_path, file_name: doc.file_name };
@@ -916,7 +927,7 @@ export async function GET(req: NextRequest) {
             const isRceDoc = doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || !!rce || !!dic?.rce_replacement_cost;
 
             if (isRceDoc) {
-                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
+                const c = detectDocCarrier(doc.file_name, doc.raw_text, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
                 if (c && !termRceCarrier[t.id]) termRceCarrier[t.id] = c;
                 if (doc.storage_path && !termRceDoc[t.id]) {
                     termRceDoc[t.id] = {
@@ -940,7 +951,7 @@ export async function GET(req: NextRequest) {
             } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
                 if (!isQuoteDoc) {
-                    const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
+                    const c = detectDocCarrier(doc.file_name, doc.raw_text, 'dic_dec_page');
                     if (c && c !== 'California FAIR Plan' && !termDicCarrier[t.id]) termDicCarrier[t.id] = c;
                     if (doc.storage_path && !termDicDoc[t.id]) {
                         termDicDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
@@ -1124,7 +1135,7 @@ export async function GET(req: NextRequest) {
         const rceDoc = termRceDoc[t.id] || policyRceDoc[policyId] || null;
         const manualRce = manualRceValuationMap[policyId];
         const finalRceReplacementCost = manualRce?.replacement_cost ?? rceDoc?.replacement_cost ?? null;
-        const finalRceCarrier = manualRce?.carrier || termRceCarrier[t.id] || policyRceCarrier[policyId] || (rceDoc ? 'Bamboo' : null);
+        const finalRceCarrier = manualRce?.carrier || termRceCarrier[t.id] || policyRceCarrier[policyId] || (rceDoc ? '360Value' : null);
         const finalRceSqFeet = manualRce?.sq_feet ?? rceDoc?.sq_feet ?? null;
         const finalRceCostPerSqft = manualRce?.cost_per_sqft ?? rceDoc?.cost_per_sqft ?? null;
         const hasRce = docSet.has('rce') || (policyDocTypes[policyId]?.has('rce') ?? false) || !!rceDoc || manualRce?.replacement_cost != null;

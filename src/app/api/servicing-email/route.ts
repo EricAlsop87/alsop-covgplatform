@@ -14,19 +14,17 @@ export const dynamic = 'force-dynamic';
 
 function detectDocCarrier(fileName?: string | null, rawText?: string | null, docType?: string | null): string | null {
     const fn = (fileName || '').toLowerCase();
-    const txt = (rawText || '').toLowerCase().slice(0, 3000);
+    const txt = (rawText || '').toLowerCase().slice(0, 5000);
     const combined = `${fn} ${txt}`;
 
-    // 1. Bamboo
+    // 1. Aegis
     if (
-        combined.includes('bamboo') ||
-        combined.includes('guidewire@bamboo') ||
-        combined.includes('casnh') ||
-        combined.includes('360value') ||
-        combined.includes('360 value') ||
-        /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
+        combined.includes('aegis') ||
+        combined.includes('webservices@aegis') ||
+        combined.includes('obsidian') ||
+        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
     ) {
-        return 'Bamboo';
+        return 'Aegis';
     }
 
     // 2. American Modern
@@ -60,17 +58,26 @@ function detectDocCarrier(fileName?: string | null, rawText?: string | null, doc
         return 'PSIC';
     }
 
-    // 4. Aegis
+    // 4. SageSure
     if (
-        combined.includes('aegis') ||
-        combined.includes('obsidian') ||
-        /(?:^|[^0-9])Q5[0-9]{5,}/i.test(fileName || '')
+        combined.includes('sagesure')
     ) {
-        return 'Aegis';
+        return 'SageSure';
     }
 
-    if (docType === 'rce') {
+    // 5. Bamboo
+    if (
+        combined.includes('bamboo') ||
+        combined.includes('guidewire@bamboo') ||
+        combined.includes('bambooinsurance') ||
+        combined.includes('casnh') ||
+        /(?:^|[^A-Za-z0-9])Q100[0-9]{5,}/i.test(fileName || '')
+    ) {
         return 'Bamboo';
+    }
+
+    if (docType === 'rce' && (combined.includes('360value') || combined.includes('360 value'))) {
+        return '360Value';
     }
 
     return null;
