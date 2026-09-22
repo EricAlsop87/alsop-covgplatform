@@ -71,7 +71,7 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
             icon: ShieldAlert,
         },
         {
-            title: 'In-Force DIC Decs',
+            title: 'DIC Docs',
             value: dicUploaded.toLocaleString(),
             sublabel: `${stats.missing_dic.toLocaleString()} remaining to upload`,
             uploaded: undefined as string | number | undefined,
