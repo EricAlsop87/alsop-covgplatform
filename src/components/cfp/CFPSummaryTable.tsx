@@ -141,6 +141,8 @@ interface CFPSummaryTableProps {
 type DocFilterType =
     | 'all'
     | 'ready_for_sending'
+    | 'ready_sent'
+    | 'ready_not_sent'
     | 'bamboo_policies'
     | 'missing_dec'
     | 'has_renewal_offer'
@@ -152,6 +154,10 @@ type DocFilterType =
     | 'has_unavailable'
     | 'has_comments'
     | 'returned_from_se';
+
+export function isTermSent(t: CFPTermRow): boolean {
+    return !!t.cfp_mail_sent || !!t.in_servicing_email || t.servicing_status === 'emailed_to_agent';
+}
 
 export function isTermReadyForSending(t: CFPTermRow): boolean {
     // 1. Must have DEC page or Renewal DEC page with a valid premium amount (not $0 / None)
@@ -902,6 +908,10 @@ export function CFPSummaryTable({
                 switch (docFilter) {
                     case 'ready_for_sending':
                         return isTermReadyForSending(t);
+                    case 'ready_sent':
+                        return isTermReadyForSending(t) && isTermSent(t);
+                    case 'ready_not_sent':
+                        return isTermReadyForSending(t) && !isTermSent(t);
                     case 'bamboo_policies':
                         return (
                             t.is_pending_dec || 
@@ -1104,6 +1114,8 @@ export function CFPSummaryTable({
     const periodStats = useMemo(() => {
         const total = allTerms.length;
         let readyForSending = 0;
+        let readySent = 0;
+        let readyNotSent = 0;
         let decAvailable = 0;
         let rceAvailable = 0;
         let dicAvailable = 0;
@@ -1113,7 +1125,16 @@ export function CFPSummaryTable({
         let returnedFromSe = 0;
 
         for (const t of allTerms) {
-            if (isTermReadyForSending(t)) readyForSending++;
+            const isReady = isTermReadyForSending(t);
+            const isSent = isTermSent(t);
+            if (isReady) {
+                readyForSending++;
+                if (isSent) {
+                    readySent++;
+                } else {
+                    readyNotSent++;
+                }
+            }
             if (t.has_dec || t.has_renewal_dec) decAvailable++;
             if (t.has_rce || t.rce_carrier) rceAvailable++;
             const quotes = Object.values(t.carrier_quotes || {});
@@ -1131,6 +1152,8 @@ export function CFPSummaryTable({
         return {
             total,
             readyForSending,
+            readySent,
+            readyNotSent,
             decAvailable,
             decMissing: Math.max(0, total - decAvailable),
             rceAvailable,
@@ -2224,6 +2247,47 @@ export function CFPSummaryTable({
                             </span>
                         </div>
 
+                        {/* Ready for Sending Card */}
+                        <div className={`${styles.summaryMiniCard} ${styles.cardReady}`}>
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>Ready for Sending</span>
+                                <Send size={13} className={styles.miniCardIcon} />
+                            </div>
+                            <span 
+                                className={styles.miniCardValue}
+                                style={{ cursor: 'pointer' }}
+                                title="Click to filter by Ready for Sending"
+                                onClick={() => { setDocFilter('ready_for_sending'); setCurrentPage(1); }}
+                            >
+                                {periodStats.readyForSending.toLocaleString()}
+                            </span>
+                            <div className={styles.miniCardMetrics} style={{ gap: '0.4rem' }}>
+                                <span 
+                                    className={styles.metricNotice}
+                                    title="Click to filter by Ready - Sent"
+                                    onClick={() => { setDocFilter('ready_sent'); setCurrentPage(1); }}
+                                    style={{ fontSize: '0.6875rem', color: '#10b981', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}
+                                >
+                                    ✉️ {periodStats.readySent.toLocaleString()} sent
+                                </span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>•</span>
+                                <span 
+                                    className={styles.metricMissing}
+                                    title="Click to filter by Ready - Not Sent"
+                                    onClick={() => { setDocFilter('ready_not_sent'); setCurrentPage(1); }}
+                                    style={{ fontSize: '0.6875rem', color: '#f59e0b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}
+                                >
+                                    ⏳ {periodStats.readyNotSent.toLocaleString()} not sent
+                                </span>
+                            </div>
+                            <div className={styles.miniProgressBar}>
+                                <div 
+                                    className={styles.miniProgressFill} 
+                                    style={{ width: `${periodStats.readyForSending > 0 ? (periodStats.readySent / periodStats.readyForSending) * 100 : 0}%` }} 
+                                />
+                            </div>
+                        </div>
+
                         {/* 2. Uploaded DEC Pages */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDec}`}>
                             <div className={styles.miniCardTop}>
@@ -2347,6 +2411,28 @@ export function CFPSummaryTable({
                         🚀 Ready for Sending
                         {periodStats.readyForSending > 0 && (
                             <span className={styles.pillCountSuccess}>{periodStats.readyForSending}</span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${styles.readySentPill} ${docFilter === 'ready_sent' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('ready_sent'); setCurrentPage(1); }}
+                        title="Ready policies already emailed"
+                    >
+                        ✉️ Sent
+                        {periodStats.readySent > 0 && (
+                            <span className={styles.pillCountInfo}>{periodStats.readySent}</span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${styles.readyNotSentPill} ${docFilter === 'ready_not_sent' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('ready_not_sent'); setCurrentPage(1); }}
+                        title="Ready policies waiting to be emailed"
+                    >
+                        ⏳ Not Sent
+                        {periodStats.readyNotSent > 0 && (
+                            <span className={styles.pillCountWarning}>{periodStats.readyNotSent}</span>
                         )}
                     </button>
                     <button

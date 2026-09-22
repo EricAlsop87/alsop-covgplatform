@@ -1556,6 +1556,23 @@
         }
     }
 
+    /* Card: Ready for Sending (Emerald / Green) */
+    &.cardReady {
+        --card-theme-color: #10b981;
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-surface) 100%);
+        border-color: rgba(16, 185, 129, 0.3);
+
+        .miniCardLabel {
+            color: #047857;
+        }
+        .miniCardValue {
+            color: #065f46;
+        }
+        .miniProgressFill {
+            background: #10b981;
+        }
+    }
+
     /* Card 2: DEC Page (Amber / Gold) */
     &.cardDec {
         --card-theme-color: #f59e0b;
@@ -2172,6 +2189,76 @@
     padding: 0.1rem 0.35rem;
     border-radius: 9999px;
     margin-left: 0.35rem;
+}
+
+.pillCountInfo {
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    margin-left: 0.35rem;
+}
+
+.pillCountWarning {
+    background: #f59e0b;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    margin-left: 0.35rem;
+}
+
+.readySentPill {
+    border-color: #3b82f6 !important;
+    color: #1d4ed8 !important;
+    background: #eff6ff !important;
+    font-weight: 600 !important;
+
+    &.active {
+        background: #2563eb !important;
+        color: #ffffff !important;
+        border-color: #2563eb !important;
+    }
+}
+
+:global([data-theme='dark']) .readySentPill {
+    border-color: rgba(59, 130, 246, 0.4) !important;
+    color: #93c5fd !important;
+    background: rgba(59, 130, 246, 0.15) !important;
+
+    &.active {
+        background: #3b82f6 !important;
+        color: #ffffff !important;
+        border-color: #3b82f6 !important;
+    }
+}
+
+.readyNotSentPill {
+    border-color: #f59e0b !important;
+    color: #b45309 !important;
+    background: #fffbeb !important;
+    font-weight: 600 !important;
+
+    &.active {
+        background: #d97706 !important;
+        color: #ffffff !important;
+        border-color: #d97706 !important;
+    }
+}
+
+:global([data-theme='dark']) .readyNotSentPill {
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    color: #fde68a !important;
+    background: rgba(245, 158, 11, 0.15) !important;
+
+    &.active {
+        background: #f59e0b !important;
+        color: #ffffff !important;
+        border-color: #f59e0b !important;
+    }
 }
 
 
