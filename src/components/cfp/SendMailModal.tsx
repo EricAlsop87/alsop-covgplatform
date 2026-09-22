@@ -945,7 +945,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
         // Note: American Modern (AM) and SageSure are supplemental/optional companion carriers per SOP and do not block sending.
 
-        // 9. Missing RCE Valuation Amount
+        // 9. Missing RCE Valuation Amount & Missing RCE PDF
         const effectiveRceCost = rceReplacementCost ?? term?.rce_replacement_cost;
         if (!effectiveRceCost) {
             warnings.push({
@@ -954,9 +954,60 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 desc: 'RCE Replacement Cost valuation is $0 / not calculated.',
                 severity: 'info',
             });
+        } else if (!selectedAttachmentIds.includes('rce')) {
+            warnings.push({
+                id: 'rce_attachment',
+                label: 'Missing RCE PDF Attachment',
+                desc: `RCE valuation ($${Math.round(Number(effectiveRceCost)).toLocaleString()}) is recorded, but no RCE PDF is attached.`,
+                severity: 'warning',
+            });
         }
 
-        // 10. No Attachments Selected
+        // 10. Check Missing PDF Attachments for Quoted Carriers
+        if (bambooQ && (bambooQ.coverage_type === 'FULL' || bambooQ.coverage_type === 'DIC' || bambooQ.coverage_type === 'QUOTE' || Number(bambooQ.premium) > 0)) {
+            if (!selectedAttachmentIds.includes('bamboo')) {
+                warnings.push({
+                    id: 'bamboo_pdf_missing',
+                    label: 'Missing Bamboo PDF Attachment',
+                    desc: 'Bamboo quote is recorded, but no Bamboo quote PDF document is attached.',
+                    severity: 'warning',
+                });
+            }
+        }
+
+        if (aegisQ && (aegisQ.coverage_type === 'FULL' || aegisQ.coverage_type === 'DIC' || aegisQ.coverage_type === 'QUOTE' || Number(aegisQ.premium) > 0)) {
+            if (!selectedAttachmentIds.includes('aegis')) {
+                warnings.push({
+                    id: 'aegis_pdf_missing',
+                    label: 'Missing Aegis PDF Attachment',
+                    desc: 'Aegis quote is recorded, but no Aegis quote PDF document is attached.',
+                    severity: 'warning',
+                });
+            }
+        }
+
+        if (psicQ && (psicQ.coverage_type === 'FULL' || psicQ.coverage_type === 'DIC' || psicQ.coverage_type === 'QUOTE' || Number(psicQ.premium) > 0)) {
+            if (!selectedAttachmentIds.includes('psic')) {
+                warnings.push({
+                    id: 'psic_pdf_missing',
+                    label: 'Missing PSIC PDF Attachment',
+                    desc: 'PSIC quote is recorded, but no PSIC quote PDF document is attached.',
+                    severity: 'warning',
+                });
+            }
+        }
+
+        // 11. Missing Dec / Renewal PDF Attachment
+        if ((term?.has_dec || term?.has_renewal_dec) && !selectedAttachmentIds.includes('dec') && !selectedAttachmentIds.includes('renewal_dec')) {
+            warnings.push({
+                id: 'dec_pdf_missing',
+                label: 'Missing Dec Page Attachment',
+                desc: 'FAIR Plan Dec Page / Renewal is available, but no Dec PDF is selected for attachment.',
+                severity: 'warning',
+            });
+        }
+
+        // 12. No Attachments Selected
         if (selectedAttachmentIds.length === 0) {
             warnings.push({
                 id: 'no_attachments',
