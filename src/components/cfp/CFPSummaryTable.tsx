@@ -2365,20 +2365,6 @@ export function CFPSummaryTable({
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'has_dic_quote' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('has_dic_quote'); setCurrentPage(1); }}
-                    >
-                        Has DIC Quote
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.filterPill} ${docFilter === 'has_full_quote' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('has_full_quote'); setCurrentPage(1); }}
-                    >
-                        Has Full Quote
-                    </button>
-                    <button
-                        type="button"
                         className={`${styles.filterPill} ${docFilter === 'has_needs_uw' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('has_needs_uw'); setCurrentPage(1); }}
                     >
