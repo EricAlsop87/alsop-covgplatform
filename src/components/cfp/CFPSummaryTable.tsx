@@ -2379,13 +2379,6 @@ export function CFPSummaryTable({
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'has_unavailable' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('has_unavailable'); setCurrentPage(1); }}
-                    >
-                        Has Unavailable (✕)
-                    </button>
-                    <button
-                        type="button"
                         className={`${styles.filterPill} ${docFilter === 'has_comments' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('has_comments'); setCurrentPage(1); }}
                     >
