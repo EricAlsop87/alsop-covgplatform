@@ -67,11 +67,10 @@ function CFPSummaryContent() {
     });
 
     const [search, setSearch] = useState('');
-    const [view, setViewState] = useState<'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all'>(() => {
+    const [view, setViewState] = useState<'active_cfp' | 'bamboo_pipeline' | 'all'>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_view');
-            if (saved === 'campaign_92_address') return 'campaign_91_address';
-            if (saved === 'active_cfp' || saved === 'bamboo_pipeline' || saved === 'campaign_91_address' || saved === 'all') return saved;
+            if (saved === 'active_cfp' || saved === 'bamboo_pipeline' || saved === 'all') return saved;
         }
         return 'active_cfp';
     });
@@ -98,7 +97,7 @@ function CFPSummaryContent() {
         }
     }, []);
 
-    const setView = useCallback((newView: 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all') => {
+    const setView = useCallback((newView: 'active_cfp' | 'bamboo_pipeline' | 'all') => {
         setViewState(newView);
         if (typeof window !== 'undefined') {
             localStorage.setItem('ccn_cfp_summary_view', newView);

@@ -62,8 +62,10 @@ import {
 
 export interface ColumnFilters {
     policy?: string;
+    status?: string;
     insured?: string;
     address?: string;
+    mailing_address?: string;
     dec?: string;
     rce?: string;
     bamboo?: string;
@@ -78,8 +80,10 @@ export interface ColumnFilters {
 
 export type CFPColumnKey =
     | 'policy'
+    | 'status'
     | 'insured'
     | 'address'
+    | 'mailing_address'
     | 'expiration'
     | 'premium'
     | 'dec'
@@ -103,8 +107,9 @@ interface ColumnDef {
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'policy', label: 'CFP Number', width: 175, minWidth: 125, align: 'left' },
+    { key: 'status', label: 'Status', width: 105, minWidth: 85, align: 'center' },
     { key: 'insured', label: 'Named Insured', width: 155, minWidth: 100, align: 'left' },
-    { key: 'address', label: 'Property Address', width: 205, minWidth: 120, align: 'left' },
+    { key: 'address', label: 'Property Address', width: 220, minWidth: 120, align: 'left' },
     { key: 'expiration', label: 'Expiration', width: 100, minWidth: 85, align: 'left' },
     { key: 'premium', label: 'Premium', width: 95, minWidth: 70, align: 'left' },
     { key: 'dec', label: 'DEC Page', width: 85, minWidth: 70, align: 'center' },
@@ -128,11 +133,11 @@ interface CFPSummaryTableProps {
     year: string;
     month: string;
     search: string;
-    view?: 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all';
+    view?: 'active_cfp' | 'bamboo_pipeline' | 'all';
     onYearChange: (y: string) => void;
     onMonthChange: (m: string) => void;
     onSearchChange: (s: string) => void;
-    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all') => void;
+    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'all') => void;
     onRefresh: () => void;
     totalTerms: number;
     totalFamilies: number;
@@ -989,13 +994,23 @@ export function CFPSummaryTable({
                 );
             } else if (columnFilters.policy === 'not_available') {
                 result = result.filter(t => 
-                    t.is_pending_dec || 
                     !t.policy_number || 
                     t.policy_number.toLowerCase().includes('pending') || 
                     t.policy_number.trim() === '' || 
                     t.policy_number.trim() === '—'
                 );
             }
+        }
+
+        if (columnFilters.status) {
+            const filterS = columnFilters.status.toLowerCase();
+            result = result.filter(t => {
+                const s = (t.carrier_status || (t.is_pending_dec ? 'pending_dec' : 'active')).toLowerCase();
+                if (filterS === 'pending_dec') {
+                    return t.is_pending_dec || s.includes('pending');
+                }
+                return s.includes(filterS);
+            });
         }
 
         if (columnFilters.insured) {
@@ -1030,6 +1045,24 @@ export function CFPSummaryTable({
                     t.property_address.trim() === '' || 
                     t.property_address.trim() === '—' || 
                     t.property_address.trim().toLowerCase() === 'unknown'
+                );
+            }
+        }
+
+        if (columnFilters.mailing_address) {
+            if (columnFilters.mailing_address === 'available') {
+                result = result.filter(t => 
+                    !!t.mailing_address && 
+                    t.mailing_address.trim() !== '' && 
+                    t.mailing_address.trim() !== '—' && 
+                    t.mailing_address.trim().toLowerCase() !== 'unknown'
+                );
+            } else if (columnFilters.mailing_address === 'not_available') {
+                result = result.filter(t => 
+                    !t.mailing_address || 
+                    t.mailing_address.trim() === '' || 
+                    t.mailing_address.trim() === '—' || 
+                    t.mailing_address.trim().toLowerCase() === 'unknown'
                 );
             }
         }
@@ -1110,60 +1143,97 @@ export function CFPSummaryTable({
         return result;
     }, [allTerms, docFilter, columnFilters]);
 
-    // Quick summary statistics for the filtered month & year
+    // Quick summary statistics for the filtered month & year (deduplicated by unique policy)
     const periodStats = useMemo(() => {
         const total = allTerms.length;
-        let readyForSending = 0;
-        let readySent = 0;
-        let readyNotSent = 0;
+        const uniquePolicyMap = new Map<string, {
+            has_dec: boolean;
+            has_rce: boolean;
+            has_dic: boolean;
+            has_full: boolean;
+            has_any_quote: boolean;
+            has_unavail: boolean;
+            client_id?: string;
+        }>();
+        const uniqueAccounts = new Set<string>();
+
+        for (const t of allTerms) {
+            const pKey = t.policy_id || t.policy_number || t.base_policy;
+            if (!uniquePolicyMap.has(pKey)) {
+                uniquePolicyMap.set(pKey, {
+                    has_dec: false,
+                    has_rce: false,
+                    has_dic: false,
+                    has_full: false,
+                    has_any_quote: false,
+                    has_unavail: false,
+                    client_id: t.client_id,
+                });
+            }
+
+            const item = uniquePolicyMap.get(pKey)!;
+            if (t.client_id) uniqueAccounts.add(t.client_id);
+
+            if (t.has_dec || t.has_renewal_dec) item.has_dec = true;
+            if (t.has_rce || t.rce_carrier) item.has_rce = true;
+
+            const quotes = Object.values(t.carrier_quotes || {});
+            const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
+            const hasFull = quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
+            const hasQuote = quotes.some(q => q?.coverage_type === 'QUOTE');
+            const hasUnavail = quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
+
+            if (hasDic) item.has_dic = true;
+            if (hasFull) item.has_full = true;
+            if (hasDic || hasFull || hasQuote) item.has_any_quote = true;
+            if (hasUnavail) item.has_unavail = true;
+        }
+
+        const uniquePolicies = uniquePolicyMap.size || total;
         let decAvailable = 0;
         let rceAvailable = 0;
         let dicAvailable = 0;
         let fullAvailable = 0;
         let quoteAvailable = 0;
         let unavailableCount = 0;
-        let returnedFromSe = 0;
+
+        for (const item of uniquePolicyMap.values()) {
+            if (item.has_dec) decAvailable++;
+            if (item.has_rce) rceAvailable++;
+            if (item.has_dic) dicAvailable++;
+            if (item.has_full) fullAvailable++;
+            if (item.has_any_quote) quoteAvailable++;
+            if (item.has_unavail) unavailableCount++;
+        }
+
+        let readyForSending = 0;
+        let readySent = 0;
+        let readyNotSent = 0;
 
         for (const t of allTerms) {
-            const isReady = isTermReadyForSending(t);
-            const isSent = isTermSent(t);
-            if (isReady) {
+            if (isTermReadyForSending(t)) {
                 readyForSending++;
-                if (isSent) {
-                    readySent++;
-                } else {
-                    readyNotSent++;
-                }
+                if (isTermSent(t)) readySent++;
+                else readyNotSent++;
             }
-            if (t.has_dec || t.has_renewal_dec) decAvailable++;
-            if (t.has_rce || t.rce_carrier) rceAvailable++;
-            const quotes = Object.values(t.carrier_quotes || {});
-            const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
-            const hasFull = quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
-            const hasQuote = quotes.some(q => q?.coverage_type === 'QUOTE');
-            const hasUnavail = quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
-            if (hasDic) dicAvailable++;
-            if (hasFull) fullAvailable++;
-            if (hasDic || hasFull || hasQuote) quoteAvailable++;
-            if (hasUnavail) unavailableCount++;
-            if (t.returned_from_se) returnedFromSe++;
         }
 
         return {
             total,
+            uniquePolicies,
+            uniqueAccounts: uniqueAccounts.size || uniquePolicies,
             readyForSending,
             readySent,
             readyNotSent,
             decAvailable,
-            decMissing: Math.max(0, total - decAvailable),
+            decMissing: Math.max(0, uniquePolicies - decAvailable),
             rceAvailable,
-            rceMissing: Math.max(0, total - rceAvailable),
+            rceMissing: Math.max(0, uniquePolicies - rceAvailable),
             dicAvailable,
             fullAvailable,
             quoteAvailable,
-            quoteMissing: Math.max(0, total - quoteAvailable),
+            quoteMissing: Math.max(0, uniquePolicies - quoteAvailable),
             unavailableCount,
-            returnedFromSe,
         };
     }, [allTerms]);
 
@@ -1415,6 +1485,50 @@ export function CFPSummaryTable({
                     </div>
                 );
 
+            case 'status': {
+                const statusStr = term.carrier_status || (term.is_pending_dec ? 'Pending DEC' : 'Active');
+                const sLower = statusStr.toLowerCase();
+                let badgeStyle: React.CSSProperties = {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                };
+
+                if (sLower.includes('cancel')) {
+                    badgeStyle = { ...badgeStyle, background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' };
+                } else if (sLower.includes('nonrenew') || sLower.includes('non-renew')) {
+                    badgeStyle = { ...badgeStyle, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' };
+                } else if (sLower === 'new') {
+                    badgeStyle = { ...badgeStyle, background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe' };
+                } else if (sLower === 'renew') {
+                    badgeStyle = { ...badgeStyle, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' };
+                } else if (sLower === 'endorse') {
+                    badgeStyle = { ...badgeStyle, background: '#f3e8ff', color: '#6b21a8', border: '1px solid #e9d5ff' };
+                } else if (sLower === 'reinstate') {
+                    badgeStyle = { ...badgeStyle, background: '#ccfbf1', color: '#115e59', border: '1px solid #99f6e4' };
+                } else if (sLower === 'rewrite') {
+                    badgeStyle = { ...badgeStyle, background: '#ffedd5', color: '#9a3412', border: '1px solid #fed7aa' };
+                } else if (term.is_pending_dec) {
+                    badgeStyle = { ...badgeStyle, background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' };
+                } else {
+                    // Standard Active
+                    badgeStyle = { ...badgeStyle, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
+                }
+
+                return (
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <span style={badgeStyle} title={`Status: ${statusStr}`}>
+                            {statusStr}
+                        </span>
+                    </div>
+                );
+            }
+
             case 'insured':
                 const insuredText = term.named_insured || 'Unknown';
                 const canCopyInsured = !!term.named_insured && term.named_insured !== '—' && term.named_insured !== 'Unknown';
@@ -1454,14 +1568,36 @@ export function CFPSummaryTable({
                     </div>
                 );
 
-            case 'address':
+            case 'address': {
                 const addressText = term.property_address || '—';
+                const mailingText = term.mailing_address || '';
                 const canCopyAddress = !!term.property_address && term.property_address !== '—' && term.property_address !== 'Unknown';
+                const hasMailing = !!mailingText && mailingText.trim() !== '' && mailingText !== '—' && mailingText !== term.property_address;
+                const fullTooltip = hasMailing ? `Property: ${addressText}\n📬 Mailing: ${mailingText}` : `Property: ${addressText}`;
+
                 return (
                     <div className={styles.copyableCell}>
-                        <span className={styles.cellText} title={addressText}>
+                        <span className={styles.cellText} title={fullTooltip}>
                             {addressText}
                         </span>
+                        {hasMailing && (
+                            <button
+                                type="button"
+                                className={`${styles.copyBtn} ${copiedKey === `mailing-${term.policy_term_id}` ? styles.copied : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(mailingText, `mailing-${term.policy_term_id}`);
+                                }}
+                                title={`Mailing Address: ${mailingText} (Click to copy)`}
+                                style={{ color: '#0284c7' }}
+                            >
+                                {copiedKey === `mailing-${term.policy_term_id}` ? (
+                                    <Check size={11} style={{ color: '#16a34a' }} />
+                                ) : (
+                                    <span style={{ fontSize: '10px' }}>📬</span>
+                                )}
+                            </button>
+                        )}
                         {canCopyAddress && (
                             <button
                                 type="button"
@@ -1473,6 +1609,35 @@ export function CFPSummaryTable({
                                 title="Copy Property Address"
                             >
                                 {copiedKey === `address-${term.policy_term_id}` ? (
+                                    <Check size={11} style={{ color: '#16a34a' }} />
+                                ) : (
+                                    <Copy size={11} />
+                                )}
+                            </button>
+                        )}
+                    </div>
+                );
+            }
+
+            case 'mailing_address':
+                const mailingText = term.mailing_address || '—';
+                const canCopyMailing = !!term.mailing_address && term.mailing_address !== '—';
+                return (
+                    <div className={styles.copyableCell}>
+                        <span className={styles.cellText} title={mailingText}>
+                            {mailingText}
+                        </span>
+                        {canCopyMailing && (
+                            <button
+                                type="button"
+                                className={`${styles.copyBtn} ${copiedKey === `mailing-${term.policy_term_id}` ? styles.copied : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(term.mailing_address!, `mailing-${term.policy_term_id}`);
+                                }}
+                                title="Copy Mailing Address"
+                            >
+                                {copiedKey === `mailing-${term.policy_term_id}` ? (
                                     <Check size={11} style={{ color: '#16a34a' }} />
                                 ) : (
                                     <Copy size={11} />
@@ -1847,6 +2012,25 @@ export function CFPSummaryTable({
                         <option value="not_available">Not Available</option>
                     </select>
                 );
+            case 'status':
+                return (
+                    <select
+                        value={columnFilters.status || ''}
+                        onChange={e => handleColumnFilterChange('status', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.status ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="renew">Renew</option>
+                        <option value="new">New</option>
+                        <option value="endorse">Endorse</option>
+                        <option value="reinstate">Reinstate</option>
+                        <option value="rewrite">Rewrite</option>
+                        <option value="cancel">Cancel</option>
+                        <option value="nonrenew">NonRenew</option>
+                        <option value="pending_dec">Pending DEC</option>
+                    </select>
+                );
             case 'insured':
                 return (
                     <select
@@ -1867,6 +2051,18 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters.address ? styles.activeFilter : ''}`}
                     >
                         <option value="">All Addresses</option>
+                        <option value="available">Available</option>
+                        <option value="not_available">Not Available</option>
+                    </select>
+                );
+            case 'mailing_address':
+                return (
+                    <select
+                        value={columnFilters.mailing_address || ''}
+                        onChange={e => handleColumnFilterChange('mailing_address', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.mailing_address ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Mailing</option>
                         <option value="available">Available</option>
                         <option value="not_available">Not Available</option>
                     </select>
@@ -1993,26 +2189,6 @@ export function CFPSummaryTable({
                     style={{ fontSize: '0.8125rem', padding: '0.35rem 0.85rem', fontWeight: 600 }}
                 >
                     🌿 Bamboo In-Force Pipeline (Pending DEC)
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        onViewChange?.('campaign_91_address');
-                        onYearChange('');
-                        onMonthChange('');
-                        setCurrentPage(1);
-                    }}
-                    className={`${styles.filterPill} ${view === 'campaign_91_address' || view === 'campaign_92_address' ? styles.active : ''}`}
-                    style={{
-                        fontSize: '0.8125rem',
-                        padding: '0.35rem 0.85rem',
-                        fontWeight: 600,
-                        background: (view === 'campaign_91_address' || view === 'campaign_92_address') ? 'var(--color-primary, #2243B6)' : undefined,
-                        color: (view === 'campaign_91_address' || view === 'campaign_92_address') ? '#ffffff' : undefined,
-                        borderColor: (view === 'campaign_91_address' || view === 'campaign_92_address') ? 'var(--color-primary, #2243B6)' : undefined,
-                    }}
-                >
-                    🎯 91 Address Campaign
                 </button>
                 <button
                     type="button"
@@ -2235,60 +2411,19 @@ export function CFPSummaryTable({
                     </div>
 
                     <div className={styles.periodSummaryCards}>
-                        {/* 1. Total Policy Terms */}
+                        {/* 1. Unique Policies */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardPolicies}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Total Policy Terms</span>
+                                <span className={styles.miniCardLabel}>Unique Policies</span>
                                 <FileText size={13} className={styles.miniCardIcon} />
                             </div>
-                            <span className={styles.miniCardValue}>{periodStats.total.toLocaleString()}</span>
+                            <span className={styles.miniCardValue}>{periodStats.uniquePolicies.toLocaleString()}</span>
                             <span className={styles.miniCardSub}>
-                                {totalFamilies && totalFamilies > 0 ? `${totalFamilies.toLocaleString()} unique accounts` : `in ${month ? `${MONTH_NAMES.find(m => m.value === month)?.label} ` : ''}${year || 'all years'}`}
+                                {`${periodStats.total.toLocaleString()} terms • ${periodStats.uniqueAccounts.toLocaleString()} accounts`}
                             </span>
                         </div>
 
-                        {/* Ready for Sending Card */}
-                        <div className={`${styles.summaryMiniCard} ${styles.cardReady}`}>
-                            <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Ready for Sending</span>
-                                <Send size={13} className={styles.miniCardIcon} />
-                            </div>
-                            <span 
-                                className={styles.miniCardValue}
-                                style={{ cursor: 'pointer' }}
-                                title="Click to filter by Ready for Sending"
-                                onClick={() => { setDocFilter('ready_for_sending'); setCurrentPage(1); }}
-                            >
-                                {periodStats.readyForSending.toLocaleString()}
-                            </span>
-                            <div className={styles.miniCardMetrics} style={{ gap: '0.4rem' }}>
-                                <span 
-                                    className={styles.metricNotice}
-                                    title="Click to filter by Ready - Sent"
-                                    onClick={() => { setDocFilter('ready_sent'); setCurrentPage(1); }}
-                                    style={{ fontSize: '0.6875rem', color: '#10b981', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}
-                                >
-                                    ✉️ {periodStats.readySent.toLocaleString()} sent
-                                </span>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>•</span>
-                                <span 
-                                    className={styles.metricMissing}
-                                    title="Click to filter by Ready - Not Sent"
-                                    onClick={() => { setDocFilter('ready_not_sent'); setCurrentPage(1); }}
-                                    style={{ fontSize: '0.6875rem', color: '#f59e0b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}
-                                >
-                                    ⏳ {periodStats.readyNotSent.toLocaleString()} not sent
-                                </span>
-                            </div>
-                            <div className={styles.miniProgressBar}>
-                                <div 
-                                    className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.readyForSending > 0 ? (periodStats.readySent / periodStats.readyForSending) * 100 : 0}%` }} 
-                                />
-                            </div>
-                        </div>
-
-                        {/* 2. Uploaded DEC Pages */}
+                        {/* 2. Uploaded DEC Pages (+1 DEC required per policy) */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDec}`}>
                             <div className={styles.miniCardTop}>
                                 <span className={styles.miniCardLabel}>Uploaded DEC</span>
@@ -2301,18 +2436,18 @@ export function CFPSummaryTable({
                                     title="Click to filter by Missing DEC"
                                     onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
                                 >
-                                    <X size={10} /> {periodStats.decMissing.toLocaleString()} missing
+                                    <X size={10} /> {periodStats.decMissing.toLocaleString()} waiting for upload
                                 </span>
                             </div>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.total > 0 ? (periodStats.decAvailable / periodStats.total) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.decAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
                                 />
                             </div>
                         </div>
 
-                        {/* 3. Uploaded RCE Reports */}
+                        {/* 3. Uploaded RCE Reports (+1 RCE required per policy) */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardRce}`}>
                             <div className={styles.miniCardTop}>
                                 <span className={styles.miniCardLabel}>Uploaded RCE</span>
@@ -2325,18 +2460,18 @@ export function CFPSummaryTable({
                                     title="Click to filter by Missing RCE"
                                     onClick={() => { setDocFilter('missing_rce'); setCurrentPage(1); }}
                                 >
-                                    <X size={10} /> {periodStats.rceMissing.toLocaleString()} missing
+                                    <X size={10} /> {periodStats.rceMissing.toLocaleString()} waiting for upload
                                 </span>
                             </div>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.total > 0 ? (periodStats.rceAvailable / periodStats.total) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.rceAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
                                 />
                             </div>
                         </div>
 
-                        {/* 4. DIC Quotes */}
+                        {/* 4. DIC Quotes (Distinct from Full Covg) */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDic}`}>
                             <div className={styles.miniCardTop}>
                                 <span className={styles.miniCardLabel}>DIC Quotes</span>
@@ -2344,28 +2479,24 @@ export function CFPSummaryTable({
                             </div>
                             <span className={styles.miniCardValue}>{periodStats.dicAvailable.toLocaleString()}</span>
                             <div className={styles.miniCardMetrics}>
-                                {periodStats.unavailableCount > 0 ? (
-                                    <span 
-                                        className={styles.metricNotice} 
-                                        title="Click to filter by Unavailable carrier quotes"
-                                        onClick={() => { setDocFilter('has_unavailable'); setCurrentPage(1); }}
-                                        style={{ fontSize: '0.6875rem', color: '#f87171', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                                    >
-                                        <X size={10} /> {periodStats.unavailableCount.toLocaleString()} unavail
-                                    </span>
-                                ) : (
-                                    <span className={styles.miniCardSub}>in-force quoted</span>
-                                )}
+                                <span 
+                                    className={styles.metricNotice} 
+                                    title="Click to filter by available DIC quotes"
+                                    onClick={() => { setDocFilter('has_dic_quote'); setCurrentPage(1); }}
+                                    style={{ fontSize: '0.6875rem', color: '#f43f5e', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                >
+                                    {periodStats.dicAvailable.toLocaleString()} DIC uploaded
+                                </span>
                             </div>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.total > 0 ? (periodStats.dicAvailable / periodStats.total) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.dicAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
                                 />
                             </div>
                         </div>
 
-                        {/* 5. Full Coverage Quotes */}
+                        {/* 5. Full Coverage Quotes (Distinct from DIC) */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardQuote}`}>
                             <div className={styles.miniCardTop}>
                                 <span className={styles.miniCardLabel}>Full Covg Quotes</span>
@@ -2375,17 +2506,17 @@ export function CFPSummaryTable({
                             <div className={styles.miniCardMetrics}>
                                 <span 
                                     className={styles.metricNotice} 
-                                    title="Click to view all policies with any quote"
-                                    onClick={() => { setDocFilter('has_any_quote'); setCurrentPage(1); }}
-                                    style={{ fontSize: '0.6875rem', color: '#93c5fd', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                    title="Click to view all policies with available Full Coverage quotes"
+                                    onClick={() => { setDocFilter('has_full_quote'); setCurrentPage(1); }}
+                                    style={{ fontSize: '0.6875rem', color: '#38bdf8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
                                 >
-                                    {periodStats.quoteAvailable.toLocaleString()} total quoted
+                                    {periodStats.fullAvailable.toLocaleString()} Full Covg uploaded
                                 </span>
                             </div>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.total > 0 ? (periodStats.fullAvailable / periodStats.total) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.fullAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
                                 />
                             </div>
                         </div>
@@ -2470,6 +2601,24 @@ export function CFPSummaryTable({
                     >
                         <MessageSquare size={11} style={{ display: 'inline', marginRight: '3px' }} />
                         Has Comments / Remarks
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${columnFilters.status === 'cancel' ? styles.active : ''}`}
+                        onClick={() => handleColumnFilterChange('status', columnFilters.status === 'cancel' ? '' : 'cancel')}
+                        style={{ color: '#dc2626', borderColor: columnFilters.status === 'cancel' ? '#dc2626' : undefined }}
+                        title="Filter cancelled policies for follow-up"
+                    >
+                        🚫 Cancelled
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${columnFilters.status === 'nonrenew' ? styles.active : ''}`}
+                        onClick={() => handleColumnFilterChange('status', columnFilters.status === 'nonrenew' ? '' : 'nonrenew')}
+                        style={{ color: '#d97706', borderColor: columnFilters.status === 'nonrenew' ? '#d97706' : undefined }}
+                        title="Filter non-renewed policies for follow-up"
+                    >
+                        📋 Non-Renewed
                     </button>
 
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

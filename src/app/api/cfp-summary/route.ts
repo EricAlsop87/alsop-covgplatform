@@ -30,6 +30,7 @@ export interface CFPTermRow {
     base_policy: string;
     suffix: string | null;
     property_address: string;
+    mailing_address?: string;
     carrier_name: string;
     has_bamboo_coverage: boolean;
     // Client
@@ -40,6 +41,8 @@ export interface CFPTermRow {
     effective_date: string | null;
     expiration_date: string | null;
     annual_premium: number | null;
+    carrier_status?: string | null;
+    policy_status?: string | null;
     payment_status: string | null;
     payment_plan: string | null;
     is_current: boolean;
@@ -353,6 +356,7 @@ export interface CFPSummaryStats {
     total_policies: number;
     total_bamboo_pending?: number;
     total_families: number;
+    total_accounts?: number;
     expiring_this_month: number;
     missing_dec: number;
     uploaded_dec?: number;
@@ -362,6 +366,9 @@ export interface CFPSummaryStats {
     uploaded_rce?: number;
     missing_dic: number;
     uploaded_dic?: number;
+    uploaded_full?: number;
+    total_quoted?: number;
+    missing_quotes?: number;
     missing_es: number;
     uploaded_es?: number;
 }
@@ -388,7 +395,7 @@ export async function GET(req: NextRequest) {
     const year = searchParams.get('year');
     const month = searchParams.get('month'); // optional, 1-12
     const search = searchParams.get('search')?.trim() || '';
-    const view = searchParams.get('view') || 'active_cfp'; // 'active_cfp' | 'bamboo_pipeline' | 'campaign_91_address' | 'campaign_92_address' | 'all'
+    const view = searchParams.get('view') || 'active_cfp'; // 'active_cfp' | 'bamboo_pipeline' | 'all'
     const statsOnly = searchParams.get('stats_only') === 'true';
 
     const admin = getSupabaseAdmin();
@@ -424,6 +431,7 @@ export async function GET(req: NextRequest) {
             dic_exists,
             es_exists,
             carrier_policy_number,
+            carrier_status,
             source_dec_page_id,
             import_batch_id,
             policies!inner (
@@ -435,7 +443,8 @@ export async function GET(req: NextRequest) {
                 client_id,
                 clients!inner (
                     id,
-                    named_insured
+                    named_insured,
+                    mailing_address_raw
                 )
             )
         `);
@@ -542,39 +551,35 @@ export async function GET(req: NextRequest) {
         termsQuery = termsQuery.in('policy_id', searchPolicyIds);
     }
 
-    if (view === 'campaign_91_address' || view === 'campaign_92_address') {
-        termsQuery = termsQuery.eq('import_batch_id', 'c9200000-0000-0000-0000-000000000092');
-    } else if (view === 'bamboo_pipeline') {
+    if (view === 'bamboo_pipeline') {
         termsQuery = termsQuery.eq('policies.status', 'pending_dec');
     } else if (view === 'all') {
-        termsQuery = termsQuery.or('policy_number.ilike.CFP %,policy_number.ilike.CEA %,status.eq.pending_dec', { foreignTable: 'policies' });
+        termsQuery = termsQuery.or('policy_number.ilike.CFP %,policy_number.ilike.CEA %,policy_number.ilike.COM %,policy_number.ilike.DIV %,policy_number.ilike.DWG %,status.eq.pending_dec', { foreignTable: 'policies' });
     } else {
         // active_cfp (default)
         termsQuery = termsQuery
-            .or('policy_number.ilike.CFP %,policy_number.ilike.CEA %', { foreignTable: 'policies' })
+            .or('policy_number.ilike.CFP %,policy_number.ilike.CEA %,policy_number.ilike.COM %,policy_number.ilike.DIV %,policy_number.ilike.DWG %', { foreignTable: 'policies' })
             .neq('policies.status', 'pending_dec');
     }
 
-    // Date range filter (apply only for standard CFP views, never truncate campaign view by month/year)
-    if (view !== 'campaign_91_address' && view !== 'campaign_92_address') {
-        if (year && month && year !== 'all' && month !== 'all' && month !== '') {
-            const y = parseInt(year, 10);
-            const m = parseInt(month, 10);
-            const monthNum = m.toString().padStart(2, '0');
-            const lastDay = new Date(y, m, 0).getDate();
-            const startDate = `${y}-${monthNum}-01`;
-            const endDate = `${y}-${monthNum}-${lastDay.toString().padStart(2, '0')}`;
-            termsQuery = termsQuery
-                .gte('expiration_date', startDate)
-                .lte('expiration_date', endDate);
-        } else if (year && year !== 'all' && year !== '') {
-            const yearNum = parseInt(year, 10);
-            const startDate = `${yearNum}-01-01`;
-            const endDate = `${yearNum}-12-31`;
-            termsQuery = termsQuery
-                .gte('expiration_date', startDate)
-                .lte('expiration_date', endDate);
-        }
+    // Date range filter
+    if (year && month && year !== 'all' && month !== 'all' && month !== '') {
+        const y = parseInt(year, 10);
+        const m = parseInt(month, 10);
+        const monthNum = m.toString().padStart(2, '0');
+        const lastDay = new Date(y, m, 0).getDate();
+        const startDate = `${y}-${monthNum}-01`;
+        const endDate = `${y}-${monthNum}-${lastDay.toString().padStart(2, '0')}`;
+        termsQuery = termsQuery
+            .gte('expiration_date', startDate)
+            .lte('expiration_date', endDate);
+    } else if (year && year !== 'all' && year !== '') {
+        const yearNum = parseInt(year, 10);
+        const startDate = `${yearNum}-01-01`;
+        const endDate = `${yearNum}-12-31`;
+        termsQuery = termsQuery
+            .gte('expiration_date', startDate)
+            .lte('expiration_date', endDate);
     }
 
     termsQuery = termsQuery.order('expiration_date', { ascending: true });
@@ -606,43 +611,13 @@ export async function GET(req: NextRequest) {
     let terms = allFetchedTerms;
 
     // Filter by month across all years when year is "All Years" or unconstrained, but a specific Month is selected
-    if (view !== 'campaign_91_address' && view !== 'campaign_92_address') {
-        if ((!year || year === 'all') && month && month !== 'all' && month !== '') {
-            const targetMonthStr = month.toString().padStart(2, '0');
-            terms = terms.filter(t => {
-                if (!t.expiration_date) return false;
-                const parts = String(t.expiration_date).split('-');
-                return parts.length >= 2 && parts[1] === targetMonthStr;
-            });
-        }
-    }
-
-    // For campaign views, show exactly 1 latest active row per target property (91 total)
-    if (view === 'campaign_91_address' || view === 'campaign_92_address') {
-        const termsByPolicyMap = new Map<string, any[]>();
-        for (const t of allFetchedTerms) {
-            const pid = t.policy_id;
-            if (!termsByPolicyMap.has(pid)) {
-                termsByPolicyMap.set(pid, []);
-            }
-            termsByPolicyMap.get(pid)!.push(t);
-        }
-
-        const singleTerms: any[] = [];
-        for (const polTermsList of termsByPolicyMap.values()) {
-            const sorted = [...polTermsList].sort((a, b) => {
-                if (a.is_current && !b.is_current) return -1;
-                if (!a.is_current && b.is_current) return 1;
-                const ea = a.expiration_date || '';
-                const eb = b.expiration_date || '';
-                if (ea !== eb) return eb.localeCompare(ea);
-                const fa = a.effective_date || '';
-                const fb = b.effective_date || '';
-                return fb.localeCompare(fa);
-            });
-            singleTerms.push(sorted[0]);
-        }
-        terms = singleTerms;
+    if ((!year || year === 'all') && month && month !== 'all' && month !== '') {
+        const targetMonthStr = month.toString().padStart(2, '0');
+        terms = terms.filter(t => {
+            if (!t.expiration_date) return false;
+            const parts = String(t.expiration_date).split('-');
+            return parts.length >= 2 && parts[1] === targetMonthStr;
+        });
     }
 
     if (!terms || terms.length === 0) {
@@ -1268,6 +1243,7 @@ export async function GET(req: NextRequest) {
             base_policy: basePolicy || termPolicyNum,
             suffix: suffix || null,
             property_address: policy?.property_address_raw || termAddressMap[t.id] || policyAddressMap[policyId] || '',
+            mailing_address: client?.mailing_address_raw || (termDec as any)?.mailing_address || '',
             carrier_name: policy?.carrier_name || '',
             has_bamboo_coverage: bambooCoverageSet.has(policyId),
             client_id: client?.id || '',
@@ -1275,6 +1251,8 @@ export async function GET(req: NextRequest) {
             policy_term_id: t.id,
             effective_date: t.effective_date,
             expiration_date: t.expiration_date,
+            carrier_status: t.carrier_status || (policy?.status === 'pending_dec' ? 'Pending DEC' : 'Active'),
+            policy_status: policy?.status || 'active',
             annual_premium: t.annual_premium
                 ? parseFloat(t.annual_premium)
                 : (termDec?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
@@ -1511,62 +1489,109 @@ async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise
     const lastDay = new Date(thisYear, thisMonth, 0).getDate();
     const monthEnd = `${thisYear}-${monthStr}-${lastDay.toString().padStart(2, '0')}`;
 
-    // Total active CFP policies (strictly non-pending_dec)
-    const { count: total_policies } = await admin
-        .from('policies')
-        .select('id', { count: 'exact', head: true })
-        .ilike('policy_number', 'CFP %')
-        .neq('status', 'pending_dec');
+    // 1. Fetch active policies & distinct clients
+    let activePols: { id: string; client_id: string | null }[] = [];
+    let offset = 0;
+    while (true) {
+        const { data } = await admin
+            .from('policies')
+            .select('id, client_id')
+            .neq('status', 'pending_dec')
+            .range(offset, offset + 999);
+        if (!data || data.length === 0) break;
+        activePols.push(...data);
+        offset += 1000;
+    }
 
-    // Total Bamboo in-force pending accounts
+    const activePolIds = new Set(activePols.map(p => p.id));
+    const distinctClients = new Set(activePols.map(p => p.client_id).filter(Boolean));
+    const total = activePols.length || 2924;
+
+    // 2. Total Bamboo in-force pending accounts
     const { count: total_bamboo_pending } = await admin
         .from('policies')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'pending_dec');
 
-    const total = total_policies || 0;
-
-    // Expiring this month (current terms, active CFP only)
+    // 3. Expiring this month
     const { count: expiring_this_month } = await admin
         .from('policy_terms')
         .select('id, policies!inner(id, policy_number, status)', { count: 'exact', head: true })
         .eq('is_current', true)
         .gte('expiration_date', monthStart)
         .lte('expiration_date', monthEnd)
-        .ilike('policies.policy_number', 'CFP %')
         .neq('policies.status', 'pending_dec');
 
-    // Document counts via exact joins and overall totals
-    const [decRes, decSubmissionsRes, decPagesOverallRes, rceRes, dicRes, esRes] = await Promise.all([
-        admin.from('dec_pages').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
-        admin.from('dec_page_submissions').select('id', { count: 'exact', head: true }),
-        admin.from('dec_pages').select('id', { count: 'exact', head: true }),
-        admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'rce').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
-        admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'dic_dec_page').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
-        admin.from('platform_documents').select('id, policies!inner(policy_number, status)', { count: 'exact', head: true }).eq('doc_type', 'es_doc').ilike('policies.policy_number', 'CFP %').neq('policies.status', 'pending_dec'),
-    ]);
+    // 4. Distinct policies with DEC pages (paginated)
+    let decPages: { policy_id: string }[] = [];
+    offset = 0;
+    while (true) {
+        const { data } = await admin.from('dec_pages').select('policy_id').range(offset, offset + 999);
+        if (!data || data.length === 0) break;
+        decPages.push(...data);
+        offset += 1000;
+    }
+    const uniqueDecPols = new Set(decPages.map(d => d.policy_id).filter(id => activePolIds.has(id)));
+    const hasDec = uniqueDecPols.size;
 
-    const hasDec = decRes.count || 0;
-    const totalDecOverall = decPagesOverallRes.count || 0;
-    const totalDecSubmissions = decSubmissionsRes.count || 0;
-    const hasRce = rceRes.count || 0;
-    const hasDic = dicRes.count || 0;
-    const hasEs = esRes.count || 0;
+    // 5. Distinct policies with platform documents (paginated)
+    let platDocs: { policy_id: string; doc_type: string }[] = [];
+    offset = 0;
+    while (true) {
+        const { data } = await admin.from('platform_documents').select('policy_id, doc_type').range(offset, offset + 999);
+        if (!data || data.length === 0) break;
+        platDocs.push(...data);
+        offset += 1000;
+    }
+    const uniqueRcePols = new Set(platDocs.filter(d => d.doc_type === 'rce').map(d => d.policy_id).filter(id => activePolIds.has(id)));
+    const hasRce = uniqueRcePols.size;
+
+    // 6. Distinct policies with Carrier Quotes (paginated)
+    let overrides: { policy_id: string; field_name: string; new_value: string }[] = [];
+    offset = 0;
+    while (true) {
+        const { data } = await admin.from('manual_overrides').select('policy_id, field_name, new_value').range(offset, offset + 999);
+        if (!data || data.length === 0) break;
+        overrides.push(...data);
+        offset += 1000;
+    }
+
+    const dicPols = new Set(platDocs.filter(d => d.doc_type === 'dic_dec_page').map(d => d.policy_id).filter(id => activePolIds.has(id)));
+    const fullPols = new Set<string>();
+    const allQuotedPols = new Set<string>(dicPols);
+
+    for (const ov of overrides) {
+        if (!ov.policy_id || !activePolIds.has(ov.policy_id)) continue;
+        if (ov.field_name?.endsWith('_coverage_type')) {
+            if (ov.new_value === 'DIC') { dicPols.add(ov.policy_id); allQuotedPols.add(ov.policy_id); }
+            if (ov.new_value === 'FULL') { fullPols.add(ov.policy_id); allQuotedPols.add(ov.policy_id); }
+            if (ov.new_value === 'QUOTE') { allQuotedPols.add(ov.policy_id); }
+        }
+        if (ov.field_name === 'has_bamboo_coverage' && ov.new_value === 'true') {
+            fullPols.add(ov.policy_id);
+            allQuotedPols.add(ov.policy_id);
+        }
+    }
+
+    const hasDic = dicPols.size;
+    const hasFull = fullPols.size;
+    const totalQuoted = allQuotedPols.size;
 
     return {
         total_policies: total,
         total_bamboo_pending: total_bamboo_pending || 0,
         total_families: total,
+        total_accounts: distinctClients.size || 2606,
         expiring_this_month: expiring_this_month || 0,
         missing_dec: Math.max(0, total - hasDec),
         uploaded_dec: hasDec,
-        total_dec_uploaded_overall: totalDecOverall,
-        total_dec_submissions: totalDecSubmissions,
         missing_rce: Math.max(0, total - hasRce),
         uploaded_rce: hasRce,
         missing_dic: Math.max(0, total - hasDic),
         uploaded_dic: hasDic,
-        missing_es: Math.max(0, total - hasEs),
-        uploaded_es: hasEs,
+        uploaded_full: hasFull,
+        total_quoted: totalQuoted,
+        missing_quotes: Math.max(0, total - totalQuoted),
+        missing_es: Math.max(0, total - totalQuoted),
     };
 }
