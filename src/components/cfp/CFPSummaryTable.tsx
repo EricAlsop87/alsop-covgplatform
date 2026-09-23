@@ -31,6 +31,7 @@ import {
     AlertTriangle,
     Undo2,
     Mail,
+    SearchX,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType } from '@/app/api/cfp-summary/route';
 export type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType };
@@ -1128,6 +1129,8 @@ export function CFPSummaryTable({
                 result = result.filter(t => t.title_pro?.match_status === 'partial');
             } else if (columnFilters.title_pro === 'mismatch') {
                 result = result.filter(t => t.title_pro?.match_status === 'mismatch');
+            } else if (columnFilters.title_pro === 'missing') {
+                result = result.filter(t => t.title_pro?.match_status === 'missing');
             } else if (columnFilters.title_pro === 'unverified') {
                 result = result.filter(t => !t.title_pro);
             }
@@ -1919,8 +1922,13 @@ export function CFPSummaryTable({
                     } else if (tp.match_status === 'mismatch') {
                         badgeClass = styles.mismatch;
                         icon = <X size={12} />;
-                        label = 'Unmatched';
+                        label = 'Mismatch';
                         titleText = `Title Pro: "${tp.title_name}" (Mismatch)\nNamed Insured: "${term.named_insured}"\nNotes: ${tp.notes || 'None'}\nVerified by: ${tp.verified_by || 'Staff'}`;
+                    } else if (tp.match_status === 'missing') {
+                        badgeClass = styles.missing;
+                        icon = <SearchX size={12} />;
+                        label = 'Missing';
+                        titleText = `Title Pro: Name Not Found / Missing\nSearched: "${tp.title_name || term.named_insured}"\nStatus: Missing (No Record)\nNotes: ${tp.notes || 'None'}\nVerified by: ${tp.verified_by || 'Staff'}`;
                     }
 
                     return (
@@ -2183,6 +2191,7 @@ export function CFPSummaryTable({
                         <option value="matched">Matched (✔)</option>
                         <option value="partial">Trust / LLC (~)</option>
                         <option value="mismatch">Mismatch (✕)</option>
+                        <option value="missing">Missing / Not Found (?)</option>
                         <option value="unverified">Unverified (+)</option>
                     </select>
                 );

@@ -112,7 +112,7 @@ export interface CFPTermRow {
 
 export interface TitleProData {
     title_name: string;
-    match_status: 'matched' | 'partial' | 'mismatch';
+    match_status: 'matched' | 'partial' | 'mismatch' | 'missing';
     notes?: string | null;
     verified_by?: string | null;
     verified_at?: string | null;

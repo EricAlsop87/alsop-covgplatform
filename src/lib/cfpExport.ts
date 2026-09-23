@@ -83,7 +83,7 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             sagesure: formatQuote(quotes.sagesure),
             psic: formatQuote(quotes.psic),
             title_pro: term.title_pro
-                ? `${term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : 'Mismatch'} (${term.title_pro.title_name})`
+                ? `${term.title_pro.match_status === 'matched' ? 'Matched' : term.title_pro.match_status === 'partial' ? 'Trust/LLC' : term.title_pro.match_status === 'missing' ? 'Missing' : 'Mismatch'} (${term.title_pro.title_name})`
                 : 'Unverified',
             notes_preview: term.latest_note_preview || (term.note_count > 0 ? `${term.note_count} note(s)` : ''),
         });
@@ -141,6 +141,8 @@ export async function exportCFPToExcel(terms: CFPTermRow[], filterDescription: s
             row.getCell('title_pro').font = { color: { argb: 'FF16A34A' }, bold: true };
         } else if (term.title_pro?.match_status === 'partial') {
             row.getCell('title_pro').font = { color: { argb: 'FFD97706' }, bold: true };
+        } else if (term.title_pro?.match_status === 'missing') {
+            row.getCell('title_pro').font = { color: { argb: 'FF9333EA' }, bold: true };
         } else if (term.title_pro?.match_status === 'mismatch') {
             row.getCell('title_pro').font = { color: { argb: 'FFDC2626' }, bold: true };
         } else {

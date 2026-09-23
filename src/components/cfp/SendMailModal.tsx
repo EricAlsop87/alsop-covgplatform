@@ -513,6 +513,10 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 titleStatus = 'UNMATCHED';
                 titleStatusType = 'declined';
                 titleDetails = `✕ Name Mismatch on Title • ${ownerName}${noteSuffix}`;
+            } else if (effectiveTitlePro.match_status === 'missing') {
+                titleStatus = 'MISSING / NOT FOUND';
+                titleStatusType = 'declined';
+                titleDetails = `⚠️ Name Nowhere to be Found on Title Record${effectiveTitlePro.notes ? ` • Note: ${effectiveTitlePro.notes}` : (effectiveTitlePro.title_name && effectiveTitlePro.title_name !== 'Name Not Found' ? ` • Searched: ${effectiveTitlePro.title_name}` : '')}`;
             } else {
                 titleStatus = 'MATCH';
                 titleStatusType = 'available';
@@ -863,6 +867,13 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 id: 'title_pro_mismatch',
                 label: 'Title Pro Unmatched',
                 desc: `Owner on record does not match insured: ${effectiveTitlePro.title_name || 'Mismatch'}.`,
+                severity: 'warning',
+            });
+        } else if (effectiveTitlePro.match_status === 'missing') {
+            warnings.push({
+                id: 'title_pro_missing',
+                label: 'Title Pro: Name Not Found',
+                desc: `Insured name was nowhere to be found on Title Pro records${effectiveTitlePro.notes ? ` (${effectiveTitlePro.notes})` : ''}.`,
                 severity: 'warning',
             });
         }

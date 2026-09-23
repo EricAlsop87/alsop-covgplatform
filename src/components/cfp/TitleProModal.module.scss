@@ -23,7 +23,7 @@
     border-radius: 12px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
     width: 100%;
-    max-width: 520px;
+    max-width: 560px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -254,14 +254,14 @@
 /* ── Match Status Radio Cards ── */
 .statusCards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
 }
 
 .statusCard {
     border: 1.5px solid var(--border-default, #cbd5e1);
     border-radius: 8px;
-    padding: 0.625rem 0.5rem;
+    padding: 0.625rem 0.35rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -299,6 +299,14 @@
             background: #fef2f2;
             border-color: #ef4444;
             color: #b91c1c;
+        }
+    }
+
+    &.missing {
+        &.active {
+            background: #faf5ff;
+            border-color: #a855f7;
+            color: #7e22ce;
         }
     }
 }

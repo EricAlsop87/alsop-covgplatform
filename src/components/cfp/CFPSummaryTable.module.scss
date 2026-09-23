@@ -1079,6 +1079,18 @@
         }
     }
 
+    &.missing {
+        background: rgba(168, 85, 247, 0.12);
+        color: #7e22ce;
+        border-color: rgba(168, 85, 247, 0.3);
+
+        &:hover {
+            background: rgba(168, 85, 247, 0.22);
+            border-color: #a855f7;
+            transform: translateY(-1px);
+        }
+    }
+
     &.unverified {
         background: var(--bg-surface-subtle, #f8fafc);
         border: 1px dashed var(--border-default, #cbd5e1);
@@ -1128,6 +1140,18 @@
         &:hover {
             background: rgba(239, 68, 68, 0.25);
             border-color: #f87171;
+            color: #ffffff;
+        }
+    }
+
+    &.missing {
+        background: rgba(168, 85, 247, 0.15);
+        color: #d8b4fe;
+        border-color: rgba(168, 85, 247, 0.35);
+
+        &:hover {
+            background: rgba(168, 85, 247, 0.25);
+            border-color: #c084fc;
             color: #ffffff;
         }
     }

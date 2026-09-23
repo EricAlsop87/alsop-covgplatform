@@ -7,6 +7,7 @@ import {
     CheckCircle2,
     AlertCircle,
     AlertTriangle,
+    SearchX,
     X,
     Copy,
     Loader2,
@@ -27,7 +28,7 @@ export function TitleProModal({ term, onClose, onSaveSuccess }: TitleProModalPro
     const existing = term.title_pro;
 
     const [titleName, setTitleName] = useState<string>(existing?.title_name || '');
-    const [matchStatus, setMatchStatus] = useState<'matched' | 'partial' | 'mismatch'>(
+    const [matchStatus, setMatchStatus] = useState<'matched' | 'partial' | 'mismatch' | 'missing'>(
         existing?.match_status || 'matched'
     );
     const [notes, setNotes] = useState<string>(existing?.notes || '');
@@ -75,6 +76,9 @@ export function TitleProModal({ term, onClose, onSaveSuccess }: TitleProModalPro
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
+            const fallbackName = matchStatus === 'missing' ? 'Name Not Found' : (term.named_insured || '');
+            const resolvedTitleName = titleName.trim() || fallbackName;
+
             const res = await fetch('/api/cfp-summary/title-pro', {
                 method: 'POST',
                 headers: {
@@ -83,7 +87,7 @@ export function TitleProModal({ term, onClose, onSaveSuccess }: TitleProModalPro
                 },
                 body: JSON.stringify({
                     policy_id: term.policy_id,
-                    title_name: titleName.trim() || term.named_insured || '',
+                    title_name: resolvedTitleName,
                     match_status: matchStatus,
                     notes: notes.trim(),
                 }),
@@ -223,7 +227,7 @@ export function TitleProModal({ term, onClose, onSaveSuccess }: TitleProModalPro
                                 id="title_name_input"
                                 type="text"
                                 className={styles.inputField}
-                                placeholder="e.g. John Doe & Jane Doe, or Doe Family Living Trust"
+                                placeholder={matchStatus === 'missing' ? 'Name not found on record (Optional)' : 'e.g. John Doe & Jane Doe, or Doe Family Living Trust'}
                                 value={titleName}
                                 onChange={e => setTitleName(e.target.value)}
                                 autoFocus
@@ -266,6 +270,17 @@ export function TitleProModal({ term, onClose, onSaveSuccess }: TitleProModalPro
                                     <span className={styles.statusCardTitle}>Mismatch</span>
                                     <span className={styles.statusCardDesc}>Different name</span>
                                 </div>
+
+                                <div
+                                    className={`${styles.statusCard} ${styles.missing} ${matchStatus === 'missing' ? styles.active : ''}`}
+                                    onClick={() => setMatchStatus('missing')}
+                                >
+                                    <div className={styles.statusCardIcon}>
+                                        <SearchX size={16} />
+                                    </div>
+                                    <span className={styles.statusCardTitle}>Missing</span>
+                                    <span className={styles.statusCardDesc}>Name not found</span>
+                                </div>
                             </div>
                         </div>
 
@@ -277,7 +292,7 @@ export function TitleProModal({ term, onClose, onSaveSuccess }: TitleProModalPro
                             <textarea
                                 id="title_notes_input"
                                 className={styles.textareaField}
-                                placeholder="e.g. Title held under John Smith Trust; wife Jane added on policy"
+                                placeholder={matchStatus === 'missing' ? 'e.g. Searched Title Pro records; name is nowhere to be found on deed or title' : 'e.g. Title held under John Smith Trust; wife Jane added on policy'}
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
                             />
