@@ -2568,20 +2568,6 @@ export function CFPSummaryTable({
                     </button>
                     <button
                         type="button"
-                        className={`${styles.filterPill} ${docFilter === 'missing_dec' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
-                    >
-                        Missing DEC
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.filterPill} ${docFilter === 'missing_rce' ? styles.active : ''}`}
-                        onClick={() => { setDocFilter('missing_rce'); setCurrentPage(1); }}
-                    >
-                        Missing RCE
-                    </button>
-                    <button
-                        type="button"
                         className={`${styles.filterPill} ${docFilter === 'has_needs_uw' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('has_needs_uw'); setCurrentPage(1); }}
                     >
