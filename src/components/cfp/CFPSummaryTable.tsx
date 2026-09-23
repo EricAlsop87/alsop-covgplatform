@@ -156,9 +156,17 @@ type DocFilterType =
     | 'has_full_quote'
     | 'has_needs_uw'
     | 'has_any_quote'
+    | 'not_quoted'
     | 'has_unavailable'
     | 'has_comments'
     | 'returned_from_se';
+
+export function isTermNotQuoted(t: CFPTermRow): boolean {
+    const hasBamboo = !!(t.carrier_quotes?.bamboo?.coverage_type || t.has_bamboo_coverage);
+    const hasAegis = !!(t.carrier_quotes?.aegis?.coverage_type);
+    const hasPsic = !!(t.carrier_quotes?.psic?.coverage_type);
+    return !hasBamboo && !hasAegis && !hasPsic;
+}
 
 export function isTermSent(t: CFPTermRow): boolean {
     return !!t.cfp_mail_sent || !!t.in_servicing_email || t.servicing_status === 'emailed_to_agent';
@@ -942,8 +950,10 @@ export function CFPSummaryTable({
                         return quotes.some(q => q?.coverage_type === 'AGENT_REVIEW');
                     }
                     case 'has_any_quote': {
-                        const quotes = Object.values(t.carrier_quotes || {});
-                        return quotes.some(q => q && q.coverage_type !== 'UNAVAILABLE');
+                        return !isTermNotQuoted(t);
+                    }
+                    case 'not_quoted': {
+                        return isTermNotQuoted(t);
                     }
                     case 'has_unavailable': {
                         const quotes = Object.values(t.carrier_quotes || {});
@@ -1209,12 +1219,19 @@ export function CFPSummaryTable({
         let readyForSending = 0;
         let readySent = 0;
         let readyNotSent = 0;
+        let allQuotedCount = 0;
+        let notQuotedCount = 0;
 
         for (const t of allTerms) {
             if (isTermReadyForSending(t)) {
                 readyForSending++;
                 if (isTermSent(t)) readySent++;
                 else readyNotSent++;
+            }
+            if (isTermNotQuoted(t)) {
+                notQuotedCount++;
+            } else {
+                allQuotedCount++;
             }
         }
 
@@ -1232,6 +1249,8 @@ export function CFPSummaryTable({
             dicAvailable,
             fullAvailable,
             quoteAvailable,
+            allQuotedCount,
+            notQuotedCount,
             quoteMissing: Math.max(0, uniquePolicies - quoteAvailable),
             unavailableCount,
         };
@@ -2577,8 +2596,23 @@ export function CFPSummaryTable({
                         type="button"
                         className={`${styles.filterPill} ${docFilter === 'has_any_quote' ? styles.active : ''}`}
                         onClick={() => { setDocFilter('has_any_quote'); setCurrentPage(1); }}
+                        title="Policies with at least one carrier quote (Bamboo, Aegis, PSIC)"
                     >
                         All Quoted
+                        {periodStats.allQuotedCount > 0 && (
+                            <span className={styles.pillCountInfo}>{periodStats.allQuotedCount}</span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${docFilter === 'not_quoted' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('not_quoted'); setCurrentPage(1); }}
+                        title="Policies with +Quote for Bamboo, Aegis, and PSIC"
+                    >
+                        Not Quoted
+                        {periodStats.notQuotedCount > 0 && (
+                            <span className={styles.pillCountNeutral}>{periodStats.notQuotedCount}</span>
+                        )}
                     </button>
                     <button
                         type="button"
