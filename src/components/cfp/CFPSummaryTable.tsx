@@ -1289,6 +1289,10 @@ export function CFPSummaryTable({
         return filteredTerms.slice(start, start + PAGE_SIZE);
     }, [filteredTerms, currentPage]);
 
+    const filteredUniqueCount = useMemo(() => {
+        return new Set(filteredTerms.map(t => t.policy_id || t.base_policy || t.policy_number)).size;
+    }, [filteredTerms]);
+
     const [isExporting, setIsExporting] = useState(false);
 
     // Export currently filtered policies to Excel (.xlsx)
@@ -2537,35 +2541,25 @@ export function CFPSummaryTable({
                             </div>
                         </div>
 
-                        {/* 5. Quoting Readiness & Action Note */}
+                        {/* 5. Unquoted Left */}
                         <div 
                             className={`${styles.summaryMiniCard} ${styles.cardReadiness}`}
-                            title="Quoting Requirements: Insured Name + Property Address are required to quote on carrier portals. Quotes & RCE can be entered/uploaded immediately even while waiting for CFP DEC page."
+                            title="Unquoted pipeline: Insured Name + Property Address are required to quote. Quotes & RCE can be entered/uploaded immediately even while waiting for CFP DEC page."
                         >
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Quoting Readiness</span>
+                                <span className={styles.miniCardLabel}>Unquoted Left</span>
                                 <Sparkles size={13} className={styles.miniCardIcon} />
                             </div>
                             <div className={styles.miniCardValueRow}>
-                                <span className={styles.miniCardValue} style={{ fontSize: '1.15rem' }}>
-                                    {periodStats.readyToQuoteCount.toLocaleString()} Ready
+                                <span className={styles.miniCardValue}>
+                                    {periodStats.quoteMissing.toLocaleString()}
                                 </span>
-                                <span className={styles.miniUploadedBadge} style={{ fontSize: '0.6rem' }}>
-                                    Name+Addr
+                                <span className={styles.miniUploadedBadge} title={`${(100 - parseFloat(periodStats.quotePercent)).toFixed(1)}% of unique policies unquoted`}>
+                                    to quote
                                 </span>
                             </div>
-                            <span className={styles.miniCardSub} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
-                                {periodStats.missingNameCount > 0 ? (
-                                    <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠️ {periodStats.missingNameCount} missing Name</span>
-                                ) : (
-                                    <span style={{ color: '#059669', fontWeight: 600 }}>✓ Names present</span>
-                                )}
-                                <span>•</span>
-                                {periodStats.missingAddressCount > 0 ? (
-                                    <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠️ {periodStats.missingAddressCount} missing Addr</span>
-                                ) : (
-                                    <span style={{ color: '#059669', fontWeight: 600 }}>✓ Addrs present</span>
-                                )}
+                            <span className={styles.miniCardSub}>
+                                {periodStats.readyToQuoteCount.toLocaleString()} Ready (have Addr) • {periodStats.missingAddressCount.toLocaleString()} Need Addr
                             </span>
                             <div className={styles.miniProgressBar}>
                                 <div 
@@ -2681,7 +2675,7 @@ export function CFPSummaryTable({
                             💡 <em>Drag headers to reorder • Drag column edges to resize</em>
                         </span>
                         <span className={styles.countsBadge}>
-                            Showing <strong>{filteredTerms.length}</strong> policies
+                            Showing <strong>{filteredUniqueCount.toLocaleString()}</strong> policies {filteredTerms.length !== filteredUniqueCount && `(${filteredTerms.length.toLocaleString()} terms)`}
                         </span>
                     </div>
                 </div>
