@@ -1229,9 +1229,11 @@ export function CFPSummaryTable({
             if (item.has_any_quote) quoteAvailable++;
             if (item.has_unavail) unavailableCount++;
 
-            if (!item.has_name && item.has_address) missingNameCount++;
-            if (item.has_name && !item.has_address) missingAddressCount++;
-            if (item.has_name && item.has_address && !item.has_any_quote) readyToQuoteCount++;
+            if (!item.has_any_quote) {
+                if (!item.has_name && item.has_address) missingNameCount++;
+                else if (item.has_name && !item.has_address) missingAddressCount++;
+                else if (item.has_name && item.has_address) readyToQuoteCount++;
+            }
         }
 
         let readyForSending = 0;
