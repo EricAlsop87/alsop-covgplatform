@@ -23,6 +23,7 @@ import {
     FileQuestion,
     Plus,
     Copy,
+    Sparkles,
     Ban,
     MessageSquare,
     MessageSquarePlus,
@@ -1163,6 +1164,8 @@ export function CFPSummaryTable({
             has_full: boolean;
             has_any_quote: boolean;
             has_unavail: boolean;
+            has_name: boolean;
+            has_address: boolean;
             client_id?: string;
         }>();
         const uniqueAccounts = new Set<string>();
@@ -1177,6 +1180,8 @@ export function CFPSummaryTable({
                     has_full: false,
                     has_any_quote: false,
                     has_unavail: false,
+                    has_name: false,
+                    has_address: false,
                     client_id: t.client_id,
                 });
             }
@@ -1186,6 +1191,12 @@ export function CFPSummaryTable({
 
             if (t.has_dec || t.has_renewal_dec) item.has_dec = true;
             if (t.has_rce || t.rce_carrier) item.has_rce = true;
+
+            const isNamed = !!t.named_insured && t.named_insured.trim() !== '' && t.named_insured !== '—' && t.named_insured.toLowerCase() !== 'unknown';
+            const isAddressed = !!t.property_address && t.property_address.trim() !== '' && t.property_address !== '—' && t.property_address.toLowerCase() !== 'unknown';
+
+            if (isNamed) item.has_name = true;
+            if (isAddressed) item.has_address = true;
 
             const quotes = Object.values(t.carrier_quotes || {});
             const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
@@ -1206,6 +1217,9 @@ export function CFPSummaryTable({
         let fullAvailable = 0;
         let quoteAvailable = 0;
         let unavailableCount = 0;
+        let missingNameCount = 0;
+        let missingAddressCount = 0;
+        let readyToQuoteCount = 0;
 
         for (const item of uniquePolicyMap.values()) {
             if (item.has_dec) decAvailable++;
@@ -1214,6 +1228,10 @@ export function CFPSummaryTable({
             if (item.has_full) fullAvailable++;
             if (item.has_any_quote) quoteAvailable++;
             if (item.has_unavail) unavailableCount++;
+
+            if (!item.has_name && item.has_address) missingNameCount++;
+            if (item.has_name && !item.has_address) missingAddressCount++;
+            if (item.has_name && item.has_address && !item.has_any_quote) readyToQuoteCount++;
         }
 
         let readyForSending = 0;
@@ -1235,6 +1253,8 @@ export function CFPSummaryTable({
             }
         }
 
+        const quotesLeft = Math.max(0, uniquePolicies - quoteAvailable);
+
         return {
             total,
             uniquePolicies,
@@ -1244,14 +1264,20 @@ export function CFPSummaryTable({
             readyNotSent,
             decAvailable,
             decMissing: Math.max(0, uniquePolicies - decAvailable),
+            decPercent: uniquePolicies > 0 ? ((decAvailable / uniquePolicies) * 100).toFixed(1) : '0',
             rceAvailable,
             rceMissing: Math.max(0, uniquePolicies - rceAvailable),
+            rcePercent: uniquePolicies > 0 ? ((rceAvailable / uniquePolicies) * 100).toFixed(1) : '0',
             dicAvailable,
             fullAvailable,
             quoteAvailable,
+            quoteMissing: quotesLeft,
+            quotePercent: uniquePolicies > 0 ? ((quoteAvailable / uniquePolicies) * 100).toFixed(1) : '0',
             allQuotedCount,
             notQuotedCount,
-            quoteMissing: Math.max(0, uniquePolicies - quoteAvailable),
+            missingNameCount,
+            missingAddressCount,
+            readyToQuoteCount,
             unavailableCount,
         };
     }, [allTerms]);
@@ -2442,100 +2468,109 @@ export function CFPSummaryTable({
                             </span>
                         </div>
 
-                        {/* 2. Uploaded DEC Pages (+1 DEC required per policy) */}
+                        {/* 2. Dec Page Uploaded (+1 DEC required per policy) */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardDec}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Uploaded DEC</span>
+                                <span className={styles.miniCardLabel}>Dec Page Uploaded</span>
                                 <FileCheck size={13} className={styles.miniCardIcon} />
                             </div>
-                            <span className={styles.miniCardValue}>{periodStats.decAvailable.toLocaleString()}</span>
-                            <div className={styles.miniCardMetrics}>
-                                <span 
-                                    className={styles.metricMissing} 
-                                    title="Click to filter by Missing DEC"
-                                    onClick={() => { setDocFilter('missing_dec'); setCurrentPage(1); }}
-                                >
-                                    <X size={10} /> {periodStats.decMissing.toLocaleString()} waiting for upload
+                            <div className={styles.miniCardValueRow}>
+                                <span className={styles.miniCardValue}>{periodStats.decAvailable.toLocaleString()}</span>
+                                <span className={styles.miniUploadedBadge} title={`${periodStats.decPercent}% of unique policies have DEC on file`}>
+                                    ● {periodStats.decPercent}%
                                 </span>
                             </div>
+                            <span className={styles.miniCardSub}>
+                                {periodStats.decMissing.toLocaleString()} waiting for upload
+                            </span>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.decAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.decPercent}%` }} 
                                 />
                             </div>
                         </div>
 
-                        {/* 3. Uploaded RCE Reports (+1 RCE required per policy) */}
+                        {/* 3. RCE Uploaded (+1 RCE required per policy) */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardRce}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Uploaded RCE</span>
+                                <span className={styles.miniCardLabel}>RCE Uploaded</span>
                                 <ShieldAlert size={13} className={styles.miniCardIcon} />
                             </div>
-                            <span className={styles.miniCardValue}>{periodStats.rceAvailable.toLocaleString()}</span>
-                            <div className={styles.miniCardMetrics}>
-                                <span 
-                                    className={styles.metricMissing} 
-                                    title="Click to filter by Missing RCE"
-                                    onClick={() => { setDocFilter('missing_rce'); setCurrentPage(1); }}
-                                >
-                                    <X size={10} /> {periodStats.rceMissing.toLocaleString()} waiting for upload
+                            <div className={styles.miniCardValueRow}>
+                                <span className={styles.miniCardValue}>{periodStats.rceAvailable.toLocaleString()}</span>
+                                <span className={styles.miniUploadedBadge} title={`${periodStats.rcePercent}% of unique policies have 360Value RCE on file`}>
+                                    ● {periodStats.rcePercent}%
                                 </span>
                             </div>
+                            <span className={styles.miniCardSub}>
+                                {periodStats.rceMissing.toLocaleString()} waiting for upload
+                            </span>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.rceAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.rcePercent}%` }} 
                                 />
                             </div>
                         </div>
 
-                        {/* 4. DIC Quotes (Distinct from Full Covg) */}
-                        <div className={`${styles.summaryMiniCard} ${styles.cardDic}`}>
-                            <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>DIC Quotes</span>
-                                <ShieldOff size={13} className={styles.miniCardIcon} />
-                            </div>
-                            <span className={styles.miniCardValue}>{periodStats.dicAvailable.toLocaleString()}</span>
-                            <div className={styles.miniCardMetrics}>
-                                <span 
-                                    className={styles.metricNotice} 
-                                    title="Click to filter by available DIC quotes"
-                                    onClick={() => { setDocFilter('has_dic_quote'); setCurrentPage(1); }}
-                                    style={{ fontSize: '0.6875rem', color: '#f43f5e', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                                >
-                                    {periodStats.dicAvailable.toLocaleString()} DIC uploaded
-                                </span>
-                            </div>
-                            <div className={styles.miniProgressBar}>
-                                <div 
-                                    className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.dicAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
-                                />
-                            </div>
-                        </div>
-
-                        {/* 5. Full Coverage Quotes (Distinct from DIC) */}
+                        {/* 4. Carrier Quotes */}
                         <div className={`${styles.summaryMiniCard} ${styles.cardQuote}`}>
                             <div className={styles.miniCardTop}>
-                                <span className={styles.miniCardLabel}>Full Covg Quotes</span>
+                                <span className={styles.miniCardLabel}>Carrier Quotes</span>
                                 <FileQuestion size={13} className={styles.miniCardIcon} />
                             </div>
-                            <span className={styles.miniCardValue}>{periodStats.fullAvailable.toLocaleString()}</span>
-                            <div className={styles.miniCardMetrics}>
-                                <span 
-                                    className={styles.metricNotice} 
-                                    title="Click to view all policies with available Full Coverage quotes"
-                                    onClick={() => { setDocFilter('has_full_quote'); setCurrentPage(1); }}
-                                    style={{ fontSize: '0.6875rem', color: '#38bdf8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                                >
-                                    {periodStats.fullAvailable.toLocaleString()} Full Covg uploaded
+                            <div className={styles.miniCardValueRow}>
+                                <span className={styles.miniCardValue}>{periodStats.quoteAvailable.toLocaleString()}</span>
+                                <span className={styles.miniUploadedBadge} title={`${periodStats.quotePercent}% of unique policies quoted`}>
+                                    ● {periodStats.quotePercent}%
                                 </span>
                             </div>
+                            <span className={styles.miniCardSub}>
+                                {periodStats.dicAvailable.toLocaleString()} DIC • {periodStats.fullAvailable.toLocaleString()} Full Covg • {periodStats.quoteMissing.toLocaleString()} left
+                            </span>
                             <div className={styles.miniProgressBar}>
                                 <div 
                                     className={styles.miniProgressFill} 
-                                    style={{ width: `${periodStats.uniquePolicies > 0 ? (periodStats.fullAvailable / periodStats.uniquePolicies) * 100 : 0}%` }} 
+                                    style={{ width: `${periodStats.quotePercent}%` }} 
+                                />
+                            </div>
+                        </div>
+
+                        {/* 5. Quoting Readiness & Action Note */}
+                        <div 
+                            className={`${styles.summaryMiniCard} ${styles.cardReadiness}`}
+                            title="Quoting Requirements: Insured Name + Property Address are required to quote on carrier portals. Quotes & RCE can be entered/uploaded immediately even while waiting for CFP DEC page."
+                        >
+                            <div className={styles.miniCardTop}>
+                                <span className={styles.miniCardLabel}>Quoting Readiness</span>
+                                <Sparkles size={13} className={styles.miniCardIcon} />
+                            </div>
+                            <div className={styles.miniCardValueRow}>
+                                <span className={styles.miniCardValue} style={{ fontSize: '1.15rem' }}>
+                                    {periodStats.readyToQuoteCount.toLocaleString()} Ready
+                                </span>
+                                <span className={styles.miniUploadedBadge} style={{ fontSize: '0.6rem' }}>
+                                    Name+Addr
+                                </span>
+                            </div>
+                            <span className={styles.miniCardSub} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+                                {periodStats.missingNameCount > 0 ? (
+                                    <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠️ {periodStats.missingNameCount} missing Name</span>
+                                ) : (
+                                    <span style={{ color: '#059669', fontWeight: 600 }}>✓ Names present</span>
+                                )}
+                                <span>•</span>
+                                {periodStats.missingAddressCount > 0 ? (
+                                    <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠️ {periodStats.missingAddressCount} missing Addr</span>
+                                ) : (
+                                    <span style={{ color: '#059669', fontWeight: 600 }}>✓ Addrs present</span>
+                                )}
+                            </span>
+                            <div className={styles.miniProgressBar}>
+                                <div 
+                                    className={styles.miniProgressFill} 
+                                    style={{ width: `${periodStats.uniquePolicies > 0 ? ((periodStats.readyToQuoteCount / periodStats.uniquePolicies) * 100) : 0}%` }} 
                                 />
                             </div>
                         </div>
