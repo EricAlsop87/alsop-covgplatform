@@ -106,9 +106,31 @@ export async function POST(req: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
+        // Helper to strip leading slashes and any embedded bucket prefixes from storage paths
+        const cleanStoragePath = (pathStr?: string | null): string => {
+            if (!pathStr) return '';
+            let clean = pathStr.trim().replace(/^\/+/, '');
+            const bucketPrefixes = [
+                'cfp-platform-documents/',
+                'cfp-raw-decpage/',
+                'platform-documents/',
+                'dec-pages/',
+                'documents/',
+                'policy-documents/',
+            ];
+            for (const prefix of bucketPrefixes) {
+                if (clean.toLowerCase().startsWith(prefix)) {
+                    clean = clean.substring(prefix.length);
+                    break;
+                }
+            }
+            return clean.replace(/^\/+/, '');
+        };
+
         // ── Fetch & Attach Policy Documents (Dec Page, RCE, Quotes) ──
         const attachments: Array<{ name: string; content: string; contentType: string }> = [];
         const attachedNames: string[] = [];
+        const failedAttachments: Array<{ name: string; storagePath?: string }> = [];
 
         try {
             // If the VA explicitly pre-selected specific attachments via the guardrail checklist:
@@ -125,12 +147,16 @@ export async function POST(req: NextRequest) {
 
                     const candidatePaths: string[] = [];
                     if (item.storagePath) {
+                        const cleaned = cleanStoragePath(item.storagePath);
+                        if (cleaned) candidatePaths.push(cleaned);
                         candidatePaths.push(item.storagePath.replace(/^\/+/, ''));
                     }
 
                     // Fallback 1: Match by exact file_name in policy's platform_documents
                     const matchByName = policyPlatformDocs?.find(d => d.file_name && d.file_name === item.fileName && d.storage_path);
                     if (matchByName?.storage_path) {
+                        const cleaned = cleanStoragePath(matchByName.storage_path);
+                        if (cleaned) candidatePaths.push(cleaned);
                         candidatePaths.push(matchByName.storage_path.replace(/^\/+/, ''));
                     }
 
@@ -143,29 +169,92 @@ export async function POST(req: NextRequest) {
                             return dName.includes(baseSearch) || baseSearch.includes(dName);
                         });
                         if (matchFuzzy?.storage_path) {
+                            const cleaned = cleanStoragePath(matchFuzzy.storage_path);
+                            if (cleaned) candidatePaths.push(cleaned);
                             candidatePaths.push(matchFuzzy.storage_path.replace(/^\/+/, ''));
                         }
                     }
 
                     const buckets = item.bucket
-                        ? [item.bucket, 'cfp-raw-decpage', 'cfp-platform-documents']
+                        ? [item.bucket, 'cfp-platform-documents', 'cfp-raw-decpage']
                         : ['cfp-platform-documents', 'cfp-raw-decpage'];
 
                     let attached = false;
-                    for (const path of Array.from(new Set(candidatePaths))) {
+                    const uniquePaths = Array.from(new Set(candidatePaths.filter(Boolean)));
+
+                    for (const path of uniquePaths) {
                         if (attached) break;
+                        for (const b of Array.from(new Set(buckets))) {
+                            try {
+                                const { data: fileBlob, error: downloadErr } = await adminClient.storage.from(b).download(path);
+                                if (fileBlob && !downloadErr) {
+                                    const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                                    if (buffer.length > 0) {
+                                        attachments.push({
+                                            name: safeName,
+                                            content: buffer.toString('base64'),
+                                            contentType: 'application/pdf',
+                                        });
+                                        attachedNames.push(safeName);
+                                        attached = true;
+                                        break;
+                                    }
+                                }
+                            } catch {
+                                // Try next bucket/path
+                            }
+                        }
+                    }
+
+                    if (!attached) {
+                        failedAttachments.push({
+                            name: safeName,
+                            storagePath: item.storagePath,
+                        });
+                    }
+                }
+
+                // STRICT GUARDRAIL: If any selected attachment failed to download, STOP and return error!
+                if (failedAttachments.length > 0) {
+                    const missingList = failedAttachments.map(f => `"${f.name}"`).join(', ');
+                    logger.error('CFPSendMail', 'BLOCKED SENDING: Attachment download failed', { failedAttachments });
+                    return NextResponse.json({
+                        success: false,
+                        error: `Attachment Download Failed — Email sending blocked to prevent sending incomplete documents. Could not attach: ${missingList}. Please verify the files are uploaded in storage before sending.`,
+                        failedAttachments,
+                    }, { status: 422 });
+                }
+
+                // AUTO-RESCUE GUARDRAIL: Scan policyPlatformDocs for any unattached DIC / Quote / RCE / Dec documents
+                if (policyPlatformDocs && policyPlatformDocs.length > 0) {
+                    const buckets = ['cfp-platform-documents', 'cfp-raw-decpage'];
+                    for (const doc of policyPlatformDocs) {
+                        if (!doc.storage_path) continue;
+                        const safeName = doc.file_name || `${doc.doc_type || 'Document'}.pdf`;
+
+                        // Skip if already attached
+                        if (attachedNames.some(n => n.toLowerCase() === safeName.toLowerCase())) continue;
+
+                        const cleanPath = cleanStoragePath(doc.storage_path);
+                        if (!cleanPath) continue;
+
                         for (const b of buckets) {
-                            const { data: fileBlob } = await adminClient.storage.from(b).download(path);
-                            if (fileBlob) {
-                                const buffer = Buffer.from(await fileBlob.arrayBuffer());
-                                attachments.push({
-                                    name: safeName,
-                                    content: buffer.toString('base64'),
-                                    contentType: 'application/pdf',
-                                });
-                                attachedNames.push(safeName);
-                                attached = true;
-                                break;
+                            try {
+                                const { data: fileBlob, error: dlErr } = await adminClient.storage.from(b).download(cleanPath);
+                                if (fileBlob && !dlErr) {
+                                    const buffer = Buffer.from(await fileBlob.arrayBuffer());
+                                    if (buffer.length > 0) {
+                                        attachments.push({
+                                            name: safeName,
+                                            content: buffer.toString('base64'),
+                                            contentType: 'application/pdf',
+                                        });
+                                        attachedNames.push(safeName);
+                                        break;
+                                    }
+                                }
+                            } catch {
+                                // Non-fatal auto-rescue scan
                             }
                         }
                     }

@@ -54,8 +54,7 @@ export async function POST(req: NextRequest) {
             admin
                 .from('platform_documents')
                 .select('doc_type, file_name, storage_path')
-                .eq('policy_id', policy_id)
-                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc']),
+                .eq('policy_id', policy_id),
             admin
                 .from('manual_overrides')
                 .select('new_value')
@@ -73,26 +72,72 @@ export async function POST(req: NextRequest) {
         const propertyAddress = pol.property_address_norm || pol.property_address_raw || '—';
         const noDicAvailable = noDicOv?.new_value === 'true' || noDicOv?.new_value === '1';
 
+        // Helper to strip leading slashes and embedded bucket prefixes from storage paths
+        const cleanStoragePath = (pathStr?: string | null): string => {
+            if (!pathStr) return '';
+            let clean = pathStr.trim().replace(/^\/+/, '');
+            const bucketPrefixes = [
+                'cfp-platform-documents/',
+                'cfp-raw-decpage/',
+                'platform-documents/',
+                'dec-pages/',
+                'documents/',
+                'policy-documents/',
+            ];
+            for (const prefix of bucketPrefixes) {
+                if (clean.toLowerCase().startsWith(prefix)) {
+                    clean = clean.substring(prefix.length);
+                    break;
+                }
+            }
+            return clean.replace(/^\/+/, '');
+        };
+
         // Find documents
-        const quoteDoc = docs?.find(d => d.doc_type === 'es_doc' && d.storage_path);
-        const rceDoc = docs?.find(d => d.doc_type === 'rce' && d.storage_path);
-        const dicDoc = docs?.find(d => d.doc_type === 'dic_dec_page' && d.storage_path);
+        const quoteDoc = docs?.find(d => {
+            if (!d.storage_path) return false;
+            const fn = (d.file_name || '').toLowerCase();
+            const dt = (d.doc_type || '').toLowerCase();
+            return dt === 'es_doc' || dt === 'quote' || dt === 'carrier_quote' || fn.includes('quote') || fn.includes('bamboo') || fn.includes('aegis');
+        });
+
+        const rceDoc = docs?.find(d => {
+            if (!d.storage_path) return false;
+            const fn = (d.file_name || '').toLowerCase();
+            const dt = (d.doc_type || '').toLowerCase();
+            return dt === 'rce' || fn.includes('rce') || fn.includes('valuation') || fn.includes('360value');
+        });
+
+        const dicDoc = docs?.find(d => {
+            if (!d.storage_path) return false;
+            const fn = (d.file_name || '').toLowerCase();
+            const dt = (d.doc_type || '').toLowerCase();
+            return dt === 'dic_dec_page' || dt === 'dic' || fn.includes('dic');
+        });
 
         // 2. Download files from Supabase Storage and convert to Base64 attachments
         const attachments: EmailAttachment[] = [];
         const threadAttachmentsMeta: { name: string; size?: number; contentType?: string }[] = [];
 
-        // Helper to download from storage
-        async function fetchStorageBase64(bucket: string, path: string): Promise<string | null> {
-            try {
-                const { data: fileData, error: fileErr } = await admin.storage.from(bucket).download(path);
-                if (fileErr || !fileData) return null;
-                const buffer = Buffer.from(await fileData.arrayBuffer());
-                return buffer.toString('base64');
-            } catch (err) {
-                console.error(`Error downloading ${path} from ${bucket}:`, err);
-                return null;
+        // Helper to download from storage with clean path fallback
+        async function fetchStorageBase64(bucket: string, rawPath: string): Promise<string | null> {
+            const candidatePaths = Array.from(new Set([cleanStoragePath(rawPath), rawPath.replace(/^\/+/, '')])).filter(Boolean);
+            const buckets = [bucket, 'cfp-platform-documents', 'cfp-raw-decpage'];
+
+            for (const path of candidatePaths) {
+                for (const b of buckets) {
+                    try {
+                        const { data: fileData, error: fileErr } = await admin.storage.from(b).download(path);
+                        if (fileData && !fileErr) {
+                            const buffer = Buffer.from(await fileData.arrayBuffer());
+                            if (buffer.length > 0) return buffer.toString('base64');
+                        }
+                    } catch (err) {
+                        // try next
+                    }
+                }
             }
+            return null;
         }
 
         // Attach Quote

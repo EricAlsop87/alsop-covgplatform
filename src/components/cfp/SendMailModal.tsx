@@ -241,6 +241,33 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         });
     }, []);
 
+    // Fetch live platform_documents for policy_id on modal load
+    const [livePlatformDocs, setLivePlatformDocs] = useState<Array<{ id: string; doc_type?: string; file_name?: string; storage_path?: string; bucket?: string }>>([]);
+
+    useEffect(() => {
+        if (!isOpen || !term?.policy_id) {
+            setLivePlatformDocs([]);
+            return;
+        }
+        let isMounted = true;
+        (async () => {
+            try {
+                const { data } = await supabase
+                    .from('platform_documents')
+                    .select('id, doc_type, file_name, storage_path, bucket')
+                    .eq('policy_id', term.policy_id);
+                if (isMounted && data) {
+                    setLivePlatformDocs(data as any[]);
+                }
+            } catch {
+                // Non-blocking
+            }
+        })();
+        return () => {
+            isMounted = false;
+        };
+    }, [isOpen, term?.policy_id]);
+
     // Compute all candidate attachments available for this policy term (deduplicated by storagePath)
     const availableAttachments = useMemo<AttachmentItem[]>(() => {
         if (!term) return [];
@@ -248,33 +275,50 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const seenStoragePaths = new Set<string>();
 
         const addCandidate = (item: AttachmentItem) => {
-            if (item.storagePath && seenStoragePaths.has(item.storagePath)) return;
-            if (item.storagePath) seenStoragePaths.add(item.storagePath);
+            if (!item.storagePath) return;
+            const cleanPath = item.storagePath.trim().replace(/^\/+/, '').toLowerCase();
+            if (seenStoragePaths.has(cleanPath)) return;
+            seenStoragePaths.add(cleanPath);
             items.push(item);
         };
 
+        // Helper to find matching live document by carrier name, doc_type, or file_name
+        const findLiveDoc = (carrierOrType: string) => {
+            const needle = carrierOrType.toLowerCase();
+            return livePlatformDocs.find(d => {
+                if (!d.storage_path) return false;
+                const fn = (d.file_name || '').toLowerCase();
+                const dt = (d.doc_type || '').toLowerCase();
+                return fn.includes(needle) || dt.includes(needle);
+            });
+        };
+
         // 1. Dec page
-        if (term.has_dec && term.dec_storage_path) {
+        const decDoc = findLiveDoc('dec');
+        const decPath = term.dec_storage_path || decDoc?.storage_path;
+        if ((term.has_dec || decPath) && decPath) {
             addCandidate({
                 id: 'dec',
                 label: 'FAIR Plan Dec Page',
                 badge: 'DEC PAGE',
-                fileName: term.dec_file_name || `FAIR_Plan_Dec_${term.policy_number}.pdf`,
-                storagePath: term.dec_storage_path,
-                bucket: term.dec_bucket || 'cfp-raw-decpage',
+                fileName: term.dec_file_name || decDoc?.file_name || `FAIR_Plan_Dec_${term.policy_number}.pdf`,
+                storagePath: decPath,
+                bucket: (term.dec_bucket as any) || (decDoc?.bucket as any) || 'cfp-raw-decpage',
                 docCategory: 'dec',
             });
         }
 
         // 2. Renewal Dec
-        if (term.has_renewal_dec && term.renewal_dec_storage_path) {
+        const renewalDoc = findLiveDoc('renewal');
+        const renewalPath = term.renewal_dec_storage_path || renewalDoc?.storage_path;
+        if ((term.has_renewal_dec || renewalPath) && renewalPath) {
             addCandidate({
                 id: 'renewal_dec',
                 label: 'Renewal Offer Dec Page',
                 badge: 'RENEWAL DEC',
-                fileName: term.renewal_dec_file_name || `Renewal_Offer_${term.policy_number}.pdf`,
-                storagePath: term.renewal_dec_storage_path,
-                bucket: term.renewal_dec_bucket || 'cfp-platform-documents',
+                fileName: term.renewal_dec_file_name || renewalDoc?.file_name || `Renewal_Offer_${term.policy_number}.pdf`,
+                storagePath: renewalPath,
+                bucket: (term.renewal_dec_bucket as any) || 'cfp-platform-documents',
                 docCategory: 'renewal',
             });
         }
@@ -282,73 +326,135 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         // 3. RCE Valuation
         const effectiveRceCost = rceReplacementCost ?? term.rce_replacement_cost;
         const effectiveRceCarrier = rceCarrier || term.rce_carrier || 'Bamboo';
-        if ((term.has_rce || effectiveRceCost) && term.rce_storage_path) {
+        const rceDoc = findLiveDoc('rce') || findLiveDoc('valuation') || findLiveDoc('360value');
+        const rcePath = term.rce_storage_path || rceDoc?.storage_path;
+        if ((term.has_rce || effectiveRceCost || rcePath) && rcePath) {
             const rceValuationStr = effectiveRceCost ? ` - $${Math.round(Number(effectiveRceCost)).toLocaleString()}` : '';
             addCandidate({
                 id: 'rce',
                 label: `RCE Valuation (${effectiveRceCarrier}${rceValuationStr})`,
                 badge: 'RCE REPORT',
-                fileName: term.rce_file_name || 'RCE_Valuation_Report.pdf',
-                storagePath: term.rce_storage_path,
+                fileName: term.rce_file_name || rceDoc?.file_name || 'RCE_Valuation_Report.pdf',
+                storagePath: rcePath,
                 bucket: 'cfp-platform-documents',
                 docCategory: 'rce',
             });
         }
 
         // 4. Bamboo Quote
-        if (term.carrier_quotes?.bamboo?.storage_path) {
-            addCandidate({
-                id: 'bamboo',
-                label: 'Bamboo Companion Quote',
-                badge: 'BAMBOO QUOTE',
-                fileName: term.carrier_quotes.bamboo.file_name || term.carrier_quotes.bamboo.doc_file_name || 'Bamboo_Quote.pdf',
-                storagePath: term.carrier_quotes.bamboo.storage_path,
-                bucket: 'cfp-platform-documents',
-                docCategory: 'quote',
-            });
+        const bambooDoc = findLiveDoc('bamboo') || livePlatformDocs.find(d => d.doc_type === 'es_doc' || d.doc_type === 'quote');
+        const bambooPath = term.carrier_quotes?.bamboo?.storage_path || bambooDoc?.storage_path;
+        if (bambooPath || term.carrier_quotes?.bamboo) {
+            if (bambooPath) {
+                addCandidate({
+                    id: 'bamboo',
+                    label: 'Bamboo Companion Quote',
+                    badge: 'BAMBOO QUOTE',
+                    fileName: term.carrier_quotes?.bamboo?.file_name || term.carrier_quotes?.bamboo?.doc_file_name || bambooDoc?.file_name || 'Bamboo_Quote.pdf',
+                    storagePath: bambooPath,
+                    bucket: 'cfp-platform-documents',
+                    docCategory: 'quote',
+                });
+            }
         }
 
         // 5. Aegis Quote
-        if (term.carrier_quotes?.aegis?.storage_path) {
-            addCandidate({
-                id: 'aegis',
-                label: 'Aegis Security / General Quote',
-                badge: 'AEGIS QUOTE',
-                fileName: term.carrier_quotes.aegis.file_name || term.carrier_quotes.aegis.doc_file_name || 'Aegis_Quote.pdf',
-                storagePath: term.carrier_quotes.aegis.storage_path,
-                bucket: 'cfp-platform-documents',
-                docCategory: 'quote',
-            });
+        const aegisDoc = findLiveDoc('aegis');
+        const aegisPath = term.carrier_quotes?.aegis?.storage_path || aegisDoc?.storage_path;
+        if (aegisPath || term.carrier_quotes?.aegis) {
+            if (aegisPath) {
+                addCandidate({
+                    id: 'aegis',
+                    label: 'Aegis Security / General Quote',
+                    badge: 'AEGIS QUOTE',
+                    fileName: term.carrier_quotes?.aegis?.file_name || term.carrier_quotes?.aegis?.doc_file_name || aegisDoc?.file_name || 'Aegis_Quote.pdf',
+                    storagePath: aegisPath,
+                    bucket: 'cfp-platform-documents',
+                    docCategory: 'quote',
+                });
+            }
         }
 
         // 6. PSIC Quote
-        if (term.carrier_quotes?.psic?.storage_path) {
+        const psicDoc = findLiveDoc('psic') || findLiveDoc('pacific');
+        const psicPath = term.carrier_quotes?.psic?.storage_path || psicDoc?.storage_path;
+        if (psicPath || term.carrier_quotes?.psic) {
+            if (psicPath) {
+                addCandidate({
+                    id: 'psic',
+                    label: 'Pacific Specialty (PSIC) Quote',
+                    badge: 'PSIC QUOTE',
+                    fileName: term.carrier_quotes?.psic?.file_name || term.carrier_quotes?.psic?.doc_file_name || psicDoc?.file_name || 'PSIC_Quote.pdf',
+                    storagePath: psicPath,
+                    bucket: 'cfp-platform-documents',
+                    docCategory: 'quote',
+                });
+            }
+        }
+
+        // 7. SageSure Quote
+        const sageDoc = findLiveDoc('sagesure') || findLiveDoc('sage');
+        const sagePath = term.carrier_quotes?.sagesure?.storage_path || sageDoc?.storage_path;
+        if (sagePath) {
             addCandidate({
-                id: 'psic',
-                label: 'Pacific Specialty (PSIC) Quote',
-                badge: 'PSIC QUOTE',
-                fileName: term.carrier_quotes.psic.file_name || term.carrier_quotes.psic.doc_file_name || 'PSIC_Quote.pdf',
-                storagePath: term.carrier_quotes.psic.storage_path,
+                id: 'sagesure',
+                label: 'SageSure Quote',
+                badge: 'SAGESURE QUOTE',
+                fileName: term.carrier_quotes?.sagesure?.file_name || sageDoc?.file_name || 'SageSure_Quote.pdf',
+                storagePath: sagePath,
                 bucket: 'cfp-platform-documents',
                 docCategory: 'quote',
             });
         }
 
-        // 9. In-force DIC Dec Page (if distinct from quotes)
-        if (term.has_dic && term.dic_storage_path) {
+        // 8. American Modern Quote
+        const amDoc = findLiveDoc('american modern') || findLiveDoc('am_quote');
+        const amPath = term.carrier_quotes?.am?.storage_path || amDoc?.storage_path;
+        if (amPath) {
+            addCandidate({
+                id: 'am',
+                label: 'American Modern Quote',
+                badge: 'AM QUOTE',
+                fileName: term.carrier_quotes?.am?.file_name || amDoc?.file_name || 'American_Modern_Quote.pdf',
+                storagePath: amPath,
+                bucket: 'cfp-platform-documents',
+                docCategory: 'quote',
+            });
+        }
+
+        // 9. In-force DIC Dec Page / Standalone DIC Document
+        const dicDoc = findLiveDoc('dic') || livePlatformDocs.find(d => d.doc_type === 'dic_dec_page');
+        const dicPath = term.dic_storage_path || dicDoc?.storage_path;
+        if ((term.has_dic || dicPath) && dicPath) {
             addCandidate({
                 id: 'dic',
-                label: `DIC Dec Page (${term.dic_carrier || 'DIC'})`,
-                badge: 'DIC DEC',
-                fileName: term.dic_file_name || 'DIC_Dec_Page.pdf',
-                storagePath: term.dic_storage_path,
+                label: `DIC Dec Page / Quote (${term.dic_carrier || dicDoc?.file_name || 'DIC'})`,
+                badge: 'DIC DOC',
+                fileName: term.dic_file_name || dicDoc?.file_name || 'DIC_Document.pdf',
+                storagePath: dicPath,
                 bucket: 'cfp-platform-documents',
                 docCategory: 'dic',
             });
         }
 
+        // 10. Append any remaining documents in livePlatformDocs not yet added
+        for (const doc of livePlatformDocs) {
+            if (!doc.storage_path) continue;
+            const fn = doc.file_name || 'Document.pdf';
+            const docCat = doc.doc_type === 'rce' ? 'rce' : doc.doc_type === 'dic_dec_page' ? 'dic' : doc.doc_type === 'dec_page' ? 'dec' : 'quote';
+            addCandidate({
+                id: doc.id || `doc_${doc.storage_path}`,
+                label: `${(doc.doc_type || 'DOCUMENT').toUpperCase()}: ${fn}`,
+                badge: 'DOCUMENT',
+                fileName: fn,
+                storagePath: doc.storage_path,
+                bucket: (doc.bucket as any) || 'cfp-platform-documents',
+                docCategory: docCat,
+            });
+        }
+
         return items;
-    }, [term]);
+    }, [term, livePlatformDocs, rceReplacementCost, rceCarrier]);
 
     // Initialize subject, notes & pre-selected attachments when modal opens with term
     useEffect(() => {
