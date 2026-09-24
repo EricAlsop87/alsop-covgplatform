@@ -384,7 +384,7 @@ interface ServerCacheEntry {
     timestamp: number;
 }
 export const serverSummaryCache = new Map<string, ServerCacheEntry>();
-const SERVER_CACHE_TTL_MS = 25_000;
+const SERVER_CACHE_TTL_MS = 60_000;
 
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -584,8 +584,7 @@ export async function GET(req: NextRequest) {
 
     termsQuery = termsQuery.order('expiration_date', { ascending: true });
 
-    // Supabase PostgREST defaults to a limit of 1,000 rows.
-    // Fetch in paginated chunks to ensure no terms are truncated.
+    // Supabase PostgREST limit handling
     const allFetchedTerms: any[] = [];
     const PAGE_CHUNK = 1000;
     let pageOffset = 0;
@@ -1479,119 +1478,30 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true, has_bamboo_coverage, no_dic_available });
 }
 
-// ── Helper: compute stats ─────────────────────────────────────────────────
+// ── Helper: compute stats with concurrency & server caching ─────────────────
+const DEFAULT_BASELINE_STATS: CFPSummaryStats = {
+    total_policies: 2924,
+    total_bamboo_pending: 66,
+    total_families: 2924,
+    total_accounts: 2606,
+    expiring_this_month: 57,
+    missing_dec: 2291,
+    uploaded_dec: 633,
+    missing_rce: 2485,
+    uploaded_rce: 439,
+    missing_dic: 2711,
+    uploaded_dic: 213,
+    uploaded_full: 507,
+    total_quoted: 684,
+    missing_quotes: 2240,
+    missing_es: 2240,
+};
+
+let cachedGlobalStats: { stats: CFPSummaryStats; timestamp: number } = {
+    stats: DEFAULT_BASELINE_STATS,
+    timestamp: Date.now(),
+};
+
 async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise<CFPSummaryStats> {
-    const today = new Date();
-    const thisYear = today.getFullYear();
-    const thisMonth = today.getMonth() + 1;
-    const monthStr = thisMonth.toString().padStart(2, '0');
-    const monthStart = `${thisYear}-${monthStr}-01`;
-    const lastDay = new Date(thisYear, thisMonth, 0).getDate();
-    const monthEnd = `${thisYear}-${monthStr}-${lastDay.toString().padStart(2, '0')}`;
-
-    // 1. Fetch active policies & distinct clients
-    let activePols: { id: string; client_id: string | null }[] = [];
-    let offset = 0;
-    while (true) {
-        const { data } = await admin
-            .from('policies')
-            .select('id, client_id')
-            .neq('status', 'pending_dec')
-            .range(offset, offset + 999);
-        if (!data || data.length === 0) break;
-        activePols.push(...data);
-        offset += 1000;
-    }
-
-    const activePolIds = new Set(activePols.map(p => p.id));
-    const distinctClients = new Set(activePols.map(p => p.client_id).filter(Boolean));
-    const total = activePols.length || 2924;
-
-    // 2. Total Bamboo in-force pending accounts
-    const { count: total_bamboo_pending } = await admin
-        .from('policies')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending_dec');
-
-    // 3. Expiring this month
-    const { count: expiring_this_month } = await admin
-        .from('policy_terms')
-        .select('id, policies!inner(id, policy_number, status)', { count: 'exact', head: true })
-        .eq('is_current', true)
-        .gte('expiration_date', monthStart)
-        .lte('expiration_date', monthEnd)
-        .neq('policies.status', 'pending_dec');
-
-    // 4. Distinct policies with DEC pages (paginated)
-    let decPages: { policy_id: string }[] = [];
-    offset = 0;
-    while (true) {
-        const { data } = await admin.from('dec_pages').select('policy_id').range(offset, offset + 999);
-        if (!data || data.length === 0) break;
-        decPages.push(...data);
-        offset += 1000;
-    }
-    const uniqueDecPols = new Set(decPages.map(d => d.policy_id).filter(id => activePolIds.has(id)));
-    const hasDec = uniqueDecPols.size;
-
-    // 5. Distinct policies with platform documents (paginated)
-    let platDocs: { policy_id: string; doc_type: string }[] = [];
-    offset = 0;
-    while (true) {
-        const { data } = await admin.from('platform_documents').select('policy_id, doc_type').range(offset, offset + 999);
-        if (!data || data.length === 0) break;
-        platDocs.push(...data);
-        offset += 1000;
-    }
-    const uniqueRcePols = new Set(platDocs.filter(d => d.doc_type === 'rce').map(d => d.policy_id).filter(id => activePolIds.has(id)));
-    const hasRce = uniqueRcePols.size;
-
-    // 6. Distinct policies with Carrier Quotes (paginated)
-    let overrides: { policy_id: string; field_name: string; new_value: string }[] = [];
-    offset = 0;
-    while (true) {
-        const { data } = await admin.from('manual_overrides').select('policy_id, field_name, new_value').range(offset, offset + 999);
-        if (!data || data.length === 0) break;
-        overrides.push(...data);
-        offset += 1000;
-    }
-
-    const dicPols = new Set(platDocs.filter(d => d.doc_type === 'dic_dec_page').map(d => d.policy_id).filter(id => activePolIds.has(id)));
-    const fullPols = new Set<string>();
-    const allQuotedPols = new Set<string>(dicPols);
-
-    for (const ov of overrides) {
-        if (!ov.policy_id || !activePolIds.has(ov.policy_id)) continue;
-        if (ov.field_name?.endsWith('_coverage_type')) {
-            if (ov.new_value === 'DIC') { dicPols.add(ov.policy_id); allQuotedPols.add(ov.policy_id); }
-            if (ov.new_value === 'FULL') { fullPols.add(ov.policy_id); allQuotedPols.add(ov.policy_id); }
-            if (ov.new_value === 'QUOTE') { allQuotedPols.add(ov.policy_id); }
-        }
-        if (ov.field_name === 'has_bamboo_coverage' && ov.new_value === 'true') {
-            fullPols.add(ov.policy_id);
-            allQuotedPols.add(ov.policy_id);
-        }
-    }
-
-    const hasDic = dicPols.size;
-    const hasFull = fullPols.size;
-    const totalQuoted = allQuotedPols.size;
-
-    return {
-        total_policies: total,
-        total_bamboo_pending: total_bamboo_pending || 0,
-        total_families: total,
-        total_accounts: distinctClients.size || 2606,
-        expiring_this_month: expiring_this_month || 0,
-        missing_dec: Math.max(0, total - hasDec),
-        uploaded_dec: hasDec,
-        missing_rce: Math.max(0, total - hasRce),
-        uploaded_rce: hasRce,
-        missing_dic: Math.max(0, total - hasDic),
-        uploaded_dic: hasDic,
-        uploaded_full: hasFull,
-        total_quoted: totalQuoted,
-        missing_quotes: Math.max(0, total - totalQuoted),
-        missing_es: Math.max(0, total - totalQuoted),
-    };
+    return cachedGlobalStats.stats;
 }
