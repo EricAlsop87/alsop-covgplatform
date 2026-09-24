@@ -1199,40 +1199,40 @@ export async function GET(req: NextRequest) {
                 ? {
                     ...autoCarrierQuotes[policyId]?.bamboo,
                     ...manualCarrierQuotes[policyId]?.bamboo,
-                    storage_path: manualCarrierQuotes[policyId]?.bamboo?.storage_path || autoCarrierQuotes[policyId]?.bamboo?.storage_path || null,
-                    file_name: manualCarrierQuotes[policyId]?.bamboo?.file_name || autoCarrierQuotes[policyId]?.bamboo?.file_name || null,
+                    storage_path: autoCarrierQuotes[policyId]?.bamboo?.storage_path || manualCarrierQuotes[policyId]?.bamboo?.storage_path || null,
+                    file_name: autoCarrierQuotes[policyId]?.bamboo?.file_name || manualCarrierQuotes[policyId]?.bamboo?.file_name || null,
                 }
                 : autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
             aegis: manualCarrierQuotes[policyId]?.aegis
                 ? {
                     ...autoCarrierQuotes[policyId]?.aegis,
                     ...manualCarrierQuotes[policyId]?.aegis,
-                    storage_path: manualCarrierQuotes[policyId]?.aegis?.storage_path || autoCarrierQuotes[policyId]?.aegis?.storage_path || null,
-                    file_name: manualCarrierQuotes[policyId]?.aegis?.file_name || autoCarrierQuotes[policyId]?.aegis?.file_name || null,
+                    storage_path: autoCarrierQuotes[policyId]?.aegis?.storage_path || manualCarrierQuotes[policyId]?.aegis?.storage_path || null,
+                    file_name: autoCarrierQuotes[policyId]?.aegis?.file_name || manualCarrierQuotes[policyId]?.aegis?.file_name || null,
                 }
                 : autoCarrierQuotes[policyId]?.aegis || null,
             am: manualCarrierQuotes[policyId]?.am
                 ? {
                     ...autoCarrierQuotes[policyId]?.am,
                     ...manualCarrierQuotes[policyId]?.am,
-                    storage_path: manualCarrierQuotes[policyId]?.am?.storage_path || autoCarrierQuotes[policyId]?.am?.storage_path || null,
-                    file_name: manualCarrierQuotes[policyId]?.am?.file_name || autoCarrierQuotes[policyId]?.am?.file_name || null,
+                    storage_path: autoCarrierQuotes[policyId]?.am?.storage_path || manualCarrierQuotes[policyId]?.am?.storage_path || null,
+                    file_name: autoCarrierQuotes[policyId]?.am?.file_name || manualCarrierQuotes[policyId]?.am?.file_name || null,
                 }
                 : autoCarrierQuotes[policyId]?.am || null,
             sagesure: manualCarrierQuotes[policyId]?.sagesure
                 ? {
                     ...autoCarrierQuotes[policyId]?.sagesure,
                     ...manualCarrierQuotes[policyId]?.sagesure,
-                    storage_path: manualCarrierQuotes[policyId]?.sagesure?.storage_path || autoCarrierQuotes[policyId]?.sagesure?.storage_path || null,
-                    file_name: manualCarrierQuotes[policyId]?.sagesure?.file_name || autoCarrierQuotes[policyId]?.sagesure?.file_name || null,
+                    storage_path: autoCarrierQuotes[policyId]?.sagesure?.storage_path || manualCarrierQuotes[policyId]?.sagesure?.storage_path || null,
+                    file_name: autoCarrierQuotes[policyId]?.sagesure?.file_name || manualCarrierQuotes[policyId]?.sagesure?.file_name || null,
                 }
                 : autoCarrierQuotes[policyId]?.sagesure || null,
             psic: manualCarrierQuotes[policyId]?.psic
                 ? {
                     ...autoCarrierQuotes[policyId]?.psic,
                     ...manualCarrierQuotes[policyId]?.psic,
-                    storage_path: manualCarrierQuotes[policyId]?.psic?.storage_path || autoCarrierQuotes[policyId]?.psic?.storage_path || null,
-                    file_name: manualCarrierQuotes[policyId]?.psic?.file_name || autoCarrierQuotes[policyId]?.psic?.file_name || null,
+                    storage_path: autoCarrierQuotes[policyId]?.psic?.storage_path || manualCarrierQuotes[policyId]?.psic?.storage_path || null,
+                    file_name: autoCarrierQuotes[policyId]?.psic?.file_name || manualCarrierQuotes[policyId]?.psic?.file_name || null,
                 }
                 : autoCarrierQuotes[policyId]?.psic || null,
         };

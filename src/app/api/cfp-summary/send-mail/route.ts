@@ -134,7 +134,38 @@ export async function POST(req: NextRequest) {
                         candidatePaths.push(matchByName.storage_path.replace(/^\/+/, ''));
                     }
 
-                    // Fallback 2: Match by partial filename or doc category
+                    // Fallback 2: Match by quote number regex (e.g., Q1003529677, Q5614576, CASNH...)
+                    const qNumMatch = (item.fileName || '').match(/(Q\d+|CASNH\d+|HO\d+|005\d+|SS\d+)/i) || (item.storagePath || '').match(/(Q\d+|CASNH\d+|HO\d+|005\d+|SS\d+)/i);
+                    if (qNumMatch) {
+                        const qNum = qNumMatch[1].toLowerCase();
+                        const matchByQNum = policyPlatformDocs?.find(d => d.storage_path && (d.file_name || '').toLowerCase().includes(qNum));
+                        if (matchByQNum?.storage_path) {
+                            candidatePaths.push(matchByQNum.storage_path.replace(/^\/+/, ''));
+                        }
+                    }
+
+                    // Fallback 3: Match by carrier keyword / document type
+                    const itemText = `${item.id || ''} ${item.label || ''} ${item.fileName || ''} ${item.badge || ''}`.toLowerCase();
+                    let carrierKeyword = '';
+                    if (itemText.includes('bamboo')) carrierKeyword = 'bamboo';
+                    else if (itemText.includes('aegis')) carrierKeyword = 'aegis';
+                    else if (itemText.includes('psic') || itemText.includes('pacific')) carrierKeyword = 'pacific';
+                    else if (itemText.includes('american modern') || itemText.includes('am quote')) carrierKeyword = 'modern';
+                    else if (itemText.includes('sagesure')) carrierKeyword = 'sagesure';
+                    else if (itemText.includes('rce') || itemText.includes('valuation')) carrierKeyword = 'rce';
+
+                    if (carrierKeyword) {
+                        const matchByCarrier = policyPlatformDocs?.find(d => {
+                            if (!d.storage_path) return false;
+                            const dText = `${d.file_name || ''} ${d.doc_type || ''}`.toLowerCase();
+                            return dText.includes(carrierKeyword);
+                        });
+                        if (matchByCarrier?.storage_path) {
+                            candidatePaths.push(matchByCarrier.storage_path.replace(/^\/+/, ''));
+                        }
+                    }
+
+                    // Fallback 4: Match by partial filename
                     if (item.fileName) {
                         const baseSearch = item.fileName.toLowerCase().replace(/[-_.\s]/g, '');
                         const matchFuzzy = policyPlatformDocs?.find(d => {
@@ -147,8 +178,26 @@ export async function POST(req: NextRequest) {
                         }
                     }
 
+                    // Fallback 5: Check dec_pages / dec_page_submissions if Dec page
+                    if (itemText.includes('dec') || item.docCategory === 'dec') {
+                        const { data: decRecord } = await adminClient
+                            .from('dec_pages')
+                            .select('storage_path, dec_page_submissions(storage_path)')
+                            .eq('policy_id', policyId)
+                            .order('created_at', { ascending: false })
+                            .limit(1)
+                            .maybeSingle();
+                        if (decRecord?.storage_path) {
+                            candidatePaths.push(decRecord.storage_path.replace(/^\/+/, ''));
+                        }
+                        const sub = Array.isArray(decRecord?.dec_page_submissions) ? decRecord?.dec_page_submissions[0] : decRecord?.dec_page_submissions;
+                        if (sub?.storage_path) {
+                            candidatePaths.push(sub.storage_path.replace(/^\/+/, ''));
+                        }
+                    }
+
                     const buckets = item.bucket
-                        ? [item.bucket, 'cfp-raw-decpage', 'cfp-platform-documents']
+                        ? [item.bucket, 'cfp-platform-documents', 'cfp-raw-decpage']
                         : ['cfp-platform-documents', 'cfp-raw-decpage'];
 
                     let attached = false;
@@ -168,6 +217,10 @@ export async function POST(req: NextRequest) {
                                 break;
                             }
                         }
+                    }
+
+                    if (!attached) {
+                        logger.warn('SendMail', `Failed to attach document: ${safeName} (policy ${policyId}). Tried paths: ${candidatePaths.join(', ')}`);
                     }
                 }
             } else {
