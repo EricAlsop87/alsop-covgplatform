@@ -807,7 +807,8 @@ export async function GET(req: NextRequest) {
             isFairPlanCarrier ||
             fn.includes('renewal_email_attachment') ||
             fn.includes('renewal_offer') ||
-            (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic'))
+            (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic')) ||
+            (fn.includes('dec page') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic'))
         );
 
         if (isCfpDecDoc && doc.storage_path) {
