@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
         // ── Fetch & Attach Policy Documents (Dec Page, RCE, Quotes) ──
         const attachments: Array<{ name: string; content: string; contentType: string }> = [];
         const attachedNames: string[] = [];
+        const failedAttachments: string[] = [];
 
         try {
             // If the VA explicitly pre-selected specific attachments via the guardrail checklist:
@@ -221,7 +222,17 @@ export async function POST(req: NextRequest) {
 
                     if (!attached) {
                         logger.warn('SendMail', `Failed to attach document: ${safeName} (policy ${policyId}). Tried paths: ${candidatePaths.join(', ')}`);
+                        failedAttachments.push(safeName);
                     }
+                }
+
+                // Strict Guardrail: If any selected attachment failed to download, halt sending
+                if (failedAttachments.length > 0) {
+                    return NextResponse.json({
+                        success: false,
+                        error: `Attachment guardrail: ${failedAttachments.length} selected document(s) could not be retrieved from storage: ${failedAttachments.join(', ')}. Email was NOT sent to prevent sending an incomplete package. Please check or re-upload the document(s).`,
+                        failedAttachments,
+                    }, { status: 422 });
                 }
             } else {
                 // Fallback: auto-detect all available documents for this policy
