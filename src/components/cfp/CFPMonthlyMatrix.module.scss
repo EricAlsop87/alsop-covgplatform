@@ -1,12 +1,79 @@
-.container {
+.pageContainer {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    align-items: center;
     width: 100%;
 }
 
+/* ========================================================
+   TOP STAT SUMMARY STRIP (Web View)
+   ======================================================== */
+.quickStatsRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.85rem;
+    width: 100%;
+}
+
+.quickStatCard {
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .statIcon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .statInfo {
+        display: flex;
+        flex-direction: column;
+
+        .statLabel {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .statVal {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+            margin-top: 0.1rem;
+        }
+
+        .statSub {
+            font-size: 0.68rem;
+            color: #94a3b8;
+            margin-top: 0.15rem;
+            font-weight: 500;
+        }
+    }
+}
+
+/* ========================================================
+   MAIN TOOLBAR / ACTION BAR
+   ======================================================== */
 .topBar {
     display: flex;
     align-items: center;
@@ -14,12 +81,11 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     background: #ffffff;
-    padding: 0.65rem 1rem;
-    border-radius: 8px;
+    padding: 0.75rem 1.15rem;
+    border-radius: 10px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     width: 100%;
-    max-width: 720px;
 }
 
 .filterControls {
@@ -31,19 +97,19 @@
 .filterGroup {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #475569;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
 }
 
 .select {
-    padding: 0.35rem 0.75rem;
+    padding: 0.4rem 0.85rem;
     border-radius: 6px;
-    border: 1px solid #cbd5e1;
+    border: 1.5px solid #cbd5e1;
     background: #f8fafc;
     color: #0f172a;
-    font-size: 0.8125rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     outline: none;
@@ -54,26 +120,26 @@
     }
 
     &:focus {
-        border-color: #0f172a;
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
 }
 
 .actions {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
     flex-wrap: wrap;
 }
 
 .btnAction {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.7rem;
-    background: #f8fafc;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    background: #ffffff;
     color: #334155;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 600;
     border-radius: 6px;
     border: 1px solid #cbd5e1;
@@ -82,7 +148,7 @@
     user-select: none;
 
     &:hover {
-        background: #f1f5f9;
+        background: #f8fafc;
         color: #0f172a;
         border-color: #94a3b8;
     }
@@ -92,27 +158,18 @@
         cursor: not-allowed;
     }
 
-    &.primary {
-        background: #0f172a;
-        color: #ffffff;
-        border-color: #0f172a;
-
-        &:hover {
-            background: #1e293b;
-        }
-    }
-
-    &.imageButton {
+    &.btnPrimaryImage {
         background: #2563eb;
         color: #ffffff;
         border-color: #1d4ed8;
+        font-weight: 700;
 
         &:hover {
             background: #1d4ed8;
         }
     }
 
-    &.success {
+    &.btnExcel {
         background: #15803d;
         color: #ffffff;
         border-color: #15803d;
@@ -123,100 +180,99 @@
     }
 }
 
-/* 
- * ========================================================
- * EXECUTIVE PRESENTATION CARD (Modeled directly on MTD Ranking Card)
- * Fixed optimal width (700px) for crystal-clear email embedding
- * ========================================================
- */
-.presentationCard {
+.errorBanner {
     width: 100%;
-    max-width: 700px;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 0.8125rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.retryBtn {
+    padding: 0.2rem 0.6rem;
+    background: #991b1b;
+    color: #fff;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* ========================================================
+   FULL-WIDTH WEB MATRIX TABLE
+   ======================================================== */
+.webTableCard {
+    width: 100%;
     background: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
     overflow: hidden;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
 }
 
-/* Dark Navy Card Header */
-.cardHeader {
-    background: #0c1b33;
-    padding: 0.75rem 1rem 0.65rem 1rem;
+.webTableHeader {
+    padding: 1.15rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 2px solid #1e3a5f;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background: #fafbfc;
 
-    .headerLeft {
-        display: flex;
-        flex-direction: column;
-        gap: 0.1rem;
-
-        .brandPill {
-            font-size: 0.65rem;
+    .webTitleGroup {
+        h2 {
+            margin: 0;
+            font-size: 1.15rem;
             font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #38bdf8;
+            color: #0f172a;
+            letter-spacing: -0.01em;
         }
 
-        .mainTitle {
-            font-size: 1.05rem;
-            font-weight: 800;
-            color: #ffffff;
-            letter-spacing: -0.01em;
-            line-height: 1.2;
+        p {
+            margin: 0.2rem 0 0 0;
+            font-size: 0.8125rem;
+            color: #64748b;
         }
     }
 
-    .headerRight {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.1rem;
-
-        .badgePeriod {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #e2e8f0;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.15rem 0.45rem;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-
-        .headerDate {
-            font-size: 0.62rem;
-            color: #94a3b8;
-            font-weight: 500;
-        }
+    .webPeriodBadge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #1e293b;
+        background: #e2e8f0;
+        padding: 0.25rem 0.65rem;
+        border-radius: 6px;
     }
 }
 
-/* Compact Table */
-.matrixTable {
+.tableResponsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.webTable {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.75rem;
     text-align: left;
     font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
 
     thead {
         background: #f8fafc;
-        border-bottom: 1.5px solid #cbd5e1;
+        border-bottom: 2px solid #cbd5e1;
 
         th {
-            padding: 0.45rem 0.5rem;
-            font-size: 0.65rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: #475569;
-            white-space: nowrap;
+            padding: 0.75rem 1rem;
+            vertical-align: middle;
             border-right: 1px solid #e2e8f0;
 
             &:last-child {
@@ -227,14 +283,33 @@
                 text-align: center;
             }
 
+            .thTitle {
+                font-size: 0.75rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: #334155;
+            }
+
+            .thSub {
+                font-size: 0.68rem;
+                font-weight: 500;
+                color: #64748b;
+                margin-top: 0.15rem;
+                text-transform: none;
+                letter-spacing: normal;
+            }
+
             &.thQuoted {
-                color: #2563eb;
                 background: #eff6ff;
+                .thTitle { color: #1d4ed8; }
+                .thSub { color: #3b82f6; }
             }
 
             &.thUnquotable {
-                color: #dc2626;
                 background: #fef2f2;
+                .thTitle { color: #b91c1c; }
+                .thSub { color: #ef4444; }
             }
         }
     }
@@ -242,10 +317,10 @@
     tbody {
         tr {
             border-bottom: 1px solid #f1f5f9;
-            transition: background 0.1s ease;
+            transition: background 0.12s ease;
 
             &:nth-child(even) {
-                background: #fafafa;
+                background: #fafbfc;
             }
 
             &:hover {
@@ -253,15 +328,14 @@
             }
 
             &.currentMonthRow {
-                background: #eff6ff !important;
-                font-weight: 700;
+                background: #f0f7ff !important;
             }
         }
 
         td {
-            padding: 0.35rem 0.5rem;
+            padding: 0.65rem 1rem;
             color: #1e293b;
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             font-weight: 600;
             vertical-align: middle;
             border-right: 1px solid #f1f5f9;
@@ -295,15 +369,11 @@
             }
 
             &.tdQuoted {
-                color: #2563eb;
-                font-weight: 700;
-                background: rgba(37, 99, 235, 0.03);
+                background: rgba(37, 99, 235, 0.02);
             }
 
             &.tdUnquotable {
-                color: #dc2626;
-                font-weight: 700;
-                background: rgba(220, 38, 38, 0.03);
+                background: rgba(220, 38, 38, 0.02);
             }
         }
     }
@@ -315,8 +385,8 @@
             border-top: 2px solid #0c1b33;
 
             td {
-                padding: 0.45rem 0.5rem;
-                font-size: 0.78rem;
+                padding: 0.85rem 1rem;
+                font-size: 0.875rem;
                 font-weight: 800;
                 color: #ffffff;
                 border-right: 1px solid #1e3a5f;
@@ -359,72 +429,403 @@
     }
 }
 
-.monthCell {
+.monthLink {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.5rem;
     font-weight: 700;
     color: #0f172a;
     text-decoration: none;
+    transition: color 0.15s ease;
 
     &:hover {
         color: #2563eb;
     }
 }
 
-.monthNum {
+.monthNumberPill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.15rem;
-    height: 1.15rem;
-    border-radius: 3px;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 4px;
     background: #e2e8f0;
-    font-size: 0.65rem;
+    font-size: 0.72rem;
     font-weight: 800;
     color: #475569;
 }
 
-.linkPill {
+.monthNameText {
+    font-size: 0.875rem;
+}
+
+.currentMonthBadge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #2563eb;
+    color: #ffffff;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+}
+
+.policyPill {
     display: inline-flex;
     align-items: center;
-    gap: 0.15rem;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    background: #f1f5f9;
     color: #0f172a;
     font-weight: 700;
     text-decoration: none;
+    transition: all 0.15s ease;
 
     &:hover {
-        color: #2563eb;
+        background: #2563eb;
+        color: #ffffff;
+        svg {
+            stroke: #ffffff;
+        }
     }
 }
 
-/* Card Sub Footer */
-.cardFooter {
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-    padding: 0.35rem 0.75rem;
+.numBadgeBlue {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.numBadgeRed {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* ========================================================
+   METRIC DEFINITION CARDS
+   ======================================================== */
+.definitionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    width: 100%;
+}
+
+.defCard {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+
+    .defHeader {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #334155;
+        margin-bottom: 0.35rem;
+    }
+
+    p {
+        margin: 0;
+        font-size: 0.75rem;
+        line-height: 1.45;
+        color: #64748b;
+
+        strong {
+            color: #1e293b;
+        }
+    }
+}
+
+/* ========================================================
+   DEDICATED EMAIL EXPORT CARD (780px Fixed Width, Zero Clipping)
+   Offscreen rendering for "Copy Image for Email" & "Save PNG"
+   ======================================================== */
+.hiddenCaptureWrapper {
+    position: fixed;
+    left: -99999px;
+    top: 0;
+    width: 780px;
+    pointer-events: none;
+    opacity: 1;
+    z-index: -100;
+}
+
+.emailExportCard {
+    width: 780px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1.5px solid #0c1b33;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.emailCardHeader {
+    background: #0c1b33;
+    padding: 0.85rem 1.15rem 0.75rem 1.15rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.62rem;
-    color: #64748b;
-    font-weight: 500;
+    border-bottom: 2px solid #1e3a5f;
+
+    .emailHeaderLeft {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .emailBrandPill {
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #38bdf8;
+        }
+
+        .emailMainTitle {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+    }
+
+    .emailHeaderRight {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.15rem;
+
+        .emailBadgePeriod {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .emailHeaderDate {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+    }
 }
 
+.emailTable {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+
+    thead {
+        background: #f1f5f9;
+        border-bottom: 2px solid #cbd5e1;
+
+        th {
+            padding: 0.5rem 0.45rem;
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #334155;
+            white-space: nowrap;
+            border-right: 1px solid #e2e8f0;
+
+            &:last-child {
+                border-right: none;
+            }
+
+            &.center {
+                text-align: center;
+            }
+
+            &.emailThQuoted {
+                color: #1d4ed8;
+                background: #e0f2fe;
+            }
+
+            &.emailThUnquotable {
+                color: #b91c1c;
+                background: #fee2e2;
+            }
+        }
+    }
+
+    tbody {
+        tr {
+            border-bottom: 1px solid #e2e8f0;
+
+            &:nth-child(even) {
+                background: #f8fafc;
+            }
+        }
+
+        td {
+            padding: 0.38rem 0.45rem;
+            color: #0f172a;
+            font-size: 0.78rem;
+            font-weight: 600;
+            vertical-align: middle;
+            border-right: 1px solid #f1f5f9;
+
+            &:last-child {
+                border-right: none;
+            }
+
+            &.center {
+                text-align: center;
+            }
+
+            &.emailBold {
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            &.emailTdDec {
+                color: #15803d;
+                font-weight: 700;
+            }
+
+            &.emailTdRce {
+                color: #7c3aed;
+                font-weight: 600;
+            }
+
+            &.emailTdWithAddr {
+                color: #0f766e;
+                font-weight: 600;
+            }
+
+            &.emailTdNoAddr {
+                color: #b45309;
+                font-weight: 600;
+            }
+
+            &.emailTdQuoted {
+                color: #1d4ed8;
+                font-weight: 700;
+                background: rgba(37, 99, 235, 0.04);
+            }
+
+            &.emailTdUnquotable {
+                color: #dc2626;
+                font-weight: 700;
+                background: rgba(220, 38, 38, 0.04);
+            }
+        }
+    }
+
+    tfoot {
+        tr {
+            background: #0c1b33;
+            color: #ffffff;
+            border-top: 2px solid #0c1b33;
+
+            td {
+                padding: 0.55rem 0.45rem;
+                font-size: 0.8rem;
+                font-weight: 800;
+                color: #ffffff;
+                border-right: 1px solid #1e3a5f;
+
+                &:last-child {
+                    border-right: none;
+                }
+
+                &.center {
+                    text-align: center;
+                }
+
+                &.emailTdDec {
+                    color: #4ade80;
+                }
+
+                &.emailTdRce {
+                    color: #c084fc;
+                }
+
+                &.emailTdWithAddr {
+                    color: #5eead4;
+                }
+
+                &.emailTdNoAddr {
+                    color: #fde047;
+                }
+
+                &.emailTdQuoted {
+                    color: #93c5fd;
+                    background: #172a45;
+                }
+
+                &.emailTdUnquotable {
+                    color: #fca5a5;
+                    background: #172a45;
+                }
+            }
+        }
+    }
+}
+
+.emailMonthNum {
+    display: inline-block;
+    width: 1.25rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #64748b;
+}
+
+.emailMonthName {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.emailCardFooter {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 0.4rem 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Toast */
 .copiedToast {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
     background: #0c1b33;
     color: #ffffff;
-    padding: 0.65rem 1.15rem;
+    padding: 0.75rem 1.25rem;
     border-radius: 8px;
-    font-size: 0.8125rem;
+    font-size: 0.85rem;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     z-index: 9999;
     animation: fadeIn 0.15s ease-out;
 }
@@ -442,7 +843,7 @@
     padding: 3rem 1rem;
     gap: 0.65rem;
     color: #64748b;
-    font-size: 0.8125rem;
+    font-size: 0.85rem;
     font-weight: 600;
 }
 
