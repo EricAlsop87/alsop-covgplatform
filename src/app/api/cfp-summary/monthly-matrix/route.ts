@@ -15,6 +15,7 @@ export interface MonthlyMatrixRow {
     totalWithAddress: number;
     totalNoAddress: number;
     quotedCount: number;
+    forQuotingCount: number;
     unquotableCount: number;
 }
 
@@ -25,6 +26,7 @@ export interface MonthlyMatrixTotals {
     totalWithAddress: number;
     totalNoAddress: number;
     quotedCount: number;
+    forQuotingCount: number;
     unquotableCount: number;
 }
 
@@ -327,6 +329,8 @@ export async function GET(req: NextRequest) {
                 if (!item.hasDec && !item.hasAddress) unquotableCount++;
             }
 
+            const forQuotingCount = Math.max(0, totalWithAddress - quotedCount);
+
             matrix.push({
                 month: m,
                 monthName,
@@ -336,6 +340,7 @@ export async function GET(req: NextRequest) {
                 totalWithAddress,
                 totalNoAddress,
                 quotedCount,
+                forQuotingCount,
                 unquotableCount,
             });
         }
@@ -398,6 +403,8 @@ export async function GET(req: NextRequest) {
             if (!item.hasDec && !item.hasAddress) globalUnquotableCount++;
         }
 
+        const globalForQuotingCount = Math.max(0, globalWithAddress - globalQuotedCount);
+
         const totals: MonthlyMatrixTotals = {
             totalUniquePolicies: globalUniqueList.length,
             decUploaded: globalDecUploaded,
@@ -405,6 +412,7 @@ export async function GET(req: NextRequest) {
             totalWithAddress: globalWithAddress,
             totalNoAddress: globalNoAddress,
             quotedCount: globalQuotedCount,
+            forQuotingCount: globalForQuotingCount,
             unquotableCount: globalUnquotableCount,
         };
 

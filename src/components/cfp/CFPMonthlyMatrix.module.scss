@@ -11,7 +11,7 @@
    ======================================================== */
 .quickStatsRow {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 0.85rem;
     width: 100%;
 }
@@ -271,7 +271,7 @@
         border-bottom: 2px solid #cbd5e1;
 
         th {
-            padding: 0.75rem 1rem;
+            padding: 0.75rem 0.85rem;
             vertical-align: middle;
             border-right: 1px solid #e2e8f0;
 
@@ -287,7 +287,7 @@
                 font-size: 0.75rem;
                 font-weight: 800;
                 text-transform: uppercase;
-                letter-spacing: 0.05em;
+                letter-spacing: 0.04em;
                 color: #334155;
             }
 
@@ -304,6 +304,12 @@
                 background: #eff6ff;
                 .thTitle { color: #1d4ed8; }
                 .thSub { color: #3b82f6; }
+            }
+
+            &.thForQuoting {
+                background: #fffbeb;
+                .thTitle { color: #b45309; }
+                .thSub { color: #d97706; }
             }
 
             &.thUnquotable {
@@ -333,7 +339,7 @@
         }
 
         td {
-            padding: 0.65rem 1rem;
+            padding: 0.65rem 0.85rem;
             color: #1e293b;
             font-size: 0.875rem;
             font-weight: 600;
@@ -372,6 +378,10 @@
                 background: rgba(37, 99, 235, 0.02);
             }
 
+            &.tdForQuoting {
+                background: rgba(217, 119, 6, 0.02);
+            }
+
             &.tdUnquotable {
                 background: rgba(220, 38, 38, 0.02);
             }
@@ -385,7 +395,7 @@
             border-top: 2px solid #0c1b33;
 
             td {
-                padding: 0.85rem 1rem;
+                padding: 0.85rem 0.85rem;
                 font-size: 0.875rem;
                 font-weight: 800;
                 color: #ffffff;
@@ -417,6 +427,11 @@
 
                 &.tdQuoted {
                     color: #93c5fd;
+                    background: #172a45;
+                }
+
+                &.tdForQuoting {
+                    color: #fcd34d;
                     background: #172a45;
                 }
 
@@ -502,6 +517,15 @@
     font-weight: 700;
 }
 
+.numBadgeAmber {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #fffbeb;
+    color: #b45309;
+    font-weight: 700;
+}
+
 .numBadgeRed {
     display: inline-block;
     padding: 0.15rem 0.45rem;
@@ -546,25 +570,33 @@
         strong {
             color: #1e293b;
         }
+
+        em {
+            display: block;
+            margin-top: 0.35rem;
+            color: #0f172a;
+            font-style: normal;
+            font-weight: 600;
+        }
     }
 }
 
 /* ========================================================
-   DEDICATED EMAIL EXPORT CARD (780px Fixed Width, Zero Clipping)
+   DEDICATED EMAIL EXPORT CARD (820px Fixed Width, Zero Clipping)
    Offscreen rendering for "Copy Image for Email" & "Save PNG"
    ======================================================== */
 .hiddenCaptureWrapper {
     position: fixed;
     left: -99999px;
     top: 0;
-    width: 780px;
+    width: 820px;
     pointer-events: none;
     opacity: 1;
     z-index: -100;
 }
 
 .emailExportCard {
-    width: 780px;
+    width: 820px;
     background: #ffffff;
     border-radius: 10px;
     border: 1.5px solid #0c1b33;
@@ -642,11 +674,11 @@
         border-bottom: 2px solid #cbd5e1;
 
         th {
-            padding: 0.5rem 0.45rem;
-            font-size: 0.68rem;
+            padding: 0.5rem 0.35rem;
+            font-size: 0.66rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.03em;
             color: #334155;
             white-space: nowrap;
             border-right: 1px solid #e2e8f0;
@@ -662,6 +694,11 @@
             &.emailThQuoted {
                 color: #1d4ed8;
                 background: #e0f2fe;
+            }
+
+            &.emailThForQuoting {
+                color: #b45309;
+                background: #fef3c7;
             }
 
             &.emailThUnquotable {
@@ -681,7 +718,7 @@
         }
 
         td {
-            padding: 0.38rem 0.45rem;
+            padding: 0.38rem 0.35rem;
             color: #0f172a;
             font-size: 0.78rem;
             font-weight: 600;
@@ -727,6 +764,12 @@
                 background: rgba(37, 99, 235, 0.04);
             }
 
+            &.emailTdForQuoting {
+                color: #d97706;
+                font-weight: 700;
+                background: rgba(217, 119, 6, 0.04);
+            }
+
             &.emailTdUnquotable {
                 color: #dc2626;
                 font-weight: 700;
@@ -742,7 +785,7 @@
             border-top: 2px solid #0c1b33;
 
             td {
-                padding: 0.55rem 0.45rem;
+                padding: 0.55rem 0.35rem;
                 font-size: 0.8rem;
                 font-weight: 800;
                 color: #ffffff;
@@ -774,6 +817,11 @@
 
                 &.emailTdQuoted {
                     color: #93c5fd;
+                    background: #172a45;
+                }
+
+                &.emailTdForQuoting {
+                    color: #fde68a;
                     background: #172a45;
                 }
 

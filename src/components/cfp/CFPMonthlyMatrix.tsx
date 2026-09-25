@@ -17,8 +17,8 @@ import {
     FileCheck,
     Calculator,
     MapPin,
-    MapPinOff,
     CheckCircle2,
+    Clock,
     AlertTriangle,
     Info
 } from 'lucide-react';
@@ -124,7 +124,7 @@ export function CFPMonthlyMatrix() {
         return () => subscription.unsubscribe();
     }, [fetchMatrixData]);
 
-    // 1. Copy Image to Clipboard (formatted specifically for crystal clear email embedding with ALL 8 columns)
+    // 1. Copy Image to Clipboard (formatted specifically for crystal clear email embedding with ALL 9 columns)
     const handleCopyImage = async () => {
         if (!exportCardRef.current) return;
         setImageCapturing(true);
@@ -135,7 +135,7 @@ export function CFPMonthlyMatrix() {
                 quality: 1,
                 pixelRatio: 2.5, // 2.5x high-definition retina resolution
                 backgroundColor: '#ffffff',
-                width: 780,
+                width: 820,
             });
 
             if (!blob) {
@@ -174,7 +174,7 @@ export function CFPMonthlyMatrix() {
                 quality: 1,
                 pixelRatio: 2.5,
                 backgroundColor: '#ffffff',
-                width: 780,
+                width: 820,
             });
 
             const link = document.createElement('a');
@@ -204,6 +204,7 @@ export function CFPMonthlyMatrix() {
             'With Addr',
             'No Addr',
             'Quoted',
+            'For Quoting',
             'Unquotable'
         ];
 
@@ -215,6 +216,7 @@ export function CFPMonthlyMatrix() {
             r.totalWithAddress,
             r.totalNoAddress,
             r.quotedCount,
+            r.forQuotingCount,
             r.unquotableCount
         ].join('\t'));
 
@@ -227,6 +229,7 @@ export function CFPMonthlyMatrix() {
                 totals.totalWithAddress,
                 totals.totalNoAddress,
                 totals.quotedCount,
+                totals.forQuotingCount,
                 totals.unquotableCount
             ].join('\t'));
         }
@@ -257,6 +260,7 @@ export function CFPMonthlyMatrix() {
             { header: 'With Addr', key: 'with_address', width: 16 },
             { header: 'No Addr', key: 'no_address', width: 16 },
             { header: 'Quoted', key: 'quoted', width: 16 },
+            { header: 'For Quoting', key: 'for_quoting', width: 16 },
             { header: 'Unquotable', key: 'unquotable', width: 18 },
         ];
 
@@ -279,6 +283,7 @@ export function CFPMonthlyMatrix() {
                 with_address: row.totalWithAddress,
                 no_address: row.totalNoAddress,
                 quoted: row.quotedCount,
+                for_quoting: row.forQuotingCount,
                 unquotable: row.unquotableCount,
             });
             addedRow.height = 19;
@@ -295,6 +300,7 @@ export function CFPMonthlyMatrix() {
                 with_address: totals.totalWithAddress,
                 no_address: totals.totalNoAddress,
                 quoted: totals.quotedCount,
+                for_quoting: totals.forQuotingCount,
                 unquotable: totals.unquotableCount,
             });
             totalRow.height = 22;
@@ -369,19 +375,6 @@ export function CFPMonthlyMatrix() {
                     </div>
 
                     <div className={styles.quickStatCard}>
-                        <div className={styles.statIcon} style={{ color: '#0f766e', background: '#f0fdfa' }}>
-                            <MapPin size={16} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <span className={styles.statLabel}>With Address</span>
-                            <span className={styles.statVal} style={{ color: '#0f766e' }}>
-                                {totals.totalWithAddress.toLocaleString()}
-                            </span>
-                            <span className={styles.statSub}>Verified location</span>
-                        </div>
-                    </div>
-
-                    <div className={styles.quickStatCard}>
                         <div className={styles.statIcon} style={{ color: '#2563eb', background: '#eff6ff' }}>
                             <CheckCircle2 size={16} />
                         </div>
@@ -391,6 +384,19 @@ export function CFPMonthlyMatrix() {
                                 {totals.quotedCount.toLocaleString()}
                             </span>
                             <span className={styles.statSub}>Companion ready</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.quickStatCard}>
+                        <div className={styles.statIcon} style={{ color: '#d97706', background: '#fffbeb' }}>
+                            <Clock size={16} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <span className={styles.statLabel}>For Quoting</span>
+                            <span className={styles.statVal} style={{ color: '#d97706' }}>
+                                {totals.forQuotingCount.toLocaleString()}
+                            </span>
+                            <span className={styles.statSub}>Quotable remaining</span>
                         </div>
                     </div>
 
@@ -511,35 +517,39 @@ export function CFPMonthlyMatrix() {
                         <table className={styles.webTable}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: '16%' }}>
+                                    <th style={{ width: '15%' }}>
                                         <div className={styles.thTitle}>MONTH</div>
                                         <div className={styles.thSub}>Calendar Term</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={styles.center}>
+                                    <th style={{ width: '10%' }} className={styles.center}>
                                         <div className={styles.thTitle}>POLICIES</div>
                                         <div className={styles.thSub}>Base Families</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={styles.center}>
+                                    <th style={{ width: '11%' }} className={styles.center}>
                                         <div className={styles.thTitle}>DEC UPLOADED</div>
                                         <div className={styles.thSub}>Active Dec on File</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={styles.center}>
+                                    <th style={{ width: '11%' }} className={styles.center}>
                                         <div className={styles.thTitle}>RCE UPLOADED</div>
                                         <div className={styles.thSub}>360Value / Est.</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={styles.center}>
+                                    <th style={{ width: '10%' }} className={styles.center}>
                                         <div className={styles.thTitle}>WITH ADDR</div>
                                         <div className={styles.thSub}>Verified Location</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={styles.center}>
+                                    <th style={{ width: '10%' }} className={styles.center}>
                                         <div className={styles.thTitle}>NO ADDR</div>
                                         <div className={styles.thSub}>Missing Location</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={`${styles.center} ${styles.thQuoted}`}>
+                                    <th style={{ width: '11%' }} className={`${styles.center} ${styles.thQuoted}`}>
                                         <div className={styles.thTitle}>QUOTED</div>
                                         <div className={styles.thSub}>Carrier Ready (≥1)</div>
                                     </th>
-                                    <th style={{ width: '12%' }} className={`${styles.center} ${styles.thUnquotable}`}>
+                                    <th style={{ width: '11%' }} className={`${styles.center} ${styles.thForQuoting}`}>
+                                        <div className={styles.thTitle}>FOR QUOTING</div>
+                                        <div className={styles.thSub}>Remaining in Queue</div>
+                                    </th>
+                                    <th style={{ width: '11%' }} className={`${styles.center} ${styles.thUnquotable}`}>
                                         <div className={styles.thTitle}>UNQUOTABLE</div>
                                         <div className={styles.thSub}>No DEC & No Addr</div>
                                     </th>
@@ -599,6 +609,11 @@ export function CFPMonthlyMatrix() {
                                                     {row.quotedCount.toLocaleString()}
                                                 </span>
                                             </td>
+                                            <td className={`${styles.center} ${styles.tdForQuoting}`}>
+                                                <span className={styles.numBadgeAmber}>
+                                                    {row.forQuotingCount.toLocaleString()}
+                                                </span>
+                                            </td>
                                             <td className={`${styles.center} ${styles.tdUnquotable}`}>
                                                 <span className={styles.numBadgeRed}>
                                                     {row.unquotableCount.toLocaleString()}
@@ -637,6 +652,9 @@ export function CFPMonthlyMatrix() {
                                         <td className={`${styles.center} ${styles.tdQuoted}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
                                             {totals.quotedCount.toLocaleString()}
                                         </td>
+                                        <td className={`${styles.center} ${styles.tdForQuoting}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                                            {totals.forQuotingCount.toLocaleString()}
+                                        </td>
                                         <td className={`${styles.center} ${styles.tdUnquotable}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
                                             {totals.unquotableCount.toLocaleString()}
                                         </td>
@@ -656,38 +674,39 @@ export function CFPMonthlyMatrix() {
                         <span>Policy Counting & Exclusions</span>
                     </div>
                     <p>
-                        <strong>Total Unique Policies (2,910):</strong> Groups multiple policy terms and annual renewal suffixes (00, 01, etc.) into singular policy families. 
-                        <strong> Excludes 66 floating Bamboo pipeline policies</strong> that do not yet have confirmed CFP base filings.
+                        <strong>Total Unique Policies (2,910):</strong> Groups multiple terms/renewals (00, 01) into singular base families. 
+                        <strong> Excludes 66 floating Bamboo pipeline policies</strong> without confirmed CFP filings.
                     </p>
                 </div>
 
                 <div className={styles.defCard}>
                     <div className={styles.defHeader}>
-                        <Info size={14} color="#16a34a" />
-                        <span>DEC & RCE Status</span>
+                        <Clock size={14} color="#d97706" />
+                        <span>Quoting Pipeline Logic</span>
                     </div>
                     <p>
-                        <strong>DEC Uploaded:</strong> Policies with an official active FAIR Plan Declaration document. 
-                        <strong> RCE Uploaded:</strong> Policies with a 360Value or calculated replacement cost estimate on file.
+                        <strong>Quoted (530):</strong> Policies with companion quotes ready in Bamboo, Aegis, AM, PSIC, or SageSure. 
+                        <strong> For Quoting (1,772):</strong> Quotable policies with verified property addresses waiting in queue for quoting.
                     </p>
                 </div>
 
                 <div className={styles.defCard}>
                     <div className={styles.defHeader}>
-                        <Info size={14} color="#dc2626" />
-                        <span>Address & Quotability Logic</span>
+                        <AlertTriangle size={14} color="#dc2626" />
+                        <span>Address & Quotability Math</span>
                     </div>
                     <p>
-                        <strong>No Address & Unquotable:</strong> In the active portfolio, 100% of policies with DEC pages have property addresses on file. All policies lacking addresses also lack DEC pages, making them unquotable by carriers.
+                        <strong>Unquotable (608):</strong> Policies missing both a DEC and property address. 
+                        <em> Math: Quoted (530) + For Quoting (1,772) + Unquotable (608) = 2,910 Total Unique Policies.</em>
                     </p>
                 </div>
             </div>
 
             {/* 
               =======================================================
-              DEDICATED EMAIL EXPORT CARD (Off-screen / Fixed 780px)
+              DEDICATED EMAIL EXPORT CARD (Off-screen / Fixed 820px)
               This card is captured at 2.5x retina resolution when clicking "Copy Image for Email"
-              ALL 8 columns fit with perfect proportions and zero cut-off!
+              ALL 9 columns fit with perfect proportions and zero cut-off!
               =======================================================
             */}
             <div className={styles.hiddenCaptureWrapper} aria-hidden="true">
@@ -708,18 +727,19 @@ export function CFPMonthlyMatrix() {
                         </div>
                     </div>
 
-                    {/* Compact All-8-Column Table */}
+                    {/* Compact All-9-Column Table */}
                     <table className={styles.emailTable}>
                         <thead>
                             <tr>
-                                <th style={{ width: '18%' }}>MONTH</th>
-                                <th style={{ width: '11.5%' }} className={styles.center}>POLICIES</th>
-                                <th style={{ width: '12.5%' }} className={styles.center}>DEC UPLOADED</th>
-                                <th style={{ width: '12.5%' }} className={styles.center}>RCE UPLOADED</th>
-                                <th style={{ width: '11%' }} className={styles.center}>WITH ADDR</th>
-                                <th style={{ width: '11%' }} className={styles.center}>NO ADDR</th>
-                                <th style={{ width: '11.5%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
-                                <th style={{ width: '12%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
+                                <th style={{ width: '16%' }}>MONTH</th>
+                                <th style={{ width: '10.5%' }} className={styles.center}>POLICIES</th>
+                                <th style={{ width: '11%' }} className={styles.center}>DEC UPLOADED</th>
+                                <th style={{ width: '11%' }} className={styles.center}>RCE UPLOADED</th>
+                                <th style={{ width: '10%' }} className={styles.center}>WITH ADDR</th>
+                                <th style={{ width: '9.5%' }} className={styles.center}>NO ADDR</th>
+                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
+                                <th style={{ width: '11%' }} className={`${styles.center} ${styles.emailThForQuoting}`}>FOR QUOTING</th>
+                                <th style={{ width: '11%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -747,6 +767,9 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>
                                         {row.quotedCount.toLocaleString()}
                                     </td>
+                                    <td className={`${styles.center} ${styles.emailTdForQuoting}`}>
+                                        {row.forQuotingCount.toLocaleString()}
+                                    </td>
                                     <td className={`${styles.center} ${styles.emailTdUnquotable}`}>
                                         {row.unquotableCount.toLocaleString()}
                                     </td>
@@ -763,6 +786,7 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center} ${styles.emailTdWithAddr}`}>{totals.totalWithAddress.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdNoAddr}`}>{totals.totalNoAddress.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>{totals.quotedCount.toLocaleString()}</td>
+                                    <td className={`${styles.center} ${styles.emailTdForQuoting}`}>{totals.forQuotingCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdUnquotable}`}>{totals.unquotableCount.toLocaleString()}</td>
                                 </tr>
                             </tfoot>
