@@ -626,8 +626,8 @@ export async function GET(req: NextRequest) {
     // ── 3. Gather all policy_ids from result ──────────────────────────────
     const policyIds = [...new Set((terms as any[]).map((t: any) => t.policy_id))];
 
-    // Helper to batch large in() queries in chunks of 600 and run concurrently
-    const CHUNK_SIZE = 600;
+    // Helper to batch large in() queries in chunks of 120 and run concurrently
+    const CHUNK_SIZE = 120;
     async function chunkedInQuery<T>(
         table: string,
         select: string,
@@ -697,7 +697,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost', 'fair_plan_premium', 'annual_premium'])
         ),
         chunkedInQuery<{
             id: string;
@@ -965,6 +965,8 @@ export async function GET(req: NextRequest) {
         notes?: string | null;
     }> = {};
 
+    const manualFairPlanPremiumMap: Record<string, number> = {};
+
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
             bambooCoverageSet.add(ov.policy_id);
@@ -1018,6 +1020,11 @@ export async function GET(req: NextRequest) {
                 } else if (!manualRceValuationMap[ov.policy_id].replacement_cost) {
                     manualRceValuationMap[ov.policy_id].replacement_cost = num;
                 }
+            }
+        } else if ((ov.field_name === 'fair_plan_premium' || ov.field_name === 'annual_premium') && ov.new_value) {
+            const num = parseFloat(ov.new_value.replace(/[^0-9.]/g, ''));
+            if (!isNaN(num) && num > 0) {
+                manualFairPlanPremiumMap[ov.policy_id] = num;
             }
         }
     }
@@ -1253,9 +1260,9 @@ export async function GET(req: NextRequest) {
             expiration_date: t.expiration_date,
             carrier_status: t.carrier_status || (policy?.status === 'pending_dec' ? 'Pending DEC' : 'Active'),
             policy_status: policy?.status || 'active',
-            annual_premium: t.annual_premium
-                ? parseFloat(t.annual_premium)
-                : (termDec?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
+            annual_premium: manualFairPlanPremiumMap[policyId]
+                ?? (t.annual_premium ? parseFloat(t.annual_premium) : null)
+                ?? (termDec?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
             payment_status: t.payment_status,
             payment_plan: t.payment_plan,
             is_current: t.is_current,
@@ -1481,20 +1488,20 @@ export async function PATCH(req: NextRequest) {
 
 // ── Helper: compute stats with concurrency & server caching ─────────────────
 const DEFAULT_BASELINE_STATS: CFPSummaryStats = {
-    total_policies: 2924,
+    total_policies: 2910,
     total_bamboo_pending: 66,
-    total_families: 2924,
-    total_accounts: 2606,
+    total_families: 2910,
+    total_accounts: 2605,
     expiring_this_month: 57,
-    missing_dec: 2291,
-    uploaded_dec: 633,
-    missing_rce: 2485,
-    uploaded_rce: 439,
+    missing_dec: 2238,
+    uploaded_dec: 672,
+    missing_rce: 2522,
+    uploaded_rce: 388,
     missing_dic: 2711,
     uploaded_dic: 213,
     uploaded_full: 507,
-    total_quoted: 684,
-    missing_quotes: 2240,
+    total_quoted: 655,
+    missing_quotes: 2255,
     missing_es: 2240,
 };
 

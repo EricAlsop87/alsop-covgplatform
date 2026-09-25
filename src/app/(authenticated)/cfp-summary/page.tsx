@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { CFPStatsCards } from '@/components/cfp/CFPStatsCards';
 import { CFPSummaryTable } from '@/components/cfp/CFPSummaryTable';
 import type { CFPFamily, CFPSummaryStats } from '@/app/api/cfp-summary/route';
-import { ShieldCheck, FileSpreadsheet } from 'lucide-react';
+import Link from 'next/link';
+import { ShieldCheck, FileSpreadsheet, List, LayoutGrid } from 'lucide-react';
 import { logger } from '@/lib/logger';
 
 export default function CFPSummaryPage() {
@@ -96,6 +98,24 @@ function CFPSummaryContent() {
             localStorage.setItem('ccn_cfp_summary_month', newMonth);
         }
     }, []);
+
+    const searchParams = useSearchParams();
+
+    // Synchronize query parameters (?month=...&year=...) with state and localStorage
+    useEffect(() => {
+        const qYear = searchParams.get('year');
+        const qMonth = searchParams.get('month');
+        if (qYear !== null) {
+            const parsedYear = qYear === 'all' ? '' : qYear;
+            setYearState(parsedYear);
+            if (typeof window !== 'undefined') localStorage.setItem('ccn_cfp_summary_year', parsedYear);
+        }
+        if (qMonth !== null) {
+            const parsedMonth = qMonth === 'all' ? '' : qMonth;
+            setMonthState(parsedMonth);
+            if (typeof window !== 'undefined') localStorage.setItem('ccn_cfp_summary_month', parsedMonth);
+        }
+    }, [searchParams]);
 
     const setView = useCallback((newView: 'active_cfp' | 'bamboo_pipeline' | 'all') => {
         setViewState(newView);
@@ -249,6 +269,60 @@ function CFPSummaryContent() {
                     <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         Overview of California FAIR Plan policy families, renewal chains, and required document tracking.
                     </p>
+                </div>
+
+                {/* Sub-Page Navigation Switcher Tabs */}
+                <div
+                    style={{
+                        display: 'flex',
+                        background: '#f1f5f9',
+                        padding: '4px',
+                        borderRadius: '10px',
+                        border: '1px solid #e2e8f0',
+                        gap: '4px',
+                    }}
+                >
+                    <Link
+                        href="/cfp-summary"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            padding: '0.45rem 0.9rem',
+                            borderRadius: '7px',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            color: '#0f172a',
+                            background: '#ffffff',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        <List size={16} />
+                        <span>Policy Details</span>
+                    </Link>
+
+                    <Link
+                        href="/cfp-summary/monthly-matrix"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            padding: '0.45rem 0.9rem',
+                            borderRadius: '7px',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            color: '#64748b',
+                            background: 'transparent',
+                            boxShadow: 'none',
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        <LayoutGrid size={16} />
+                        <span>Monthly Matrix</span>
+                    </Link>
                 </div>
             </div>
 

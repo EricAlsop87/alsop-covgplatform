@@ -38,8 +38,8 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
     const cards = [
         {
             title: 'Unique Policies',
-            value: stats.total_policies.toLocaleString(),
-            sublabel: `🌿 ${bambooFloating} Bamboo floating • ${uniqueAccounts.toLocaleString()} unique accounts`,
+            value: (stats.total_families ?? stats.total_policies).toLocaleString(),
+            sublabel: `🌿 ${bambooFloating} Bamboo policies not included • ${uniqueAccounts.toLocaleString()} unique accounts`,
             uploaded: undefined as string | number | undefined,
             color: '#3B82F6',
             bg: 'rgba(59, 130, 246, 0.12)',

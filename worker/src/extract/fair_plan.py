@@ -465,6 +465,7 @@ def parse_declaration(raw_text: str) -> dict:
 
     # ── Total Annual Premium ──
     extracted["total_annual_premium"] = _extract_dollar_field(cleaned, [
+        r'TOTAL\s+(?:ANNUAL\s+)?PREMIUM[\s\S]{0,60}?\$?\s*([\d,]+\.\d{2})',
         r'TOTAL\s+(?:ANNUAL\s+)?PREMIUM[:\s]*(\$?\s*[\d,]+(?:\.\d{2})?)',
         r'ANNUAL\s+PREMIUM[:\s]*(\$?\s*[\d,]+(?:\.\d{2})?)',
         r'TOTAL\s+POLICY\s+PREMIUM[:\s]*(\$?\s*[\d,]+(?:\.\d{2})?)',

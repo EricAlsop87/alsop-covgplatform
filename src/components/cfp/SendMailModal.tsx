@@ -148,13 +148,36 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [currentUserName, setCurrentUserName] = useState<string>('');
     const [rceReplacementCost, setRceReplacementCost] = useState<number | null>(term?.rce_replacement_cost || null);
     const [rceCarrier, setRceCarrier] = useState<string>(term?.rce_carrier || 'Bamboo');
+    const [fairPlanPremium, setFairPlanPremium] = useState<number | null>(term?.annual_premium || term?.renewal_annual_premium || null);
 
     useEffect(() => {
         if (term) {
             setRceReplacementCost(term.rce_replacement_cost || null);
             setRceCarrier(term.rce_carrier || 'Bamboo');
+            setFairPlanPremium(term.annual_premium || term.renewal_annual_premium || null);
         }
     }, [term]);
+
+    const saveFairPlanPremiumAsync = async (prem: number | null) => {
+        if (!term?.policy_id) return;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            await fetch('/api/cfp-summary/fair-plan-premium', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    policy_id: term.policy_id,
+                    annual_premium: prem,
+                }),
+            });
+        } catch (err) {
+            console.error('Failed to auto-save FAIR Plan premium in SendMailModal:', err);
+        }
+    };
 
     const saveRceValuationAsync = async (cost: number | null, carrierName: string) => {
         if (!term?.policy_id) return;
@@ -554,7 +577,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const isRenewalAttached = selectedAttachmentIds.includes('renewal_dec');
         const isRceAttached = selectedAttachmentIds.includes('rce');
 
-        const currentPremVal = term.annual_premium ? Number(term.annual_premium) : null;
+        const currentPremVal = fairPlanPremium ?? (term.annual_premium ? Number(term.annual_premium) : null);
         const renewalPremVal = term.renewal_annual_premium ? Number(term.renewal_annual_premium) : null;
 
         const currentPremStr = currentPremVal ? `$${Math.round(currentPremVal).toLocaleString()}` : null;
@@ -645,7 +668,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         const addr = term.property_address || 'Address on file';
         const exp = term.expiration_date || '—';
 
-        const currentPremVal = term.annual_premium ? Number(term.annual_premium) : null;
+        const currentPremVal = fairPlanPremium ?? (term.annual_premium ? Number(term.annual_premium) : null);
         const renewalPremVal = term.renewal_annual_premium ? Number(term.renewal_annual_premium) : null;
         const currentPremStr = currentPremVal ? `$${Math.round(currentPremVal).toLocaleString()}` : null;
         const renewalPremStr = renewalPremVal ? `$${Math.round(renewalPremVal).toLocaleString()}` : null;
@@ -905,7 +928,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         }
 
         // 2. Missing FAIR Plan Premium Amount
-        const curPrem = term?.annual_premium ? Number(term.annual_premium) : 0;
+        const curPrem = fairPlanPremium ?? (term?.annual_premium ? Number(term.annual_premium) : 0);
         const renPrem = term?.renewal_annual_premium ? Number(term.renewal_annual_premium) : 0;
         if (!curPrem && !renPrem) {
             warnings.push({
@@ -1369,6 +1392,40 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     value={customNotes}
                                     onChange={e => setCustomNotes(e.target.value)}
                                     />
+                            </div>
+
+                            {/* FAIR Plan Premium Entry / Override */}
+                            <div className={styles.formSection}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                        <DollarSign size={14} /> FAIR Plan Premium Amount (Dec Page / Renewal Offer)
+                                    </label>
+                                    {(term.has_dec || term.has_renewal_dec) && (
+                                        <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 600 }}>
+                                            {term.dec_file_name || term.renewal_dec_file_name || 'Dec Page Attached'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.875rem', fontWeight: 600 }}>$</span>
+                                        <input
+                                            type="text"
+                                            className={styles.textInput}
+                                            style={{ paddingLeft: '24px' }}
+                                            placeholder="e.g. 2688.15"
+                                            value={fairPlanPremium ? String(fairPlanPremium) : ''}
+                                            onChange={e => {
+                                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                                const num = raw ? parseFloat(raw) : null;
+                                                setFairPlanPremium(num);
+                                                if (num !== null) {
+                                                    saveFairPlanPremiumAsync(num);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* RCE Valuation Amount Entry / Override */}
