@@ -1,0 +1,309 @@
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modalCard {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: scaleUp 0.15s ease-out;
+}
+
+@keyframes scaleUp {
+    from { transform: scale(0.97); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modalHeader {
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+
+    .titleGroup {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .headerIcon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        p {
+            margin: 0.15rem 0 0 0;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+    }
+
+    .closeBtn {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0.35rem;
+        border-radius: 6px;
+        transition: background 0.15s ease, color 0.15s ease;
+
+        &:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+    }
+}
+
+.modalBody {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.errorAlert {
+    padding: 0.65rem 0.85rem;
+    border-radius: 6px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.fieldLabel {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.selectInput,
+.textInput {
+    padding: 0.55rem 0.85rem;
+    border-radius: 6px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 0.875rem;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.15s ease;
+
+    &:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+}
+
+.customInputGroup {
+    display: flex;
+    gap: 0.5rem;
+
+    .textInput {
+        flex: 1;
+    }
+}
+
+.btnSecondary {
+    padding: 0.45rem 0.75rem;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+}
+
+/* History Section */
+.historySection {
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.historyHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.historyTimeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.timelineItem {
+    display: flex;
+    gap: 0.65rem;
+    position: relative;
+
+    .timelineDot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #2563eb;
+        margin-top: 0.35rem;
+        flex-shrink: 0;
+    }
+
+    .timelineContent {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .timelineTitle {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8125rem;
+
+            .producerNew {
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            .producerPrev {
+                font-size: 0.75rem;
+                color: #64748b;
+            }
+        }
+
+        .timelineMeta {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            display: flex;
+            gap: 0.35rem;
+
+            strong {
+                color: #475569;
+            }
+        }
+
+        .timelineNote {
+            font-size: 0.72rem;
+            color: #475569;
+            font-style: italic;
+            margin-top: 0.1rem;
+        }
+    }
+}
+
+.emptyHistory {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    padding: 0.35rem 0;
+}
+
+.modalFooter {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    background: #fafbfc;
+}
+
+.btnCancel {
+    padding: 0.5rem 0.95rem;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+}
+
+.btnSave {
+    padding: 0.5rem 1.15rem;
+    background: #2563eb;
+    border: 1px solid #1d4ed8;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #ffffff;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+        background: #1d4ed8;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}

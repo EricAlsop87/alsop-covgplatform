@@ -99,6 +99,9 @@ export interface CFPTermRow {
     cfp_mail_sent_at?: string | null;
     cfp_mail_subject?: string | null;
     cfp_mail_attachments?: string[];
+    // Producer / Agent Assignment
+    producer_name?: string | null;
+    producer_history?: any[];
     // Title Pro verification
     title_pro?: TitleProData | null;
     // Renewal term data if available
@@ -434,6 +437,7 @@ export async function GET(req: NextRequest) {
             carrier_status,
             source_dec_page_id,
             import_batch_id,
+            sold_by,
             policies!inner (
                 id,
                 policy_number,
@@ -692,12 +696,12 @@ export async function GET(req: NextRequest) {
             policyIds,
             q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
         ),
-        chunkedInQuery<{ policy_id: string; field_name: string; new_value: string }>(
+        chunkedInQuery<{ policy_id: string; field_name: string; new_value: string; original_value?: string }>(
             'manual_overrides',
-            'policy_id, field_name, new_value',
+            'policy_id, field_name, new_value, original_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost', 'fair_plan_premium', 'annual_premium'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost', 'fair_plan_premium', 'annual_premium', 'producer_override'])
         ),
         chunkedInQuery<{
             id: string;
@@ -966,6 +970,7 @@ export async function GET(req: NextRequest) {
     }> = {};
 
     const manualFairPlanPremiumMap: Record<string, number> = {};
+    const producerOverrideMap: Record<string, { producer_name: string; history: any[] }> = {};
 
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
@@ -1026,6 +1031,15 @@ export async function GET(req: NextRequest) {
             if (!isNaN(num) && num > 0) {
                 manualFairPlanPremiumMap[ov.policy_id] = num;
             }
+        } else if (ov.field_name === 'producer_override') {
+            let hist: any[] = [];
+            try {
+                if (ov.original_value) hist = JSON.parse(ov.original_value);
+            } catch {}
+            producerOverrideMap[ov.policy_id] = {
+                producer_name: ov.new_value,
+                history: hist,
+            };
         }
     }
 
@@ -1314,6 +1328,10 @@ export async function GET(req: NextRequest) {
             cfp_mail_subject: termCfpMailSent?.subject || null,
             cfp_mail_attachments: termCfpMailSent?.attachments || [],
             carrier_quotes: termCarrierQuotes,
+            producer_name: producerOverrideMap[policyId]?.producer_name !== undefined
+                ? producerOverrideMap[policyId].producer_name
+                : (t.sold_by || null),
+            producer_history: producerOverrideMap[policyId]?.history || [],
             title_pro: titleProMap[policyId] || null,
             renewal_annual_premium: renewalAnnualPremium,
             renewal_effective_date: renewalEffectiveDate,

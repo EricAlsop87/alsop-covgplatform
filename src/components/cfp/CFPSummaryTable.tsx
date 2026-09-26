@@ -45,6 +45,7 @@ import { RceValuationModal } from './RceValuationModal';
 import type { RceValuationData } from '@/app/api/cfp-summary/rce-valuation/route';
 import { SendMailModal, type SentMailDetails } from './SendMailModal';
 import { SentMailInfoPopover } from './SentMailInfoPopover';
+import { ProducerModal } from './ProducerModal';
 
 const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo',
@@ -66,6 +67,7 @@ export interface ColumnFilters {
     policy?: string;
     status?: string;
     insured?: string;
+    producer?: string;
     address?: string;
     mailing_address?: string;
     dec?: string;
@@ -84,6 +86,7 @@ export type CFPColumnKey =
     | 'policy'
     | 'status'
     | 'insured'
+    | 'producer'
     | 'address'
     | 'mailing_address'
     | 'expiration'
@@ -111,6 +114,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'policy', label: 'CFP Number', width: 175, minWidth: 125, align: 'left' },
     { key: 'status', label: 'Status', width: 105, minWidth: 85, align: 'center' },
     { key: 'insured', label: 'Named Insured', width: 155, minWidth: 100, align: 'left' },
+    { key: 'producer', label: 'Producer', width: 135, minWidth: 95, align: 'left' },
     { key: 'address', label: 'Property Address', width: 220, minWidth: 120, align: 'left' },
     { key: 'expiration', label: 'Expiration', width: 100, minWidth: 85, align: 'left' },
     { key: 'premium', label: 'Premium', width: 95, minWidth: 70, align: 'left' },
@@ -574,6 +578,29 @@ export function CFPSummaryTable({
 
     // ── Send Mail Modal State ─────────────────────────────────────────────
     const [activeSendMailTerm, setActiveSendMailTerm] = useState<CFPTermRow | null>(null);
+
+    // ── Producer Assignment Modal State ──────────────────────────────────
+    const [activeProducerModalTerm, setActiveProducerModalTerm] = useState<CFPTermRow | null>(null);
+
+    const handleSaveProducerSuccess = (policyId: string, newProducer: string, updatedHistory: any[]) => {
+        setFamilies(prev =>
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === policyId || belongsToFamily
+                            ? {
+                                  ...t,
+                                  producer_name: newProducer || null,
+                                  producer_history: updatedHistory,
+                              }
+                            : t
+                    ),
+                };
+            })
+        );
+    };
 
     const handleMailSentSuccess = (policyId: string, details: SentMailDetails | string[]) => {
         const isDetailsObj = typeof details === 'object' && !Array.isArray(details);
@@ -1040,6 +1067,15 @@ export function CFPSummaryTable({
                     t.named_insured.trim() === '—' || 
                     t.named_insured.trim().toLowerCase() === 'unknown'
                 );
+            }
+        }
+
+        if (columnFilters.producer) {
+            if (columnFilters.producer === '__unassigned__') {
+                result = result.filter(t => !t.producer_name || t.producer_name.trim() === '' || t.producer_name === '—');
+            } else {
+                const prodTarget = columnFilters.producer.toLowerCase();
+                result = result.filter(t => t.producer_name?.toLowerCase() === prodTarget);
             }
         }
 
@@ -1673,6 +1709,41 @@ export function CFPSummaryTable({
                 );
             }
 
+            case 'producer': {
+                const prod = term.producer_name;
+                const hasHistory = term.producer_history && term.producer_history.length > 0;
+                return (
+                    <div className={styles.producerCellWrapper}>
+                        {prod ? (
+                            <button
+                                type="button"
+                                className={`${styles.producerBadge} ${hasHistory ? styles.producerOverridden : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveProducerModalTerm(term);
+                                }}
+                                title={hasHistory ? `Producer: ${prod} (Modified - click to view history)` : `Producer: ${prod} (Click to reassign)`}
+                            >
+                                <span className={styles.producerNameText}>{prod}</span>
+                                {hasHistory && <span className={styles.historyDot} title="Has assignment history" />}
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className={styles.producerUnassignedBtn}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveProducerModalTerm(term);
+                                }}
+                                title="Click to assign a producer"
+                            >
+                                <Plus size={10} /> <span>Assign</span>
+                            </button>
+                        )}
+                    </div>
+                );
+            }
+
             case 'mailing_address':
                 const mailingText = term.mailing_address || '—';
                 const canCopyMailing = !!term.mailing_address && term.mailing_address !== '—';
@@ -2102,6 +2173,25 @@ export function CFPSummaryTable({
                         <option value="not_available">Not Available</option>
                     </select>
                 );
+            case 'producer': {
+                const uniqueProducers = Array.from(new Set(
+                    families.flatMap(f => f.terms.map(t => t.producer_name).filter(Boolean) as string[])
+                )).sort();
+
+                return (
+                    <select
+                        value={columnFilters.producer || ''}
+                        onChange={e => handleColumnFilterChange('producer', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.producer ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Producers</option>
+                        <option value="__unassigned__">Unassigned (Blank)</option>
+                        {uniqueProducers.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                        ))}
+                    </select>
+                );
+            }
             case 'address':
                 return (
                     <select
@@ -3012,6 +3102,22 @@ export function CFPSummaryTable({
                     isOpen={!!activeSendMailTerm}
                     onClose={() => setActiveSendMailTerm(null)}
                     onSentSuccess={handleMailSentSuccess}
+                />
+            )}
+
+            {/* ── Producer Assignment / Reassignment Modal ── */}
+            {activeProducerModalTerm && (
+                <ProducerModal
+                    isOpen={!!activeProducerModalTerm}
+                    onClose={() => setActiveProducerModalTerm(null)}
+                    policyId={activeProducerModalTerm.policy_id}
+                    policyNumber={activeProducerModalTerm.policy_number}
+                    insuredName={activeProducerModalTerm.named_insured}
+                    currentProducer={activeProducerModalTerm.producer_name || null}
+                    initialHistory={activeProducerModalTerm.producer_history || []}
+                    onProducerUpdated={(newProd, newHist) =>
+                        handleSaveProducerSuccess(activeProducerModalTerm.policy_id, newProd, newHist)
+                    }
                 />
             )}
         </div>

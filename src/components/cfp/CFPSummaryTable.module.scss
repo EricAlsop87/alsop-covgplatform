@@ -2330,4 +2330,114 @@
     }
 }
 
+/* ========================================================
+   PRODUCER COLUMN STYLES
+   ======================================================== */
+.producerCellWrapper {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+}
+
+.producerBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+    background: #f1f5f9;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    max-width: 130px;
+    text-align: left;
+
+    &:hover {
+        background: #e2e8f0;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+
+    &.producerOverridden {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-color: #93c5fd;
+
+        &:hover {
+            background: #dbeafe;
+            border-color: #60a5fa;
+        }
+    }
+
+    .producerNameText {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .historyDot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #2563eb;
+        flex-shrink: 0;
+    }
+}
+
+.producerUnassignedBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.45rem;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px dashed #cbd5e1;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: #f8fafc;
+        color: #2563eb;
+        border-color: #93c5fd;
+        border-style: solid;
+    }
+}
+
+:global([data-theme='dark']) {
+    .producerBadge {
+        background: #1e293b;
+        color: #f1f5f9;
+        border-color: #334155;
+
+        &:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        &.producerOverridden {
+            background: rgba(37, 99, 235, 0.18);
+            color: #93c5fd;
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+    }
+
+    .producerUnassignedBtn {
+        color: #64748b;
+        border-color: #334155;
+
+        &:hover {
+            background: #1e293b;
+            color: #60a5fa;
+            border-color: #3b82f6;
+        }
+    }
+}
+
+
 
