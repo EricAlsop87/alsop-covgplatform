@@ -22,6 +22,13 @@ def normalize_pn(pn: str) -> str:
     s = re.sub(r'[^a-zA-Z0-9]', '', s).upper()
     return s
 
+def to_title_case(name: str) -> str:
+    if not name: return ''
+    words = name.strip().split()
+    def cap_word(w):
+        return '-'.join(p.capitalize() for p in w.split('-'))
+    return ' '.join(cap_word(w) for w in words)
+
 print('Fetching Google Sheet CSV...')
 req = urllib.request.Request(SHEET_URL, headers={'User-Agent': 'Mozilla/5.0'})
 with urllib.request.urlopen(req) as resp:
@@ -35,7 +42,7 @@ sheet_map = {}
 for r in sheet_records:
     raw_pn = r.get('POLICY NUMBER', '')
     norm = normalize_pn(raw_pn)
-    prod = (r.get('PRODUCER NAME') or '').strip()
+    prod = to_title_case((r.get('PRODUCER NAME') or '').strip())
     email = (r.get('PRODUCER EMAIL ADDRESS') or '').strip()
     agency = (r.get('AGENCY NAME') or '').strip()
     

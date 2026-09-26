@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
 import { normalizePolicyNumber } from '@/lib/normalization';
+import { toTitleCase } from './producer/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -1328,9 +1329,11 @@ export async function GET(req: NextRequest) {
             cfp_mail_subject: termCfpMailSent?.subject || null,
             cfp_mail_attachments: termCfpMailSent?.attachments || [],
             carrier_quotes: termCarrierQuotes,
-            producer_name: producerOverrideMap[policyId]?.producer_name !== undefined
-                ? producerOverrideMap[policyId].producer_name
-                : (t.sold_by || null),
+            producer_name: toTitleCase(
+                producerOverrideMap[policyId]?.producer_name !== undefined
+                    ? producerOverrideMap[policyId].producer_name
+                    : t.sold_by
+            ) || null,
             producer_history: producerOverrideMap[policyId]?.history || [],
             title_pro: titleProMap[policyId] || null,
             renewal_annual_premium: renewalAnnualPremium,

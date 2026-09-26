@@ -5,6 +5,20 @@ import { User, Check, X, Clock, History, AlertCircle, Sparkles } from 'lucide-re
 import styles from './ProducerModal.module.scss';
 import type { ProducerAuditEntry } from '@/app/api/cfp-summary/producer/route';
 
+export function toTitleCase(name?: string | null): string {
+    if (!name) return '';
+    return name
+        .trim()
+        .split(/\s+/)
+        .map(word => {
+            return word
+                .split('-')
+                .map(sub => sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase())
+                .join('-');
+        })
+        .join(' ');
+}
+
 interface ProducerModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -18,13 +32,13 @@ interface ProducerModalProps {
 
 const COMMON_PRODUCERS = [
     'John Alsop',
-    'MISTY TORREZ',
+    'Misty Torrez',
     'Danielle Self',
     'Sylvia Duran',
     'Roxana Topete',
     'John Dizon',
-    'gilda aquino',
-    'SUZANNE YNIGUEZ',
+    'Gilda Aquino',
+    'Suzanne Yniguez',
     'Giselle Ramos',
     'Maila Castro',
     'Esmeralda Cervantes',
@@ -32,6 +46,21 @@ const COMMON_PRODUCERS = [
     'Denice Santos',
     'Jerome Delfin',
     'Eric Alsop',
+    'Alex Clancy',
+    'Dawn Zenor',
+    'Edwin Sernas',
+    'Enrique Rodriguez',
+    'Estela Montalvo',
+    'Jennifer Martinez',
+    'Jonathan Jimenez',
+    'Juanita Calderon',
+    'Liliana Morales',
+    'Lori Ohlhauser',
+    'Manuel Olivares',
+    'Nancy Maldonado',
+    'Ricardo Becerra',
+    'Rosario Delgado',
+    'Teyssy Espino',
 ];
 
 export function ProducerModal({
@@ -44,7 +73,7 @@ export function ProducerModal({
     initialHistory = [],
     onProducerUpdated,
 }: ProducerModalProps) {
-    const [selectedProducer, setSelectedProducer] = useState<string>(currentProducer || '');
+    const [selectedProducer, setSelectedProducer] = useState<string>(toTitleCase(currentProducer) || '');
     const [customProducer, setCustomProducer] = useState<string>('');
     const [isCustom, setIsCustom] = useState<boolean>(false);
     const [changeNote, setChangeNote] = useState<string>('');
@@ -54,7 +83,7 @@ export function ProducerModal({
 
     useEffect(() => {
         if (isOpen) {
-            const current = currentProducer || '';
+            const current = toTitleCase(currentProducer) || '';
             setSelectedProducer(current);
             const isMatch = COMMON_PRODUCERS.some(p => p.toLowerCase() === current.toLowerCase());
             if (current && !isMatch) {
@@ -73,7 +102,8 @@ export function ProducerModal({
     if (!isOpen) return null;
 
     const handleSave = async () => {
-        const finalProducer = isCustom ? customProducer.trim() : selectedProducer.trim();
+        const rawProducer = isCustom ? customProducer.trim() : selectedProducer.trim();
+        const finalProducer = toTitleCase(rawProducer);
         setSaving(true);
         setErrorMsg(null);
 
@@ -84,7 +114,7 @@ export function ProducerModal({
                 body: JSON.stringify({
                     policy_id: policyId,
                     producer_name: finalProducer,
-                    previous_producer: currentProducer,
+                    previous_producer: toTitleCase(currentProducer),
                     note: changeNote,
                 }),
             });
@@ -171,7 +201,7 @@ export function ProducerModal({
                                     className={styles.btnSecondary}
                                     onClick={() => {
                                         setIsCustom(false);
-                                        setSelectedProducer(currentProducer || '');
+                                        setSelectedProducer(toTitleCase(currentProducer) || '');
                                     }}
                                 >
                                     Select from list
@@ -206,11 +236,11 @@ export function ProducerModal({
                                         <div className={styles.timelineContent}>
                                             <div className={styles.timelineTitle}>
                                                 <span className={styles.producerNew}>
-                                                    {entry.new_producer || '(Unassigned)'}
+                                                    {toTitleCase(entry.new_producer) || '(Unassigned)'}
                                                 </span>
                                                 {entry.previous_producer && (
                                                     <span className={styles.producerPrev}>
-                                                        from {entry.previous_producer}
+                                                        from {toTitleCase(entry.previous_producer)}
                                                     </span>
                                                 )}
                                             </div>
@@ -231,7 +261,7 @@ export function ProducerModal({
                                 <Clock size={13} />
                                 <span>
                                     {currentProducer
-                                        ? `Original baseline: ${currentProducer} (standard sheet)`
+                                        ? `Original baseline: ${toTitleCase(currentProducer)} (standard sheet)`
                                         : 'No previous manual changes recorded.'}
                                 </span>
                             </div>

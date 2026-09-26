@@ -12,6 +12,20 @@ export interface ProducerAuditEntry {
     note?: string | null;
 }
 
+export function toTitleCase(name?: string | null): string {
+    if (!name) return '';
+    return name
+        .trim()
+        .split(/\s+/)
+        .map(word => {
+            return word
+                .split('-')
+                .map(sub => sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase())
+                .join('-');
+        })
+        .join(' ');
+}
+
 export async function POST(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service', 'agent'] });
     if (isAuthError(auth)) return auth;
@@ -44,7 +58,8 @@ export async function POST(req: NextRequest) {
             : auth.user.email?.split('@')[0] || 'Staff';
 
         const now = new Date().toISOString();
-        const newProducerClean = (producer_name || '').trim();
+        const newProducerClean = toTitleCase(producer_name);
+        const prevProducerClean = toTitleCase(previous_producer);
 
         // 1. Fetch current policy details to identify all terms
         const { data: pol } = await admin
@@ -75,7 +90,7 @@ export async function POST(req: NextRequest) {
 
         // Add new change entry
         history.unshift({
-            previous_producer: previous_producer || null,
+            previous_producer: prevProducerClean || null,
             new_producer: newProducerClean || null,
             changed_by: changedBy,
             changed_at: now,
