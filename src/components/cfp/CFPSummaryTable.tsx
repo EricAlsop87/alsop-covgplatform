@@ -1073,6 +1073,8 @@ export function CFPSummaryTable({
         if (columnFilters.producer) {
             if (columnFilters.producer === '__unassigned__') {
                 result = result.filter(t => !t.producer_name || t.producer_name.trim() === '' || t.producer_name === '—');
+            } else if (columnFilters.producer === '__assigned__') {
+                result = result.filter(t => !!t.producer_name && t.producer_name.trim() !== '' && t.producer_name.trim() !== '—');
             } else {
                 const prodTarget = columnFilters.producer.toLowerCase();
                 result = result.filter(t => t.producer_name?.toLowerCase() === prodTarget);
@@ -1351,6 +1353,7 @@ export function CFPSummaryTable({
             if (search) parts.push(`Search_${search.slice(0, 10)}`);
             if (columnFilters.policy) parts.push(`Policy_${columnFilters.policy}`);
             if (columnFilters.insured) parts.push(`Insured_${columnFilters.insured}`);
+            if (columnFilters.producer) parts.push(`Producer_${columnFilters.producer === '__assigned__' ? 'Assigned' : columnFilters.producer === '__unassigned__' ? 'Unassigned' : columnFilters.producer}`);
             if (columnFilters.address) parts.push(`Address_${columnFilters.address}`);
             if (columnFilters.dec) parts.push(`DEC_${columnFilters.dec}`);
             if (columnFilters.rce) parts.push(`RCE_${columnFilters.rce}`);
@@ -2185,6 +2188,7 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters.producer ? styles.activeFilter : ''}`}
                     >
                         <option value="">All Producers</option>
+                        <option value="__assigned__">All Assigned (Has Producer)</option>
                         <option value="__unassigned__">Unassigned (Blank)</option>
                         {uniqueProducers.map(p => (
                             <option key={p} value={p}>{p}</option>
@@ -2751,6 +2755,14 @@ export function CFPSummaryTable({
                     >
                         <MessageSquare size={11} style={{ display: 'inline', marginRight: '3px' }} />
                         Has Comments / Remarks
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${columnFilters.producer === '__assigned__' ? styles.active : ''}`}
+                        onClick={() => handleColumnFilterChange('producer', columnFilters.producer === '__assigned__' ? '' : '__assigned__')}
+                        title="Filter policies with an assigned producer (hide unassigned)"
+                    >
+                        👤 Has Producer
                     </button>
                     <button
                         type="button"
