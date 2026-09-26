@@ -664,8 +664,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         if (!term) return '';
         const polNum = term.policy_number || 'Policy';
         const cleanPolNum = polNum.replace(/^CFP\s*/i, '');
-        const insured = term.named_insured || 'Insured';
-        const addr = term.property_address || 'Address on file';
+        const insured = term.named_insured ? toTitleCase(term.named_insured) : 'Insured';
+        const addr = term.property_address ? toTitleCase(term.property_address) : 'Address on file';
+        const producerName = term.producer_name ? toTitleCase(term.producer_name) : '—';
         const exp = term.expiration_date || '—';
 
         const currentPremVal = fairPlanPremium ?? (term.annual_premium ? Number(term.annual_premium) : null);
@@ -790,6 +791,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     <td style="padding:12px 16px;font-size:13px;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
                       <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Named Insured:</strong> ${insured}</div>
                       <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Property Address:</strong> ${addr}</div>
+                      <div style="margin-bottom:4px;"><strong style="color:#1e40af;">Producer:</strong> ${producerName}</div>
                       <div><strong style="color:#1e40af;">Expiration Date:</strong> ${exp}${term.renewal_expiration_date ? ` &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">Renewal Exp:</strong> ${term.renewal_expiration_date}` : ''} &nbsp;&bull;&nbsp; <strong style="color:#1e40af;">FAIR Plan Premium:</strong> ${displayPrem}</div>
                     </td>
                   </tr>
@@ -1178,7 +1180,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                             <h3 className={styles.modalTitle}>Send Policy Document Status</h3>
                         </div>
                         <p className={styles.modalSubtitle}>
-                            {term.policy_number} &bull; {term.named_insured} &bull; {term.property_address || 'No address'}
+                            {term.policy_number} &bull; {term.named_insured ? toTitleCase(term.named_insured) : '—'} &bull; {term.property_address ? toTitleCase(term.property_address) : 'No address'} &bull; Producer: {term.producer_name ? toTitleCase(term.producer_name) : '—'}
                         </p>
                     </div>
                     <button type="button" className={styles.closeBtn} onClick={onClose} title="Close">
