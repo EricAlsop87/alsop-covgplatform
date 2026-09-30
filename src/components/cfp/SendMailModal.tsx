@@ -21,10 +21,18 @@ import {
     AlertCircle,
     Info,
     DollarSign,
+    Copy,
+    Check,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './SendMailModal.module.scss';
 import type { CFPTermRow } from '@/app/api/cfp-summary/route';
+import {
+    SCENARIO_DEFINITIONS,
+    type ScenarioType,
+    generateCompositeClientEmail,
+    type PolicyScenarioData,
+} from '@/lib/scenarioEmailTemplates';
 
 export interface TeamRecipient {
     id: string;
@@ -132,6 +140,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [customTo, setCustomTo] = useState('');
     const [customCc, setCustomCc] = useState('');
     const [isUrgent, setIsUrgent] = useState<boolean>(false);
+    const [isTestMail, setIsTestMail] = useState<boolean>(false);
     const [subject, setSubject] = useState('');
     const [customNotes, setCustomNotes] = useState('');
     const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
@@ -150,11 +159,40 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [rceCarrier, setRceCarrier] = useState<string>(term?.rce_carrier || 'Bamboo');
     const [fairPlanPremium, setFairPlanPremium] = useState<number | null>(term?.annual_premium || term?.renewal_annual_premium || null);
 
+    // Scenario Checklist & Client Draft States
+    const [activeScenarios, setActiveScenarios] = useState<ScenarioType[]>([]);
+    const [otherStructureTypes, setOtherStructureTypes] = useState<string[]>(['Detached Garage', 'Shed']);
+    const [otherStructureCoverage, setOtherStructureCoverage] = useState<number | null>(null);
+    const [propertyFeatures, setPropertyFeatures] = useState<string[]>(['Wood-Burning Stove']);
+    const [annualSavings, setAnnualSavings] = useState<number | null>(null);
+    const [copyDraftStatus, setCopyDraftStatus] = useState<'idle' | 'copied_html' | 'copied_text'>('idle');
+
     useEffect(() => {
         if (term) {
             setRceReplacementCost(term.rce_replacement_cost || null);
             setRceCarrier(term.rce_carrier || 'Bamboo');
             setFairPlanPremium(term.annual_premium || term.renewal_annual_premium || null);
+
+            // Auto-detect scenarios from term data
+            const detectedScenarios: ScenarioType[] = [];
+            if (term.rce_replacement_cost) {
+                detectedScenarios.push('rce_review');
+            }
+
+            // Check if any companion quotes exist
+            const bPrem = term.carrier_quotes?.bamboo?.premium ? Number(term.carrier_quotes.bamboo.premium) : null;
+            const aPrem = term.carrier_quotes?.aegis?.premium ? Number(term.carrier_quotes.aegis.premium) : null;
+            const pPrem = term.carrier_quotes?.psic?.premium ? Number(term.carrier_quotes.psic.premium) : null;
+            const cfpPrem = term.annual_premium || term.renewal_annual_premium;
+
+            const bestPrem = bPrem || aPrem || pPrem;
+            if (bestPrem && cfpPrem && bestPrem < Number(cfpPrem)) {
+                detectedScenarios.push('standard_savings');
+            } else if (bestPrem) {
+                detectedScenarios.push('standard_no_savings');
+            }
+
+            setActiveScenarios(detectedScenarios);
         }
     }, [term]);
 
@@ -436,6 +474,22 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         });
     };
 
+    const handleToggleTestMail = () => {
+        setIsTestMail(prev => {
+            const next = !prev;
+            setSubject(currSubj => {
+                const cleanSubj = currSubj
+                    .replace(/^\[TEST MAIL\]\s*/i, '')
+                    .replace(/^\[SAMPLE EMAIL\]\s*/i, '')
+                    .replace(/^TEST MAIL:\s*/i, '')
+                    .replace(/^SAMPLE:\s*/i, '')
+                    .trim();
+                return next ? `[TEST MAIL] ${cleanSubj}` : cleanSubj;
+            });
+            return next;
+        });
+    };
+
     const toggleAttachment = (id: string) => {
         setSelectedAttachmentIds(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
@@ -659,6 +713,62 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         ];
     }, [term, selectedAttachmentIds, liveTitlePro, rceReplacementCost, rceCarrier]);
 
+    // Build the dynamic Client Email Draft based on active scenarios
+    const clientEmailDraft = useMemo(() => {
+        if (!term) return { subject: '', bodyText: '', bodyHtml: '' };
+        const effectiveRceCost = rceReplacementCost ?? term.rce_replacement_cost;
+        const effectiveCfpPrem = fairPlanPremium ?? term.annual_premium ?? term.renewal_annual_premium;
+
+        // Auto-resolve best quote details if any
+        let bestCarrier = 'Bamboo';
+        let bestQuotePrem: number | null = null;
+        if (term.carrier_quotes?.bamboo?.premium) {
+            bestCarrier = 'Bamboo';
+            bestQuotePrem = Number(term.carrier_quotes.bamboo.premium);
+        } else if (term.carrier_quotes?.aegis?.premium) {
+            bestCarrier = 'Aegis';
+            bestQuotePrem = Number(term.carrier_quotes.aegis.premium);
+        } else if (term.carrier_quotes?.psic?.premium) {
+            bestCarrier = 'Pacific Specialty (PSIC)';
+            bestQuotePrem = Number(term.carrier_quotes.psic.premium);
+        }
+
+        const calculatedSavings = annualSavings ?? (effectiveCfpPrem && bestQuotePrem && Number(effectiveCfpPrem) > bestQuotePrem ? Math.round(Number(effectiveCfpPrem) - bestQuotePrem) : null);
+
+        const data: PolicyScenarioData = {
+            clientName: term.named_insured ? toTitleCase(term.named_insured) : undefined,
+            propertyAddress: term.property_address ? toTitleCase(term.property_address) : undefined,
+            policyNumber: term.policy_number || undefined,
+            currentDwellingLimit: (term as any).coverage_a || null,
+            rceValuationAmount: effectiveRceCost,
+            rceCarrier: rceCarrier || term.rce_carrier || 'Bamboo',
+            otherStructureTypes,
+            otherStructureCoverage: otherStructureCoverage ?? (term as any).coverage_b ?? null,
+            propertyFeatures,
+            carrierName: bestCarrier,
+            annualSavings: calculatedSavings,
+            standardQuotePremium: bestQuotePrem,
+            currentCfpPremium: effectiveCfpPrem ? Number(effectiveCfpPrem) : null,
+            agentName: currentUserName || 'Coverage Check Team',
+            agencyName: 'Alsop & Associates Insurance Agency',
+            vaRemarks: customNotes,
+        };
+
+        return generateCompositeClientEmail(activeScenarios, data);
+    }, [
+        term,
+        activeScenarios,
+        rceReplacementCost,
+        rceCarrier,
+        fairPlanPremium,
+        otherStructureTypes,
+        otherStructureCoverage,
+        propertyFeatures,
+        annualSavings,
+        currentUserName,
+        customNotes,
+    ]);
+
     // Build the executive HTML Email Body with professional blue theme
     const htmlBody = useMemo(() => {
         if (!term) return '';
@@ -719,6 +829,29 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             </tr>`;
         }).join('');
 
+        // Scenario Alert Callout Box
+        let scenarioAlertHtml = '';
+        if (activeScenarios.length > 0) {
+            const scenarioBadges = activeScenarios
+                .map(s => `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;margin-right:4px;">${SCENARIO_DEFINITIONS[s].shortBadge}</span>`)
+                .join(' ');
+
+            scenarioAlertHtml = `
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-bottom:16px;border-collapse:collapse;background:#fffbeb;border:1.5px solid #f59e0b;border-left:5px solid #d97706;border-radius:6px;">
+              <tr>
+                <td style="padding:12px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <strong style="color:#b45309;font-size:13px;text-transform:uppercase;letter-spacing:0.03em;">⚠️ Active Policy Review Scenarios:</strong>
+                    ${scenarioBadges}
+                  </div>
+                  <p style="margin:4px 0 0 0;color:#92400e;font-size:12.5px;line-height:1.4;">
+                    VAs have cross-checked this policy and prepared a tailored client-facing draft. (See ready draft attached below for forwarding).
+                  </p>
+                </td>
+              </tr>
+            </table>`;
+        }
+
         const notesBlock = customNotes.trim()
             ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:16px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:4px;">
                  <tr>
@@ -757,12 +890,29 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                </table>`
             : '';
 
+        // Ready Client Email Draft Embedded Section for Olga/JP/Nancy
+        const readyClientDraftSection = activeScenarios.length > 0 && clientEmailDraft.bodyText ? `
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:20px;border-collapse:collapse;background:#ffffff;border:1.5px solid #cbd5e1;border-radius:6px;overflow:hidden;">
+          <tr>
+            <td style="background:#f1f5f9;padding:10px 14px;border-bottom:1px solid #e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              <strong style="color:#0f172a;font-size:13px;">📋 Ready Agent/Client Email Draft (For Forwarding):</strong>
+              <span style="font-size:11.5px;color:#64748b;display:block;margin-top:2px;">Subject: ${clientEmailDraft.subject}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 16px;font-size:13px;line-height:1.6;color:#334155;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              ${clientEmailDraft.bodyHtml}
+            </td>
+          </tr>
+        </table>` : '';
+
         return `
         <div style="margin:0;padding:0;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
           <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:680px;width:100%;margin:0;text-align:left;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;">
             <tr>
               <td align="left" style="padding:0;text-align:left;">
                 ${urgentBannerHtml}
+                ${scenarioAlertHtml}
                 
                 <!-- Title Row: Table based for perfect Outlook alignment -->
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;border-bottom:2px solid #1e3a8a;padding-bottom:10px;margin-bottom:16px;">
@@ -816,6 +966,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
                 ${notesBlock}
 
+                ${readyClientDraftSection}
+
                 <!-- Signature & Footer -->
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:24px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;">
                   <tr>
@@ -832,7 +984,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           </table>
         </div>
         `;
-    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName]);
+    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName, activeScenarios, clientEmailDraft]);
 
     if (!isOpen || !term) return null;
 
@@ -1350,21 +1502,32 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                 />
                             </div>
 
-                            {/* Subject Line with URGENT Toggle */}
+                            {/* Subject Line with URGENT & TEST MAIL Toggles */}
                             <div className={styles.formSection}>
                                 <div className={styles.subjectHeaderRow}>
                                     <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
                                         <FileText size={14} /> Subject
                                     </label>
-                                    <button
-                                        type="button"
-                                        className={`${styles.urgentToggleBtn} ${isUrgent ? styles.urgentActive : ''}`}
-                                        onClick={handleToggleUrgent}
-                                        title={isUrgent ? 'Click to remove URGENT flag' : 'Click to mark this email as URGENT'}
-                                    >
-                                        <AlertTriangle size={12} />
-                                        <span>{isUrgent ? 'URGENT: ON' : 'Mark URGENT'}</span>
-                                    </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <button
+                                            type="button"
+                                            className={`${styles.urgentToggleBtn} ${isTestMail ? styles.urgentActive : ''}`}
+                                            onClick={handleToggleTestMail}
+                                            title={isTestMail ? 'Click to remove [TEST MAIL] tag' : 'Click to add [TEST MAIL] tag for approval'}
+                                            style={isTestMail ? { background: '#f59e0b', borderColor: '#d97706', color: '#ffffff' } : {}}
+                                        >
+                                            <span>{isTestMail ? '🧪 [TEST MAIL]: ON' : '🧪 Add [TEST MAIL]'}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`${styles.urgentToggleBtn} ${isUrgent ? styles.urgentActive : ''}`}
+                                            onClick={handleToggleUrgent}
+                                            title={isUrgent ? 'Click to remove URGENT flag' : 'Click to mark this email as URGENT'}
+                                        >
+                                            <AlertTriangle size={12} />
+                                            <span>{isUrgent ? 'URGENT: ON' : 'Mark URGENT'}</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <input
                                     type="text"
@@ -1393,7 +1556,156 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     rows={2}
                                     value={customNotes}
                                     onChange={e => setCustomNotes(e.target.value)}
-                                    />
+                                />
+                            </div>
+
+                            {/* Scenario Checklist & Smart Client Draft Generator */}
+                            <div className={styles.scenarioSection}>
+                                <div className={styles.scenarioSectionHeader}>
+                                    <div className={styles.scenarioTitleRow}>
+                                        <AlertTriangle size={15} color="#d97706" />
+                                        <span>Policy Review Scenarios &amp; Alerts</span>
+                                    </div>
+                                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                        {activeScenarios.length} selected
+                                    </span>
+                                </div>
+                                <div className={styles.scenarioSubtext}>
+                                    Cross-check applicable scenarios to generate ready-to-forward client templates and alert management:
+                                </div>
+
+                                <div className={styles.scenarioChipsGrid}>
+                                    {(Object.keys(SCENARIO_DEFINITIONS) as ScenarioType[]).map(scId => {
+                                        const def = SCENARIO_DEFINITIONS[scId];
+                                        const isActive = activeScenarios.includes(scId);
+                                        return (
+                                            <button
+                                                key={scId}
+                                                type="button"
+                                                className={`${styles.scenarioChip} ${isActive ? styles.scenarioChipActive : ''}`}
+                                                onClick={() => {
+                                                    setActiveScenarios(prev =>
+                                                        prev.includes(scId) ? prev.filter(s => s !== scId) : [...prev, scId]
+                                                    );
+                                                }}
+                                                title={def.description}
+                                            >
+                                                {isActive ? <CheckSquare size={13} color="#2563eb" /> : <Square size={13} color="#94a3b8" />}
+                                                <span>{def.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Active Scenario Tailoring Controls */}
+                                {activeScenarios.includes('other_structures') && (
+                                    <div className={styles.scenarioDetailsBox}>
+                                        <strong style={{ color: '#1e40af' }}>Other Structures Options:</strong>
+                                        <div className={styles.scenarioInputsRow}>
+                                            {['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop'].map(st => {
+                                                const hasSt = otherStructureTypes.includes(st);
+                                                return (
+                                                    <label key={st} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.74rem' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={hasSt}
+                                                            onChange={e => {
+                                                                if (e.target.checked) setOtherStructureTypes(prev => [...prev, st]);
+                                                                else setOtherStructureTypes(prev => prev.filter(x => x !== st));
+                                                            }}
+                                                        />
+                                                        <span>{st}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeScenarios.includes('property_feature') && (
+                                    <div className={styles.scenarioDetailsBox}>
+                                        <strong style={{ color: '#1e40af' }}>Property Features / Hazards:</strong>
+                                        <div className={styles.scenarioInputsRow}>
+                                            {['Wood-Burning Stove', 'Solar Panels', 'Propane Tank', 'Roof Condition', 'Brush Hazard'].map(pf => {
+                                                const hasPf = propertyFeatures.includes(pf);
+                                                return (
+                                                    <label key={pf} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.74rem' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={hasPf}
+                                                            onChange={e => {
+                                                                if (e.target.checked) setPropertyFeatures(prev => [...prev, pf]);
+                                                                else setPropertyFeatures(prev => prev.filter(x => x !== pf));
+                                                            }}
+                                                        />
+                                                        <span>{pf}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Ready Client Draft Box with 1-Click Copy */}
+                                {activeScenarios.length > 0 && clientEmailDraft.bodyText && (
+                                    <div className={styles.clientDraftContainer}>
+                                        <div className={styles.clientDraftHeader}>
+                                            <div className={styles.clientDraftTitle}>
+                                                <Mail size={13} color="#2563eb" />
+                                                <span>Ready-to-Forward Client Email Draft</span>
+                                            </div>
+                                            <div className={styles.clientDraftActions}>
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.copyDraftBtn} ${copyDraftStatus === 'copied_html' ? styles.copied : ''}`}
+                                                    onClick={async () => {
+                                                        try {
+                                                            if (navigator.clipboard && window.ClipboardItem) {
+                                                                const blobHtml = new Blob([clientEmailDraft.bodyHtml], { type: 'text/html' });
+                                                                const blobText = new Blob([clientEmailDraft.bodyText], { type: 'text/plain' });
+                                                                await navigator.clipboard.write([
+                                                                    new ClipboardItem({
+                                                                        'text/html': blobHtml,
+                                                                        'text/plain': blobText,
+                                                                    }),
+                                                                ]);
+                                                            } else {
+                                                                await navigator.clipboard.writeText(clientEmailDraft.bodyText);
+                                                            }
+                                                            setCopyDraftStatus('copied_html');
+                                                            setTimeout(() => setCopyDraftStatus('idle'), 2500);
+                                                        } catch {
+                                                            await navigator.clipboard.writeText(clientEmailDraft.bodyText);
+                                                            setCopyDraftStatus('copied_text');
+                                                            setTimeout(() => setCopyDraftStatus('idle'), 2500);
+                                                        }
+                                                    }}
+                                                >
+                                                    {copyDraftStatus === 'copied_html' ? <Check size={12} /> : <Copy size={12} />}
+                                                    <span>{copyDraftStatus === 'copied_html' ? 'Copied HTML!' : 'Copy Client Draft'}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.copyDraftBtn} ${copyDraftStatus === 'copied_text' ? styles.copied : ''}`}
+                                                    onClick={async () => {
+                                                        await navigator.clipboard.writeText(clientEmailDraft.bodyText);
+                                                        setCopyDraftStatus('copied_text');
+                                                        setTimeout(() => setCopyDraftStatus('idle'), 2500);
+                                                    }}
+                                                >
+                                                    {copyDraftStatus === 'copied_text' ? <Check size={12} /> : <Copy size={12} />}
+                                                    <span>{copyDraftStatus === 'copied_text' ? 'Copied Text!' : 'Copy Plain Text'}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className={styles.clientDraftBody}>
+                                            <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '8px' }}>
+                                                Subject: {clientEmailDraft.subject}
+                                            </div>
+                                            {clientEmailDraft.bodyText}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* FAIR Plan Premium Entry / Override */}

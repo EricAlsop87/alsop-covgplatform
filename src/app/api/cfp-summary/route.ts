@@ -100,6 +100,7 @@ export interface CFPTermRow {
     cfp_mail_sent_at?: string | null;
     cfp_mail_subject?: string | null;
     cfp_mail_attachments?: string[];
+    scenario_alert?: any | null;
     // Producer / Agent Assignment
     producer_name?: string | null;
     producer_history?: any[];
@@ -702,7 +703,7 @@ export async function GET(req: NextRequest) {
             'policy_id, field_name, new_value, original_value',
             'policy_id',
             policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost', 'fair_plan_premium', 'annual_premium', 'producer_override'])
+            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost', 'fair_plan_premium', 'annual_premium', 'producer_override', 'scenario_alert'])
         ),
         chunkedInQuery<{
             id: string;
@@ -972,6 +973,7 @@ export async function GET(req: NextRequest) {
 
     const manualFairPlanPremiumMap: Record<string, number> = {};
     const producerOverrideMap: Record<string, { producer_name: string; history: any[] }> = {};
+    const scenarioAlertMap: Record<string, any> = {};
 
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
@@ -1032,6 +1034,11 @@ export async function GET(req: NextRequest) {
             if (!isNaN(num) && num > 0) {
                 manualFairPlanPremiumMap[ov.policy_id] = num;
             }
+        } else if (ov.field_name === 'scenario_alert' && ov.new_value) {
+            try {
+                const parsed = JSON.parse(ov.new_value);
+                scenarioAlertMap[ov.policy_id] = parsed;
+            } catch {}
         } else if (ov.field_name === 'producer_override') {
             let hist: any[] = [];
             try {
@@ -1336,6 +1343,7 @@ export async function GET(req: NextRequest) {
             ) || null,
             producer_history: producerOverrideMap[policyId]?.history || [],
             title_pro: titleProMap[policyId] || null,
+            scenario_alert: scenarioAlertMap[policyId] || null,
             renewal_annual_premium: renewalAnnualPremium,
             renewal_effective_date: renewalEffectiveDate,
             renewal_expiration_date: renewalExpirationDate,

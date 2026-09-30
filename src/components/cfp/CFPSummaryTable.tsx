@@ -46,6 +46,8 @@ import type { RceValuationData } from '@/app/api/cfp-summary/rce-valuation/route
 import { SendMailModal, type SentMailDetails } from './SendMailModal';
 import { SentMailInfoPopover } from './SentMailInfoPopover';
 import { ProducerModal } from './ProducerModal';
+import { ScenarioAlertModal, type ScenarioAlertData } from './ScenarioAlertModal';
+import { SCENARIO_DEFINITIONS, type ScenarioType } from '@/lib/scenarioEmailTemplates';
 
 const CARRIER_NAMES: Record<CarrierKey, string> = {
     bamboo: 'Bamboo',
@@ -78,6 +80,7 @@ export interface ColumnFilters {
     sagesure?: string;
     psic?: string;
     title_pro?: string;
+    scenario_alert?: string;
     servicing?: string;
     notes?: string;
 }
@@ -99,6 +102,7 @@ export type CFPColumnKey =
     | 'sagesure'
     | 'psic'
     | 'title_pro'
+    | 'scenario_alert'
     | 'servicing'
     | 'notes';
 
@@ -124,6 +128,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
     { key: 'aegis', label: 'Aegis', width: 105, minWidth: 80, align: 'center' },
     { key: 'psic', label: 'PSIC', width: 105, minWidth: 80, align: 'center' },
     { key: 'title_pro', label: 'Title Pro', width: 95, minWidth: 75, align: 'center' },
+    { key: 'scenario_alert', label: 'Alert', width: 110, minWidth: 85, align: 'center' },
     { key: 'servicing', label: 'Send Mail', width: 115, minWidth: 85, align: 'center' },
     { key: 'notes', label: 'Notes', width: 95, minWidth: 70, align: 'center' },
 ];
@@ -489,8 +494,26 @@ export function CFPSummaryTable({
                         const filtered = parsed.filter((k: string): k is CFPColumnKey =>
                             DEFAULT_COLUMN_KEYS.includes(k as CFPColumnKey)
                         );
+                        // If any default column is missing (e.g. scenario_alert), insert it at its default position relative to existing columns
                         const missing = DEFAULT_COLUMN_KEYS.filter(k => !filtered.includes(k));
-                        return [...filtered, ...missing];
+                        if (missing.length > 0) {
+                            const result = [...filtered];
+                            for (const m of missing) {
+                                const defaultIdx = DEFAULT_COLUMN_KEYS.indexOf(m);
+                                let insertIdx = result.length;
+                                for (let i = defaultIdx - 1; i >= 0; i--) {
+                                    const prevKey = DEFAULT_COLUMN_KEYS[i];
+                                    const foundIdx = result.indexOf(prevKey);
+                                    if (foundIdx !== -1) {
+                                        insertIdx = foundIdx + 1;
+                                        break;
+                                    }
+                                }
+                                result.splice(insertIdx, 0, m);
+                            }
+                            return result;
+                        }
+                        return filtered;
                     }
                 }
             } catch {}
@@ -570,6 +593,25 @@ export function CFPSummaryTable({
                     ...f,
                     terms: f.terms.map(t =>
                         t.policy_id === policyId || belongsToFamily ? { ...t, title_pro: updatedData } : t
+                    ),
+                };
+            })
+        );
+    };
+
+    // ── Scenario Alert Modal State ─────────────────────────────────────────
+    const [activeScenarioModalTerm, setActiveScenarioModalTerm] = useState<CFPTermRow | null>(null);
+
+    const handleSaveScenarioAlertSuccess = (policyId: string, alertData: ScenarioAlertData | null) => {
+        setFamilies(prev =>
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === policyId || belongsToFamily
+                            ? { ...t, scenario_alert: alertData }
+                            : t
                     ),
                 };
             })
@@ -1174,6 +1216,22 @@ export function CFPSummaryTable({
             }
         }
 
+        if (columnFilters.scenario_alert) {
+            if (columnFilters.scenario_alert === 'has_alert') {
+                result = result.filter(t => (t.scenario_alert?.scenarios?.length || 0) > 0);
+            } else if (columnFilters.scenario_alert === 'no_alert') {
+                result = result.filter(t => !(t.scenario_alert?.scenarios?.length));
+            } else if (columnFilters.scenario_alert === 'rce') {
+                result = result.filter(t => (t.scenario_alert?.scenarios || []).includes('rce_review'));
+            } else if (columnFilters.scenario_alert === 'other_structures') {
+                result = result.filter(t => (t.scenario_alert?.scenarios || []).includes('other_structures'));
+            } else if (columnFilters.scenario_alert === 'features') {
+                result = result.filter(t => (t.scenario_alert?.scenarios || []).includes('property_feature'));
+            } else if (columnFilters.scenario_alert === 'quotes') {
+                result = result.filter(t => (t.scenario_alert?.scenarios || []).some((s: ScenarioType) => s === 'standard_savings' || s === 'standard_no_savings'));
+            }
+        }
+
         if (columnFilters.servicing) {
             if (columnFilters.servicing === 'sent' || columnFilters.servicing === 'in_se') {
                 result = result.filter(t => !!t.cfp_mail_sent);
@@ -1389,6 +1447,9 @@ export function CFPSummaryTable({
     const dragStartScrollLeft = useRef(0);
     const isDraggingActive = useRef(false);
 
+    const isSyncingTop = useRef(false);
+    const isSyncingTable = useRef(false);
+
     // Synchronize and update scroll status
     const updateScrollState = useCallback(() => {
         const el = tableScrollRef.current;
@@ -1400,19 +1461,25 @@ export function CFPSummaryTable({
     // Main table scroll handler
     const handleTableScroll = useCallback(() => {
         updateScrollState();
+        if (isSyncingTop.current) {
+            isSyncingTop.current = false;
+            return;
+        }
         if (topScrollRef.current && tableScrollRef.current) {
-            if (Math.abs(topScrollRef.current.scrollLeft - tableScrollRef.current.scrollLeft) > 1) {
-                topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
-            }
+            isSyncingTable.current = true;
+            topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
         }
     }, [updateScrollState]);
 
     // Top scrollbar scroll handler
     const handleTopScroll = useCallback(() => {
+        if (isSyncingTable.current) {
+            isSyncingTable.current = false;
+            return;
+        }
         if (tableScrollRef.current && topScrollRef.current) {
-            if (Math.abs(tableScrollRef.current.scrollLeft - topScrollRef.current.scrollLeft) > 1) {
-                tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-            }
+            isSyncingTop.current = true;
+            tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
         }
     }, []);
 
@@ -2035,6 +2102,71 @@ export function CFPSummaryTable({
                 );
             }
 
+            case 'scenario_alert': {
+                const alertData = term.scenario_alert;
+                const activeList: ScenarioType[] = alertData?.scenarios || [];
+
+                if (activeList.length > 0) {
+                    const count = activeList.length;
+                    const primary = activeList[0];
+                    let badgeLabel = 'Alert';
+                    if (primary === 'rce_review') badgeLabel = '⚠️ RCE Gap';
+                    else if (primary === 'other_structures') badgeLabel = '🏠 Other Struct';
+                    else if (primary === 'property_feature') badgeLabel = '🔥 Feature Flag';
+                    else if (primary === 'standard_savings') badgeLabel = '⚡ Quote (Saved)';
+                    else if (primary === 'standard_no_savings') badgeLabel = '📋 Quote (No Sav)';
+
+                    const labels = activeList.map((s: ScenarioType) => {
+                        const def = SCENARIO_DEFINITIONS[s];
+                        return def ? `• ${def.label}` : `• ${s}`;
+                    });
+
+                    const titleText = [
+                        `Scenario Alert (${count} active):`,
+                        ...labels,
+                        alertData.vaRemarks ? `VA Remarks: "${alertData.vaRemarks}"` : '',
+                        alertData.updated_by ? `Updated by: ${alertData.updated_by}` : '',
+                        '(Click to view / edit / copy prepared email)'
+                    ].filter(Boolean).join('\n');
+
+                    return (
+                        <div className={styles.scenarioAlertCell}>
+                            <button
+                                type="button"
+                                className={styles.scenarioAlertBadge}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveScenarioModalTerm(term);
+                                }}
+                                title={titleText}
+                            >
+                                <AlertTriangle size={11} />
+                                <span>{badgeLabel}</span>
+                                {count > 1 && (
+                                    <span className={styles.scenarioCountBadge}>+{count - 1}</span>
+                                )}
+                            </button>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className={styles.scenarioAlertCell}>
+                        <button
+                            type="button"
+                            className={styles.noAlertBadge}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveScenarioModalTerm(term);
+                            }}
+                            title="No scenario alert set. Click to configure scenario alert & prepared email."
+                        >
+                            <Plus size={10} /> <span>No Alert</span>
+                        </button>
+                    </div>
+                );
+            }
+
             case 'servicing': {
                 const isSent = !!term.cfp_mail_sent;
                 if (isSent) {
@@ -2287,6 +2419,22 @@ export function CFPSummaryTable({
                         <option value="mismatch">Mismatch (✕)</option>
                         <option value="missing">Missing / Not Found (?)</option>
                         <option value="unverified">Unverified (+)</option>
+                    </select>
+                );
+            case 'scenario_alert':
+                return (
+                    <select
+                        value={columnFilters.scenario_alert || ''}
+                        onChange={e => handleColumnFilterChange('scenario_alert', e.target.value)}
+                        className={`${styles.columnFilterSelect} ${columnFilters.scenario_alert ? styles.activeFilter : ''}`}
+                    >
+                        <option value="">All Alerts</option>
+                        <option value="has_alert">⚠️ Has Alert</option>
+                        <option value="no_alert">No Alert</option>
+                        <option value="rce">RCE Gap</option>
+                        <option value="other_structures">Other Structures</option>
+                        <option value="features">Hazards/Features</option>
+                        <option value="quotes">Standard Quote</option>
                     </select>
                 );
             case 'servicing':
@@ -3104,6 +3252,16 @@ export function CFPSummaryTable({
                     term={activeTitleModalTerm}
                     onClose={() => setActiveTitleModalTerm(null)}
                     onSaveSuccess={handleSaveTitleProSuccess}
+                />
+            )}
+
+            {/* ── Scenario Alert Modal ── */}
+            {activeScenarioModalTerm && (
+                <ScenarioAlertModal
+                    isOpen={!!activeScenarioModalTerm}
+                    term={activeScenarioModalTerm}
+                    onClose={() => setActiveScenarioModalTerm(null)}
+                    onSavedSuccess={handleSaveScenarioAlertSuccess}
                 />
             )}
 
