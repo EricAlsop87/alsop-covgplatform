@@ -93,9 +93,9 @@ export async function POST(req: NextRequest) {
 
         // Build Full CC List (Explicit CCs + peer CCN team emails + any custom CCs, excluding primary TOs)
         const defaultVaCcs = [
-            'phoebe@coveragechecknow.com',
-            'danicah@coveragechecknow.com',
-            'paula@coveragechecknow.com',
+            'alsopva01@gmail.com',
+            'alsopva02@gmail.com',
+            'alsopva03@gmail.com',
         ];
         const extraCcs = (customCc && typeof customCc === 'string')
             ? customCc.split(/[,;\s]+/).map((e: string) => e.trim()).filter((e: string) => e.includes('@'))

@@ -621,7 +621,7 @@ export const COMPANY_AGENTS: CompanyAgent[] = [
     {
         nickname: 'Danicah',
         fullName: 'Danicah Jesoro',
-        email: 'danicah@coveragechecknow.com',
+        email: 'alsopva03@gmail.com',
         team: 'Support',
         office: '',
         role: 'admin',
@@ -630,7 +630,7 @@ export const COMPANY_AGENTS: CompanyAgent[] = [
     {
         nickname: 'Paula',
         fullName: 'Paula Veloza',
-        email: 'paula@coveragechecknow.com',
+        email: 'alsopva01@gmail.com',
         team: 'Support',
         office: '',
         role: 'admin',
@@ -639,7 +639,7 @@ export const COMPANY_AGENTS: CompanyAgent[] = [
     {
         nickname: 'Phoebe',
         fullName: 'Phoebe Hernandez',
-        email: 'phoebe@coveragechecknow.com',
+        email: 'alsopva02@gmail.com',
         team: 'Support',
         office: '',
         role: 'admin',
