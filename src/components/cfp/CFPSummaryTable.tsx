@@ -141,6 +141,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<CFPColumnKey, number> = Object.fromEntries(
 interface CFPSummaryTableProps {
     families: CFPFamily[];
     loading: boolean;
+    error?: string | null;
     year: string;
     month: string;
     search: string;
@@ -289,6 +290,7 @@ function renderCarrierBadge(
 export function CFPSummaryTable({
     families: initialFamilies,
     loading,
+    error,
     year,
     month,
     search,
@@ -2944,6 +2946,17 @@ export function CFPSummaryTable({
 
             {/* ── Table Card ── */}
             <div className={styles.tableCard}>
+                {loading && allTerms.length > 0 && (
+                    <div
+                        style={{
+                            height: '3px',
+                            width: '100%',
+                            background: 'linear-gradient(90deg, #2563eb, #60a5fa, #2563eb)',
+                            borderRadius: '4px 4px 0 0',
+                            animation: 'pulse 1.2s infinite ease-in-out',
+                        }}
+                    />
+                )}
                 {/* Top Synchronized Scrollbar */}
                 {maxScrollLeft > 0 && (
                     <div
@@ -3077,6 +3090,34 @@ export function CFPSummaryTable({
                                         <div className={styles.emptyState}>
                                             <Loader2 size={28} className="animate-spin text-primary" />
                                             <span>Loading CFP policies...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : error && allTerms.length === 0 ? (
+                                <tr>
+                                    <td colSpan={columnOrder.length}>
+                                        <div className={styles.emptyState} style={{ color: '#dc2626' }}>
+                                            <AlertTriangle size={32} />
+                                            <span style={{ fontWeight: 600, marginTop: '8px' }}>{error}</span>
+                                            <button
+                                                type="button"
+                                                onClick={onRefresh}
+                                                style={{
+                                                    marginTop: '12px',
+                                                    padding: '6px 16px',
+                                                    background: '#2563eb',
+                                                    color: '#fff',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    border: 'none',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px'
+                                                }}
+                                            >
+                                                <RotateCcw size={14} /> Retry Loading
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

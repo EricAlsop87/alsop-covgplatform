@@ -82,6 +82,7 @@ function CFPSummaryContent() {
 
     const [families, setFamilies] = useState<CFPFamily[]>(() => initialCached?.families || []);
     const [dataLoading, setDataLoading] = useState(() => !initialCached);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [totalTerms, setTotalTerms] = useState(() => initialCached?.total_terms || 0);
     const [totalFamilies, setTotalFamilies] = useState(() => initialCached?.total_families || 0);
 
@@ -175,6 +176,7 @@ function CFPSummaryContent() {
             setTotalTerms(cached.total_terms);
             setTotalFamilies(cached.total_families);
             setDataLoading(false);
+            setFetchError(null);
             // If cache is fresh, skip background fetch
             if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
                 return;
@@ -208,25 +210,33 @@ function CFPSummaryContent() {
             });
 
             const json = await res.json();
-            if (currentRequestId === requestIdRef.current && json.success) {
-                const fams = json.families || [];
-                const totTerms = json.total_terms || 0;
-                const totFams = json.total_families || 0;
+            if (currentRequestId === requestIdRef.current) {
+                if (json.success) {
+                    const fams = json.families || [];
+                    const totTerms = json.total_terms || 0;
+                    const totFams = json.total_families || 0;
 
-                globalCFPCache.set(cacheKey, {
-                    families: fams,
-                    total_terms: totTerms,
-                    total_families: totFams,
-                    timestamp: Date.now(),
-                });
+                    globalCFPCache.set(cacheKey, {
+                        families: fams,
+                        total_terms: totTerms,
+                        total_families: totFams,
+                        timestamp: Date.now(),
+                    });
 
-                setFamilies(fams);
-                setTotalTerms(totTerms);
-                setTotalFamilies(totFams);
+                    setFamilies(fams);
+                    setTotalTerms(totTerms);
+                    setTotalFamilies(totFams);
+                    setFetchError(null);
+                } else {
+                    setFetchError(json.error || json.message || 'Failed to load policies. Please click Retry.');
+                }
             }
         } catch (err: any) {
             if (err?.name === 'AbortError') return; // Cancelled normally
             logger.error('CFPSummary', 'Failed to fetch data', { error: String(err) });
+            if (currentRequestId === requestIdRef.current) {
+                setFetchError('Connection timeout or network error. Please click Retry.');
+            }
         } finally {
             if (currentRequestId === requestIdRef.current) {
                 setDataLoading(false);
@@ -333,6 +343,7 @@ function CFPSummaryContent() {
             <CFPSummaryTable
                 families={families}
                 loading={dataLoading}
+                error={fetchError}
                 year={year}
                 month={month}
                 search={search}

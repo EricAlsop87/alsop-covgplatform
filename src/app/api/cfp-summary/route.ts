@@ -42,6 +42,8 @@ export interface CFPTermRow {
     effective_date: string | null;
     expiration_date: string | null;
     annual_premium: number | null;
+    coverage_a?: number | null;
+    coverage_b?: number | null;
     carrier_status?: string | null;
     policy_status?: string | null;
     payment_status: string | null;
@@ -389,7 +391,7 @@ interface ServerCacheEntry {
     timestamp: number;
 }
 export const serverSummaryCache = new Map<string, ServerCacheEntry>();
-const SERVER_CACHE_TTL_MS = 60_000;
+const SERVER_CACHE_TTL_MS = 180_000; // 3 min server cache for instant 0ms responses
 
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -430,6 +432,8 @@ export async function GET(req: NextRequest) {
             effective_date,
             expiration_date,
             annual_premium,
+            limit_dwelling,
+            limit_other_structures,
             payment_status,
             payment_plan,
             is_current,
@@ -590,26 +594,28 @@ export async function GET(req: NextRequest) {
 
     termsQuery = termsQuery.order('expiration_date', { ascending: true });
 
-    // Supabase PostgREST limit handling
+    // Supabase PostgREST fast parallel pagination
     const allFetchedTerms: any[] = [];
     const PAGE_CHUNK = 1000;
-    let pageOffset = 0;
-    let keepFetching = true;
 
-    while (keepFetching) {
-        const { data: chunkData, error: chunkError } = await termsQuery.range(pageOffset, pageOffset + PAGE_CHUNK - 1);
-        if (chunkError) {
-            return NextResponse.json({ success: false, error: chunkError.message }, { status: 500 });
-        }
-        if (chunkData && chunkData.length > 0) {
-            allFetchedTerms.push(...chunkData);
-            if (chunkData.length < PAGE_CHUNK) {
-                keepFetching = false;
-            } else {
-                pageOffset += PAGE_CHUNK;
+    const { data: firstChunk, error: firstErr } = await termsQuery.range(0, PAGE_CHUNK - 1);
+    if (firstErr) {
+        return NextResponse.json({ success: false, error: firstErr.message }, { status: 500 });
+    }
+    if (firstChunk && firstChunk.length > 0) {
+        allFetchedTerms.push(...firstChunk);
+        // If first chunk was full (1000), fetch next chunks concurrently
+        if (firstChunk.length === PAGE_CHUNK) {
+            const extraChunks = await Promise.all([
+                termsQuery.range(1000, 1999),
+                termsQuery.range(2000, 2999),
+                termsQuery.range(3000, 3999),
+            ]);
+            for (const chunkRes of extraChunks) {
+                if (chunkRes.data && chunkRes.data.length > 0) {
+                    allFetchedTerms.push(...chunkRes.data);
+                }
             }
-        } else {
-            keepFetching = false;
         }
     }
 
@@ -631,93 +637,81 @@ export async function GET(req: NextRequest) {
 
     // ── 3. Gather all policy_ids from result ──────────────────────────────
     const policyIds = [...new Set((terms as any[]).map((t: any) => t.policy_id))];
+    const policyIdSet = new Set(policyIds);
 
-    // Helper to batch large in() queries in chunks of 120 and run concurrently
-    const CHUNK_SIZE = 120;
-    async function chunkedInQuery<T>(
-        table: string,
-        select: string,
-        inCol: string,
-        inValues: string[],
-        extraFilter?: (q: any) => any
-    ): Promise<T[]> {
-        if (inValues.length === 0) return [];
-        const chunks: string[][] = [];
-        for (let i = 0; i < inValues.length; i += CHUNK_SIZE) {
-            chunks.push(inValues.slice(i, i + CHUNK_SIZE));
-        }
-        const responses = await Promise.all(
-            chunks.map(chunk => {
-                let q = admin.from(table).select(select).in(inCol, chunk);
-                if (extraFilter) q = extraFilter(q);
-                return q;
-            })
-        );
-        const results: T[] = [];
-        for (const res of responses) {
-            if (res.data) results.push(...(res.data as T[]));
-        }
-        return results;
-    }
+    // ── 4. High-Performance Ancillary Data Fetching (Parallel, No raw_text) ──
+    const OVERRIDE_FIELDS = [
+        'has_bamboo_coverage', 'no_dic_available', 'servicing_email_item',
+        'servicing_return_info', 'title_pro', 'carrier_quote_bamboo',
+        'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure',
+        'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation',
+        'rce_replacement_cost', 'fair_plan_premium', 'annual_premium',
+        'coverage_a', 'coverage_b', 'limit_dwelling',
+        'producer_override', 'scenario_alert'
+    ];
 
-    // ── 4. Fetch dec_pages, platform_documents, and overrides in PARALLEL ──
+    const isLargeSlice = policyIds.length > 300;
+
     const [decPages, docs, bambooOverrides, notesData] = await Promise.all([
-        chunkedInQuery<{
-            id: string;
-            policy_id: string;
-            policy_term_id?: string;
-            policy_number?: string;
-            policy_period_start?: string;
-            policy_period_end?: string;
-            property_location?: string;
-            mailing_address?: string;
-            total_annual_premium?: string | number | null;
-            dec_page_submissions?: any;
-        }>(
-            'dec_pages',
-            'id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, dec_page_submissions(storage_path, file_name, bucket)',
-            'policy_id',
-            policyIds
-        ),
-        chunkedInQuery<{
-            id: string;
-            policy_id: string;
-            policy_term_id?: string;
-            doc_type: string;
-            file_name?: string;
-            storage_path?: string;
-            bucket?: string;
-            extracted_address?: string;
-            raw_text?: string;
-            doc_data_dic?: any;
-            doc_data_rce?: any;
-        }>(
-            'platform_documents',
-            'id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, raw_text, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)',
-            'policy_id',
-            policyIds,
-            q => q.in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
-        ),
-        chunkedInQuery<{ policy_id: string; field_name: string; new_value: string; original_value?: string }>(
-            'manual_overrides',
-            'policy_id, field_name, new_value, original_value',
-            'policy_id',
-            policyIds,
-            q => q.in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'servicing_email_item', 'servicing_return_info', 'title_pro', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation', 'rce_replacement_cost', 'fair_plan_premium', 'annual_premium', 'producer_override', 'scenario_alert'])
-        ),
-        chunkedInQuery<{
-            id: string;
-            policy_id: string;
-            body: string;
-            meta: { tags?: string[]; is_resolved?: boolean; [key: string]: unknown };
-            created_at: string;
-        }>(
-            'notes',
-            'id, policy_id, body, meta, created_at',
-            'policy_id',
-            policyIds,
-            q => q.eq('is_archived', false)
-        ),
+        // 1. Dec pages
+        isLargeSlice
+            ? admin
+                .from('dec_pages')
+                .select('id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, limit_dwelling, limit_other_structures, dec_page_submissions(storage_path, file_name, bucket)')
+                .not('policy_id', 'is', null)
+                .limit(3000)
+                .then(res => (res.data || []).filter(d => policyIdSet.has(d.policy_id)))
+            : admin
+                .from('dec_pages')
+                .select('id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, limit_dwelling, limit_other_structures, dec_page_submissions(storage_path, file_name, bucket)')
+                .in('policy_id', policyIds)
+                .then(res => res.data || []),
+
+        // 2. Platform documents (WITHOUT raw_text to eliminate MBs of network/JSON overhead)
+        isLargeSlice
+            ? admin
+                .from('platform_documents')
+                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
+                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
+                .not('policy_id', 'is', null)
+                .limit(3000)
+                .then(res => (res.data || []).filter(d => policyIdSet.has(d.policy_id)))
+            : admin
+                .from('platform_documents')
+                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
+                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
+                .in('policy_id', policyIds)
+                .then(res => res.data || []),
+
+        // 3. Manual overrides
+        isLargeSlice
+            ? admin
+                .from('manual_overrides')
+                .select('policy_id, field_name, new_value, original_value')
+                .in('field_name', OVERRIDE_FIELDS)
+                .limit(5000)
+                .then(res => (res.data || []).filter(o => policyIdSet.has(o.policy_id)))
+            : admin
+                .from('manual_overrides')
+                .select('policy_id, field_name, new_value, original_value')
+                .in('field_name', OVERRIDE_FIELDS)
+                .in('policy_id', policyIds)
+                .then(res => res.data || []),
+
+        // 4. Notes
+        isLargeSlice
+            ? admin
+                .from('notes')
+                .select('id, policy_id, body, meta, created_at')
+                .eq('is_archived', false)
+                .limit(4000)
+                .then(res => (res.data || []).filter(n => policyIdSet.has(n.policy_id)))
+            : admin
+                .from('notes')
+                .select('id, policy_id, body, meta, created_at')
+                .eq('is_archived', false)
+                .in('policy_id', policyIds)
+                .then(res => res.data || []),
     ]);
 
     // Map terms by policy_id for term lookup
@@ -727,9 +721,18 @@ export async function GET(req: NextRequest) {
         termsByPolicy[t.policy_id].push(t);
     }
 
-    const termDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string; total_premium?: number }> = {};
-    const policyDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string; total_premium?: number }> = {};
-    const policyRenewalDecDocMap: Record<string, { storage_path?: string; file_name?: string; bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents'; policy_number?: string; total_premium?: number }> = {};
+    interface DecDocInfo {
+        storage_path?: string;
+        file_name?: string;
+        bucket?: 'cfp-raw-decpage' | 'cfp-platform-documents';
+        policy_number?: string;
+        total_premium?: number;
+        limit_dwelling?: number;
+        limit_other_structures?: number;
+    }
+    const termDecDocMap: Record<string, DecDocInfo> = {};
+    const policyDecDocMap: Record<string, DecDocInfo> = {};
+    const policyRenewalDecDocMap: Record<string, DecDocInfo> = {};
     const policyAddressMap: Record<string, string> = {};
     const termAddressMap: Record<string, string> = {};
 
@@ -751,6 +754,8 @@ export async function GET(req: NextRequest) {
             bucket,
             policy_number: d.policy_number || undefined,
             total_premium: d.total_annual_premium ? parseFloat(String(d.total_annual_premium).replace(/[^0-9.]/g, '')) : undefined,
+            limit_dwelling: d.limit_dwelling ? parseFloat(String(d.limit_dwelling).replace(/[^0-9.]/g, '')) : undefined,
+            limit_other_structures: d.limit_other_structures ? parseFloat(String(d.limit_other_structures).replace(/[^0-9.]/g, '')) : undefined,
         };
         if (sub?.storage_path && d.policy_id) {
             policyDecDocMap[d.policy_id] = docInfo;
@@ -854,7 +859,7 @@ export async function GET(req: NextRequest) {
             const isRceDoc = doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || !!rce || !!dic?.rce_replacement_cost;
 
             if (isRceDoc) {
-                const c = detectDocCarrier(doc.file_name, doc.raw_text, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
+                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
                 if (c && !policyRceCarrier[pid]) policyRceCarrier[pid] = c;
                 if (doc.storage_path && !policyRceDoc[pid]) {
                     policyRceDoc[pid] = {
@@ -878,7 +883,7 @@ export async function GET(req: NextRequest) {
             } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
                 if (!isQuoteDoc) {
-                    const c = detectDocCarrier(doc.file_name, doc.raw_text, 'dic_dec_page');
+                    const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
                     if (c && c !== 'California FAIR Plan' && !policyDicCarrier[pid]) policyDicCarrier[pid] = c;
                     if (doc.storage_path && !policyDicDoc[pid]) {
                         policyDicDoc[pid] = { storage_path: doc.storage_path, file_name: doc.file_name };
@@ -908,7 +913,7 @@ export async function GET(req: NextRequest) {
             const isRceDoc = doc.doc_type === 'rce' || (fn.includes('rce') && !isQuoteDoc) || !!rce || !!dic?.rce_replacement_cost;
 
             if (isRceDoc) {
-                const c = detectDocCarrier(doc.file_name, doc.raw_text, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
+                const c = detectDocCarrier(doc.file_name, null, 'rce', rce?.source || dic?.carrier_name, rce?.created_by);
                 if (c && !termRceCarrier[t.id]) termRceCarrier[t.id] = c;
                 if (doc.storage_path && !termRceDoc[t.id]) {
                     termRceDoc[t.id] = {
@@ -932,7 +937,7 @@ export async function GET(req: NextRequest) {
             } else if ((doc.doc_type === 'dic_dec_page' || fn.includes('dic')) && !isFairPlanCarrier) {
                 // Only set as in-force DIC Dec Page if it is NOT a quote and NOT a FAIR Plan Dec Page
                 if (!isQuoteDoc) {
-                    const c = detectDocCarrier(doc.file_name, doc.raw_text, 'dic_dec_page');
+                    const c = detectDocCarrier(doc.file_name, null, 'dic_dec_page');
                     if (c && c !== 'California FAIR Plan' && !termDicCarrier[t.id]) termDicCarrier[t.id] = c;
                     if (doc.storage_path && !termDicDoc[t.id]) {
                         termDicDoc[t.id] = { storage_path: doc.storage_path, file_name: doc.file_name };
@@ -972,6 +977,8 @@ export async function GET(req: NextRequest) {
     }> = {};
 
     const manualFairPlanPremiumMap: Record<string, number> = {};
+    const manualCoverageAMap: Record<string, number> = {};
+    const manualCoverageBMap: Record<string, number> = {};
     const producerOverrideMap: Record<string, { producer_name: string; history: any[] }> = {};
     const scenarioAlertMap: Record<string, any> = {};
 
@@ -1033,6 +1040,16 @@ export async function GET(req: NextRequest) {
             const num = parseFloat(ov.new_value.replace(/[^0-9.]/g, ''));
             if (!isNaN(num) && num > 0) {
                 manualFairPlanPremiumMap[ov.policy_id] = num;
+            }
+        } else if ((ov.field_name === 'coverage_a' || ov.field_name === 'limit_dwelling') && ov.new_value) {
+            const num = parseFloat(ov.new_value.replace(/[^0-9.]/g, ''));
+            if (!isNaN(num) && num > 0) {
+                manualCoverageAMap[ov.policy_id] = num;
+            }
+        } else if ((ov.field_name === 'coverage_b' || ov.field_name === 'limit_other_structures') && ov.new_value) {
+            const num = parseFloat(ov.new_value.replace(/[^0-9.]/g, ''));
+            if (!isNaN(num) && num > 0) {
+                manualCoverageBMap[ov.policy_id] = num;
             }
         } else if (ov.field_name === 'scenario_alert' && ov.new_value) {
             try {
@@ -1285,6 +1302,12 @@ export async function GET(req: NextRequest) {
             annual_premium: manualFairPlanPremiumMap[policyId]
                 ?? (t.annual_premium ? parseFloat(t.annual_premium) : null)
                 ?? (termDec?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
+            coverage_a: manualCoverageAMap[policyId]
+                ?? (t.limit_dwelling ? parseFloat(String(t.limit_dwelling).replace(/[^0-9.]/g, '')) : null)
+                ?? (termDec?.limit_dwelling ?? (policyDecDocMap[policyId] as any)?.limit_dwelling ?? null),
+            coverage_b: manualCoverageBMap[policyId]
+                ?? (t.limit_other_structures ? parseFloat(String(t.limit_other_structures).replace(/[^0-9.]/g, '')) : null)
+                ?? (termDec?.limit_other_structures ?? (policyDecDocMap[policyId] as any)?.limit_other_structures ?? null),
             payment_status: t.payment_status,
             payment_plan: t.payment_plan,
             is_current: t.is_current,

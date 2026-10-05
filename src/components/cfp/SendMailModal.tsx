@@ -158,6 +158,9 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [rceReplacementCost, setRceReplacementCost] = useState<number | null>(term?.rce_replacement_cost || null);
     const [rceCarrier, setRceCarrier] = useState<string>(term?.rce_carrier || 'Bamboo');
     const [fairPlanPremium, setFairPlanPremium] = useState<number | null>(term?.annual_premium || term?.renewal_annual_premium || null);
+    const [coverageADwelling, setCoverageADwelling] = useState<number | null>((term as any)?.coverage_a || (term as any)?.limit_dwelling || null);
+    const [hasAdditionalAlert, setHasAdditionalAlert] = useState<boolean>(false);
+    const [additionalAlertText, setAdditionalAlertText] = useState<string>('');
 
     // Scenario Checklist & Client Draft States
     const [activeScenarios, setActiveScenarios] = useState<ScenarioType[]>([]);
@@ -172,6 +175,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             setRceReplacementCost(term.rce_replacement_cost || null);
             setRceCarrier(term.rce_carrier || 'Bamboo');
             setFairPlanPremium(term.annual_premium || term.renewal_annual_premium || null);
+            setCoverageADwelling((term as any).coverage_a || (term as any).limit_dwelling || null);
 
             // Auto-detect scenarios from term data
             const detectedScenarios: ScenarioType[] = [];
@@ -214,6 +218,27 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             });
         } catch (err) {
             console.error('Failed to auto-save FAIR Plan premium in SendMailModal:', err);
+        }
+    };
+
+    const saveCoverageAAsync = async (covA: number | null) => {
+        if (!term?.policy_id) return;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            await fetch('/api/cfp-summary/coverage-a', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    policy_id: term.policy_id,
+                    coverage_a: covA,
+                }),
+            });
+        } catch (err) {
+            console.error('Failed to auto-save Coverage A in SendMailModal:', err);
         }
     };
 
@@ -441,6 +466,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     useEffect(() => {
         if (!isOpen || !term) return;
         setIsUrgent(false);
+        setHasAdditionalAlert(false);
+        setAdditionalAlertText('');
         setSubject(buildDefaultSubject(term, false));
         setCustomNotes('');
         setCustomTo('');
@@ -469,6 +496,21 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     .replace(/^URGENT\s*-\s*/i, '')
                     .trim();
                 return next ? `URGENT: ${cleanSubj}` : cleanSubj;
+            });
+            return next;
+        });
+    };
+
+    const handleToggleAdditionalAlert = () => {
+        setHasAdditionalAlert(prev => {
+            const next = !prev;
+            setSubject(currSubj => {
+                const cleanSubj = currSubj
+                    .replace(/^\[ALERT:\s*DIFFERENCE\s*NOTICED\]\s*/i, '')
+                    .replace(/^\[ALERT\]\s*/i, '')
+                    .replace(/^⚠️\s*ALERT:\s*/i, '')
+                    .trim();
+                return next ? `[ALERT: DIFFERENCE NOTICED] ${cleanSubj}` : cleanSubj;
             });
             return next;
         });
@@ -651,6 +693,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         let decName = 'FAIR Plan Dec Page';
         let decDetails = 'No Dec Page on file';
 
+        const covAPart = coverageADwelling ? `Cov A: $${Math.round(coverageADwelling).toLocaleString()}` : null;
+
         if (term.has_dec && term.has_renewal_dec) {
             decName = 'FAIR Plan Dec & Renewal Offer';
             decStatus = 'Available + Renewal';
@@ -658,19 +702,19 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             const expPart = term.expiration_date ? `Current Exp: ${term.expiration_date}` : '';
             const renExpPart = term.renewal_expiration_date ? `Renewal Exp: ${term.renewal_expiration_date}` : '';
             const attPart = `Dec ${isDecAttached ? '✓ Attached' : '(Not Attached)'}, Renewal ${isRenewalAttached ? '✓ Attached' : '(Not Attached)'}`;
-            decDetails = [expPart, renExpPart, attPart].filter(Boolean).join(' • ');
+            decDetails = [covAPart, expPart, renExpPart, attPart].filter(Boolean).join(' • ');
         } else if (term.has_renewal_dec) {
             decName = 'Renewal Offer Dec Page';
             decStatus = 'Renewal Available';
             decStatusType = 'available';
             const expPart = term.renewal_expiration_date || term.expiration_date ? `Exp: ${term.renewal_expiration_date || term.expiration_date}` : '';
-            decDetails = `Renewal Offer ${isRenewalAttached ? '(Attached)' : '(Not Attached)'}${expPart ? ` • ${expPart}` : ''}`;
+            decDetails = [covAPart, `Renewal Offer ${isRenewalAttached ? '(Attached)' : '(Not Attached)'}`, expPart].filter(Boolean).join(' • ');
         } else if (term.has_dec) {
             decName = 'FAIR Plan Dec Page';
             decStatus = 'Available';
             decStatusType = 'available';
             const expPart = term.expiration_date ? `Exp: ${term.expiration_date}` : '';
-            decDetails = `FAIR Plan Dec ${isDecAttached ? '(Attached)' : '(Not Attached)'}${expPart ? ` • ${expPart}` : ''}`;
+            decDetails = [covAPart, `FAIR Plan Dec ${isDecAttached ? '(Attached)' : '(Not Attached)'}`, expPart].filter(Boolean).join(' • ');
         }
 
         const effectiveRceCost = rceReplacementCost ?? term.rce_replacement_cost;
@@ -711,7 +755,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 details: titleDetails,
             },
         ];
-    }, [term, selectedAttachmentIds, liveTitlePro, rceReplacementCost, rceCarrier]);
+    }, [term, selectedAttachmentIds, liveTitlePro, rceReplacementCost, rceCarrier, fairPlanPremium, coverageADwelling]);
 
     // Build the dynamic Client Email Draft based on active scenarios
     const clientEmailDraft = useMemo(() => {
@@ -739,7 +783,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             clientName: term.named_insured ? toTitleCase(term.named_insured) : undefined,
             propertyAddress: term.property_address ? toTitleCase(term.property_address) : undefined,
             policyNumber: term.policy_number || undefined,
-            currentDwellingLimit: (term as any).coverage_a || null,
+            currentDwellingLimit: coverageADwelling ?? (term as any).coverage_a ?? null,
             rceValuationAmount: effectiveRceCost,
             rceCarrier: rceCarrier || term.rce_carrier || 'Bamboo',
             otherStructureTypes,
@@ -761,6 +805,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         rceReplacementCost,
         rceCarrier,
         fairPlanPremium,
+        coverageADwelling,
         otherStructureTypes,
         otherStructureCoverage,
         propertyFeatures,
@@ -906,12 +951,38 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           </tr>
         </table>` : '';
 
+        // High Priority Additional Alert / Difference Notice Box (Red Font & High Contrast for Olga, Nancy, JP, etc.)
+        const hasAlert = hasAdditionalAlert || !!additionalAlertText.trim();
+        const additionalAlertHtml = hasAlert ? `
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-bottom:16px;border-collapse:collapse;background:#fef2f2;border:2px solid #ef4444;border-left:6px solid #dc2626;border-radius:6px;box-shadow:0 1px 3px rgba(220,38,38,0.08);">
+          <tr>
+            <td style="padding:14px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <span style="font-size:16px;line-height:1;">🚨</span>
+                <strong style="color:#b91c1c;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;">
+                  THIS EMAIL CONTAINS AN ADDITIONAL ALERT &bull; ATTENTION REQUIRED
+                </strong>
+              </div>
+              <p style="margin:2px 0 8px 0;color:#dc2626;font-size:13px;font-weight:700;line-height:1.4;">
+                The VA noticed differences or critical details while preparing this quote:
+              </p>
+              <div style="background:#ffffff;border:1.5px solid #fca5a5;border-left:4px solid #dc2626;border-radius:4px;padding:12px 14px;color:#991b1b;font-size:13px;font-weight:600;line-height:1.6;">
+                ${additionalAlertText.trim() ? additionalAlertText.trim().replace(/\n/g, '<br/>') : 'VA flagged differences between property details / RCE / coverage limits. Please review closely.'}
+              </div>
+              <p style="margin:8px 0 0 0;color:#7f1d1d;font-size:11.5px;font-weight:500;">
+                * Notice: The VA identified property, RCE, or underwriting discrepancies during review. Please review before proceeding.
+              </p>
+            </td>
+          </tr>
+        </table>` : '';
+
         return `
         <div style="margin:0;padding:0;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
           <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:680px;width:100%;margin:0;text-align:left;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.5;">
             <tr>
               <td align="left" style="padding:0;text-align:left;">
                 ${urgentBannerHtml}
+                ${additionalAlertHtml}
                 ${scenarioAlertHtml}
                 
                 <!-- Title Row: Table based for perfect Outlook alignment -->
@@ -984,7 +1055,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           </table>
         </div>
         `;
-    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName, activeScenarios, clientEmailDraft]);
+    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName, activeScenarios, clientEmailDraft, hasAdditionalAlert, additionalAlertText]);
 
     if (!isOpen || !term) return null;
 
@@ -1511,6 +1582,16 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <button
                                             type="button"
+                                            className={`${styles.urgentToggleBtn} ${hasAdditionalAlert ? styles.urgentActive : ''}`}
+                                            onClick={handleToggleAdditionalAlert}
+                                            title={hasAdditionalAlert ? 'Click to remove Additional Alert' : 'Click to flag this email with an Additional Difference Alert'}
+                                            style={hasAdditionalAlert ? { background: '#dc2626', borderColor: '#b91c1c', color: '#ffffff' } : {}}
+                                        >
+                                            <AlertCircle size={12} />
+                                            <span>{hasAdditionalAlert ? '🚨 Alert: ON' : '🚨 Add Difference Alert'}</span>
+                                        </button>
+                                        <button
+                                            type="button"
                                             className={`${styles.urgentToggleBtn} ${isTestMail ? styles.urgentActive : ''}`}
                                             onClick={handleToggleTestMail}
                                             title={isTestMail ? 'Click to remove [TEST MAIL] tag' : 'Click to add [TEST MAIL] tag for approval'}
@@ -1542,6 +1623,55 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                         }
                                     }}
                                     placeholder="CFP No - Insured Name - Address"
+                                />
+                            </div>
+
+                            {/* Additional Alert / Differences Noticed by VA (Red Font Notice) */}
+                            <div className={styles.formSection} style={{
+                                background: hasAdditionalAlert ? '#fff1f2' : 'transparent',
+                                border: hasAdditionalAlert ? '1.5px solid #fda4af' : '1px dashed #cbd5e1',
+                                borderRadius: '8px',
+                                padding: '12px',
+                                transition: 'all 0.2s ease',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0, color: hasAdditionalAlert ? '#b91c1c' : '#334155', fontWeight: 700 }}>
+                                        <AlertCircle size={14} style={{ color: hasAdditionalAlert ? '#dc2626' : '#64748b' }} />
+                                        <span>Additional Alert / Differences Noticed by VA (Red Font Alert)</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleAdditionalAlert}
+                                        style={{
+                                            fontSize: '0.72rem',
+                                            padding: '2px 8px',
+                                            borderRadius: '4px',
+                                            background: hasAdditionalAlert ? '#dc2626' : '#f1f5f9',
+                                            color: hasAdditionalAlert ? '#ffffff' : '#475569',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {hasAdditionalAlert ? 'Active (Will Show in Red)' : '+ Enable Red Alert'}
+                                    </button>
+                                </div>
+                                <p style={{ fontSize: '0.74rem', color: hasAdditionalAlert ? '#9f1239' : '#64748b', margin: '2px 0 8px 0' }}>
+                                    Note differences noticed during quote preparation (e.g., property sq ft mismatch, RCE differences, prior damage, hazard details). This note will be sent in <strong>bold red font</strong> to Olga, Nancy, JP, and anyone on the email.
+                                </p>
+                                <textarea
+                                    className={styles.textareaInput}
+                                    style={hasAdditionalAlert ? { borderColor: '#f43f5e', background: '#ffffff', color: '#991b1b', fontWeight: 600 } : {}}
+                                    placeholder="e.g. VA Notice: Differences detected between Title Pro sq ft (1,850) and RCE (2,200). Roof condition noted as fair. Please review before proceeding."
+                                    rows={2}
+                                    value={additionalAlertText}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setAdditionalAlertText(val);
+                                        if (val.trim() && !hasAdditionalAlert) {
+                                            setHasAdditionalAlert(true);
+                                        }
+                                    }}
                                 />
                             </div>
 
@@ -1706,6 +1836,47 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                         </div>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* FAIR Plan Coverage A (Dwelling Limit) Entry / Override */}
+                            <div className={styles.formSection}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                        <Shield size={14} /> FAIR Plan Coverage A &bull; Dwelling Limit
+                                    </label>
+                                    {coverageADwelling ? (
+                                        <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>
+                                            Parsed: ${Math.round(coverageADwelling).toLocaleString()}
+                                        </span>
+                                    ) : (
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                                            Enter Dwelling Limit
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.875rem', fontWeight: 600 }}>$</span>
+                                        <input
+                                            type="text"
+                                            className={styles.textInput}
+                                            style={{ paddingLeft: '24px' }}
+                                            placeholder="e.g. 350000"
+                                            value={coverageADwelling ? String(Math.round(Number(coverageADwelling))) : ''}
+                                            onChange={e => {
+                                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                                const num = raw ? parseFloat(raw) : null;
+                                                setCoverageADwelling(num);
+                                                if (num !== null) {
+                                                    saveCoverageAAsync(num);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                        Syncs with client draft in real-time
+                                    </div>
+                                </div>
                             </div>
 
                             {/* FAIR Plan Premium Entry / Override */}
