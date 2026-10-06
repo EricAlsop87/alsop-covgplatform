@@ -964,27 +964,25 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           </tr>
         </table>` : '';
 
-        // High Priority Additional Alert / Difference Notice Box (Red Font & High Contrast for Olga, Nancy, JP, etc.)
+        // High Priority Additional Alert / Difference Notice Box (Red Font & High Contrast)
         const hasAlert = hasAdditionalAlert || !!additionalAlertText.trim();
+        const alertContent = additionalAlertText.trim()
+            ? additionalAlertText.trim().replace(/\n/g, '<br/>')
+            : 'This policy was flagged with differences between property details / RCE / coverage limits. Please review closely before proceeding.';
+
         const additionalAlertHtml = hasAlert ? `
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-bottom:16px;border-collapse:collapse;background:#fef2f2;border:2px solid #ef4444;border-left:6px solid #dc2626;border-radius:6px;box-shadow:0 1px 3px rgba(220,38,38,0.08);">
           <tr>
             <td style="padding:14px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                 <span style="font-size:16px;line-height:1;">🚨</span>
                 <strong style="color:#b91c1c;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;">
                   THIS EMAIL CONTAINS AN ADDITIONAL ALERT &bull; ATTENTION REQUIRED
                 </strong>
               </div>
-              <p style="margin:2px 0 8px 0;color:#dc2626;font-size:13px;font-weight:700;line-height:1.4;">
-                The VA noticed differences or critical details while preparing this quote:
-              </p>
               <div style="background:#ffffff;border:1.5px solid #fca5a5;border-left:4px solid #dc2626;border-radius:4px;padding:12px 14px;color:#991b1b;font-size:13px;font-weight:600;line-height:1.6;">
-                ${additionalAlertText.trim() ? additionalAlertText.trim().replace(/\n/g, '<br/>') : 'VA flagged differences between property details / RCE / coverage limits. Please review closely.'}
+                ${alertContent}
               </div>
-              <p style="margin:8px 0 0 0;color:#7f1d1d;font-size:11.5px;font-weight:500;">
-                * Notice: The VA identified property, RCE, or underwriting discrepancies during review. Please review before proceeding.
-              </p>
             </td>
           </tr>
         </table>` : '';
@@ -1650,7 +1648,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                                     <label className={styles.fieldLabel} style={{ marginBottom: 0, color: hasAdditionalAlert ? '#b91c1c' : '#334155', fontWeight: 700 }}>
                                         <AlertCircle size={14} style={{ color: hasAdditionalAlert ? '#dc2626' : '#64748b' }} />
-                                        <span>Additional Alert / Differences Noticed by VA (Red Font Alert)</span>
+                                        <span>Additional Alert / Critical Differences (Red Font Notice)</span>
                                     </label>
                                     <button
                                         type="button"
@@ -1670,12 +1668,12 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     </button>
                                 </div>
                                 <p style={{ fontSize: '0.74rem', color: hasAdditionalAlert ? '#9f1239' : '#64748b', margin: '2px 0 8px 0' }}>
-                                    Note differences noticed during quote preparation (e.g., property sq ft mismatch, RCE differences, prior damage, hazard details). This note will be sent in <strong>bold red font</strong> to Olga, Nancy, JP, and anyone on the email.
+                                    Note critical differences noticed during review (e.g., property sq ft mismatch, RCE differences, prior damage, hazard details). This alert will appear in <strong>bold red font</strong> for the reviewing team.
                                 </p>
                                 <textarea
                                     className={styles.textareaInput}
                                     style={hasAdditionalAlert ? { borderColor: '#f43f5e', background: '#ffffff', color: '#991b1b', fontWeight: 600 } : {}}
-                                    placeholder="e.g. VA Notice: Differences detected between Title Pro sq ft (1,850) and RCE (2,200). Roof condition noted as fair. Please review before proceeding."
+                                    placeholder="e.g. This policy was flagged with differences between Title Pro sq ft (1,850) and RCE (2,200). Roof condition noted as fair. Please review before proceeding."
                                     rows={2}
                                     value={additionalAlertText}
                                     onChange={e => {

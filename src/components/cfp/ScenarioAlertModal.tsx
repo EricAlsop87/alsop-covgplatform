@@ -457,14 +457,14 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
                         </div>
                     )}
 
-                    {/* VA Remarks / Instructions for Management */}
+                    {/* Policy Review Notes / Instructions for Management */}
                     <div>
                         <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
-                            <FileText size={14} color="#2563eb" /> VA Remarks / Specific Instructions for Olga, JP &amp; Nancy:
+                            <FileText size={14} color="#2563eb" /> Policy Review Notes / Specific Instructions for Olga, JP &amp; Nancy:
                         </label>
                         <textarea
                             className={styles.remarksTextarea}
-                            placeholder="e.g. Aerial photos show large 2-car detached garage; current Cov B is $0. RCE calculated at $620k."
+                            placeholder="e.g. This policy was flagged: Aerial photos show large 2-car detached garage; current Cov B is $0. RCE calculated at $620k."
                             rows={2}
                             value={vaRemarks}
                             onChange={e => setVaRemarks(e.target.value)}
