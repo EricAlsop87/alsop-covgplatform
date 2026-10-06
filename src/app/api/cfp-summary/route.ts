@@ -592,31 +592,35 @@ export async function GET(req: NextRequest) {
             .lte('expiration_date', endDate);
     }
 
-    termsQuery = termsQuery.order('expiration_date', { ascending: true });
+    termsQuery = termsQuery
+        .order('expiration_date', { ascending: true, nullsFirst: false })
+        .order('id', { ascending: true });
 
-    // Supabase PostgREST fast parallel pagination
+    // Supabase PostgREST sequential pagination to safely retrieve all matching terms without mutating query builder or causing concurrency bugs
     const allFetchedTerms: any[] = [];
+    const seenTermIds = new Set<string>();
     const PAGE_CHUNK = 1000;
+    let page = 0;
+    const MAX_PAGES = 10; // safety ceiling (10,000 terms)
 
-    const { data: firstChunk, error: firstErr } = await termsQuery.range(0, PAGE_CHUNK - 1);
-    if (firstErr) {
-        return NextResponse.json({ success: false, error: firstErr.message }, { status: 500 });
-    }
-    if (firstChunk && firstChunk.length > 0) {
-        allFetchedTerms.push(...firstChunk);
-        // If first chunk was full (1000), fetch next chunks concurrently
-        if (firstChunk.length === PAGE_CHUNK) {
-            const extraChunks = await Promise.all([
-                termsQuery.range(1000, 1999),
-                termsQuery.range(2000, 2999),
-                termsQuery.range(3000, 3999),
-            ]);
-            for (const chunkRes of extraChunks) {
-                if (chunkRes.data && chunkRes.data.length > 0) {
-                    allFetchedTerms.push(...chunkRes.data);
-                }
+    while (page < MAX_PAGES) {
+        const from = page * PAGE_CHUNK;
+        const to = from + PAGE_CHUNK - 1;
+        const { data: chunk, error: pageErr } = await termsQuery.range(from, to);
+        if (pageErr) {
+            return NextResponse.json({ success: false, error: pageErr.message }, { status: 500 });
+        }
+        if (!chunk || chunk.length === 0) break;
+
+        for (const item of chunk) {
+            if (!seenTermIds.has(item.id)) {
+                seenTermIds.add(item.id);
+                allFetchedTerms.push(item);
             }
         }
+
+        if (chunk.length < PAGE_CHUNK) break;
+        page++;
     }
 
     let terms = allFetchedTerms;
@@ -1416,8 +1420,51 @@ export async function GET(req: NextRequest) {
 
     // Sort terms within each family by effective_date, label ORIGINAL/RENEWAL, and unify family-wide metadata
     const families: CFPFamily[] = Object.entries(familyMap).map(([base_policy, termRows]) => {
+        // Clean up duplicate/ghost terms within the family:
+        // 1. Term ID uniqueness
+        const uniqueById: CFPTermRow[] = [];
+        const seenIds = new Set<string>();
+        for (const tr of termRows) {
+            if (!seenIds.has(tr.policy_term_id)) {
+                seenIds.add(tr.policy_term_id);
+                uniqueById.push(tr);
+            }
+        }
+
+        // 2. Suppress ghost terms with missing dates if dated terms exist
+        const hasDatedTerm = uniqueById.some(t => !!t.effective_date || !!t.expiration_date);
+        let cleaned = hasDatedTerm
+            ? uniqueById.filter(t => !!t.effective_date || !!t.expiration_date)
+            : uniqueById;
+
+        // 3. Deduplicate terms that share the exact same expiration date (keep the richer one)
+        if (cleaned.length > 1) {
+            const byExpDate = new Map<string, CFPTermRow>();
+            const noExp: CFPTermRow[] = [];
+            for (const t of cleaned) {
+                if (!t.expiration_date) {
+                    noExp.push(t);
+                    continue;
+                }
+                const existing = byExpDate.get(t.expiration_date);
+                if (!existing) {
+                    byExpDate.set(t.expiration_date, t);
+                } else {
+                    const score = (row: CFPTermRow) =>
+                        (row.effective_date ? 2 : 0) +
+                        (row.annual_premium ? 2 : 0) +
+                        (row.has_dec ? 1 : 0) +
+                        (row.has_rce ? 1 : 0);
+                    if (score(t) > score(existing)) {
+                        byExpDate.set(t.expiration_date, { ...existing, ...t });
+                    }
+                }
+            }
+            cleaned = [...Array.from(byExpDate.values()), ...noExp];
+        }
+
         // Sort by effective_date asc (oldest = ORIGINAL)
-        const sorted = [...termRows].sort((a, b) => {
+        const sorted = [...cleaned].sort((a, b) => {
             const da = a.effective_date || '';
             const db = b.effective_date || '';
             return da.localeCompare(db);
@@ -1471,10 +1518,12 @@ export async function GET(req: NextRequest) {
         return ea.localeCompare(eb);
     });
 
+    const totalActualTerms = families.reduce((acc, f) => acc + f.terms.length, 0);
+
     const responsePayload = {
         success: true,
         families,
-        total_terms: filtered.length,
+        total_terms: totalActualTerms,
         total_families: families.length,
     };
 
