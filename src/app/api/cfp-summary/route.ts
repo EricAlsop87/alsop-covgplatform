@@ -675,15 +675,15 @@ export async function GET(req: NextRequest) {
         isLargeSlice
             ? admin
                 .from('platform_documents')
-                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
-                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
+                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, cov_b_other_struct, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
+                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other', 'dec_page'])
                 .not('policy_id', 'is', null)
                 .limit(3000)
                 .then(res => (res.data || []).filter(d => policyIdSet.has(d.policy_id)))
             : admin
                 .from('platform_documents')
-                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
-                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
+                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, cov_b_other_struct, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
+                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other', 'dec_page'])
                 .in('policy_id', policyIds)
                 .then(res => res.data || []),
 
@@ -851,24 +851,79 @@ export async function GET(req: NextRequest) {
         );
 
         if (isCfpDecDoc && doc.storage_path) {
+            const docCovA = dic?.cov_a_dwelling ? parseFloat(String(dic.cov_a_dwelling).replace(/[^0-9.]/g, '')) : undefined;
+            const validCovA = docCovA && !isNaN(docCovA) && docCovA > 0 ? docCovA : undefined;
+
+            const docCovB = dic?.cov_b_other_struct ? parseFloat(String(dic.cov_b_other_struct).replace(/[^0-9.]/g, '')) : undefined;
+            const validCovB = docCovB !== undefined && !isNaN(docCovB) && docCovB >= 0 ? docCovB : undefined;
+
+            const docPremRaw = dic?.total_charge || dic?.basic_premium;
+            const docPremium = docPremRaw ? parseFloat(String(docPremRaw).replace(/[^0-9.]/g, '')) : undefined;
+            const validPrem = docPremium && !isNaN(docPremium) && docPremium > 0 ? docPremium : undefined;
+
             const docInfo = {
                 storage_path: doc.storage_path,
                 file_name: doc.file_name,
                 bucket: (doc.bucket || 'cfp-platform-documents') as 'cfp-raw-decpage' | 'cfp-platform-documents',
-                policy_number: undefined,
+                policy_number: dic?.policy_number || undefined,
+                total_premium: validPrem,
+                limit_dwelling: validCovA,
+                limit_other_structures: validCovB,
             };
             if (doc.policy_id) {
                 policyDecDocMap[doc.policy_id] = docInfo;
                 if (fn.includes('renewal') || dicType.includes('renewal')) {
                     policyRenewalDecDocMap[doc.policy_id] = docInfo;
                 }
+                if (validCovA && !policyDecLimitDwellingMap[doc.policy_id]) {
+                    policyDecLimitDwellingMap[doc.policy_id] = validCovA;
+                }
+                if (validCovB !== undefined && policyDecLimitOtherStructuresMap[doc.policy_id] === undefined) {
+                    policyDecLimitOtherStructuresMap[doc.policy_id] = validCovB;
+                }
+                if (validPrem && !policyDecPremiumMap[doc.policy_id]) {
+                    policyDecPremiumMap[doc.policy_id] = validPrem;
+                }
             }
             if (doc.policy_term_id) {
                 termDecDocMap[doc.policy_term_id] = docInfo;
+                if (validCovA && !termDecLimitDwellingMap[doc.policy_term_id]) {
+                    termDecLimitDwellingMap[doc.policy_term_id] = validCovA;
+                }
+                if (validCovB !== undefined && termDecLimitOtherStructuresMap[doc.policy_term_id] === undefined) {
+                    termDecLimitOtherStructuresMap[doc.policy_term_id] = validCovB;
+                }
+                if (validPrem && !termDecPremiumMap[doc.policy_term_id]) {
+                    termDecPremiumMap[doc.policy_term_id] = validPrem;
+                }
             } else if (doc.policy_id) {
                 const polTerms = termsByPolicy[doc.policy_id] || [];
                 if (polTerms.length === 1) {
                     termDecDocMap[polTerms[0].id] = docInfo;
+                    if (validCovA && !termDecLimitDwellingMap[polTerms[0].id]) {
+                        termDecLimitDwellingMap[polTerms[0].id] = validCovA;
+                    }
+                    if (validCovB !== undefined && termDecLimitOtherStructuresMap[polTerms[0].id] === undefined) {
+                        termDecLimitOtherStructuresMap[polTerms[0].id] = validCovB;
+                    }
+                    if (validPrem && !termDecPremiumMap[polTerms[0].id]) {
+                        termDecPremiumMap[polTerms[0].id] = validPrem;
+                    }
+                } else if (polTerms.length > 1 && (fn.includes('renewal') || dicType.includes('renewal'))) {
+                    // Associate renewal dec with the latest term
+                    const latestTerm = [...polTerms].sort((a, b) => (b.expiration_date || '').localeCompare(a.expiration_date || ''))[0];
+                    if (latestTerm) {
+                        termDecDocMap[latestTerm.id] = docInfo;
+                        if (validCovA && !termDecLimitDwellingMap[latestTerm.id]) {
+                            termDecLimitDwellingMap[latestTerm.id] = validCovA;
+                        }
+                        if (validCovB !== undefined && termDecLimitOtherStructuresMap[latestTerm.id] === undefined) {
+                            termDecLimitOtherStructuresMap[latestTerm.id] = validCovB;
+                        }
+                        if (validPrem && !termDecPremiumMap[latestTerm.id]) {
+                            termDecPremiumMap[latestTerm.id] = validPrem;
+                        }
+                    }
                 }
             }
             continue;
@@ -1329,13 +1384,13 @@ export async function GET(req: NextRequest) {
             policy_status: policy?.status || 'active',
             annual_premium: manualFairPlanPremiumMap[policyId]
                 ?? (t.annual_premium ? parseFloat(t.annual_premium) : null)
-                ?? (termDecPremiumMap[t.id] ?? termDec?.total_premium ?? policyDecPremiumMap[policyId] ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
+                ?? (termDecPremiumMap[t.id] ?? termDec?.total_premium ?? policyDecPremiumMap[policyId] ?? (policyRenewalDecDocMap[policyId] as any)?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
             coverage_a: manualCoverageAMap[policyId]
                 ?? (t.limit_dwelling ? parseFloat(String(t.limit_dwelling).replace(/[^0-9.]/g, '')) : null)
-                ?? (termDecLimitDwellingMap[t.id] ?? termDec?.limit_dwelling ?? policyDecLimitDwellingMap[policyId] ?? (policyDecDocMap[policyId] as any)?.limit_dwelling ?? null),
+                ?? (termDecLimitDwellingMap[t.id] ?? termDec?.limit_dwelling ?? policyDecLimitDwellingMap[policyId] ?? (policyRenewalDecDocMap[policyId] as any)?.limit_dwelling ?? (policyDecDocMap[policyId] as any)?.limit_dwelling ?? null),
             coverage_b: manualCoverageBMap[policyId]
                 ?? (t.limit_other_structures ? parseFloat(String(t.limit_other_structures).replace(/[^0-9.]/g, '')) : null)
-                ?? (termDecLimitOtherStructuresMap[t.id] ?? termDec?.limit_other_structures ?? policyDecLimitOtherStructuresMap[policyId] ?? (policyDecDocMap[policyId] as any)?.limit_other_structures ?? null),
+                ?? (termDecLimitOtherStructuresMap[t.id] ?? termDec?.limit_other_structures ?? policyDecLimitOtherStructuresMap[policyId] ?? (policyRenewalDecDocMap[policyId] as any)?.limit_other_structures ?? (policyDecDocMap[policyId] as any)?.limit_other_structures ?? null),
             payment_status: t.payment_status,
             payment_plan: t.payment_plan,
             is_current: t.is_current,
