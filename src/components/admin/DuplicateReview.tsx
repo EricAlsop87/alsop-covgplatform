@@ -14,6 +14,7 @@ export default function DuplicateReview() {
     const [selectedPolicy, setSelectedPolicy] = useState<string | null>(null);
     const [isMerging, setIsMerging] = useState(false);
     const [isAutoMerging, setIsAutoMerging] = useState(false);
+    const [isAutoBindingPolicies, setIsAutoBindingPolicies] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     // Modal State
@@ -193,6 +194,45 @@ export default function DuplicateReview() {
             alert(err?.message || 'Failed to complete auto-merge. Please check console.');
         } finally {
             setIsAutoMerging(false);
+        }
+    };
+
+    const handleAutoBindPolicies = async (minConfidence = 100) => {
+        const eligible = duplicatePolicies.filter(g => g.confidence >= minConfidence);
+        if (eligible.length === 0) {
+            alert(`No suspected policy mergers found with match confidence >= ${minConfidence}%.`);
+            return;
+        }
+
+        const totalDuplicates = eligible.reduce((acc, g) => acc + (g.merged_ids?.length || 1), 0);
+        const confirmed = window.confirm(
+            `⚡ Auto-Bind Confirmation:\n\nAre you sure you want to automatically bind all ${eligible.length} suspected policy groups (${totalDuplicates} variant records) with ${minConfidence}% match confidence?\n\nThis will link their terms, dates, premiums, and documents into their respective Root Policies.`
+        );
+        if (!confirmed) return;
+
+        setIsAutoBindingPolicies(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/merge/policies/auto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                },
+                body: JSON.stringify({ min_confidence: minConfidence }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data?.error || 'Auto-bind failed');
+            }
+
+            alert(data.message || `Successfully bound ${data.merged_groups_count || eligible.length} policy groups!`);
+            await fetchDuplicates(false);
+        } catch (err: any) {
+            logger.error('DuplicateReview', 'Auto-bind error:', { error: err?.message || String(err) });
+            alert(err?.message || 'Failed to complete auto-bind. Please check console.');
+        } finally {
+            setIsAutoBindingPolicies(false);
         }
     };
 
@@ -762,15 +802,56 @@ export default function DuplicateReview() {
             {/* Policies Column */}
             <div className={styles.column}>
                 <div className={styles.header}>
-                    <h3 className={styles.headerTitle}>
-                        <ShieldAlert size={18} style={{ color: "var(--status-info)" }} />
-                        Suspected Policy Mergers
-                    </h3>
-                    {filteredPolicies.length > 0 && (
-                        <span className={styles.badge}>{filteredPolicies.length} Actionable</span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h3 className={styles.headerTitle} style={{ margin: 0 }}>
+                            <ShieldAlert size={18} style={{ color: "var(--status-info)" }} />
+                            Suspected Policy Mergers
+                        </h3>
+                        {filteredPolicies.length > 0 && (
+                            <span className={styles.badge}>{filteredPolicies.length} Actionable</span>
+                        )}
+                    </div>
+
+                    {/* Auto-Bind All 100% Button */}
+                    {(() => {
+                        const exactCount = filteredPolicies.filter(g => g.confidence >= 100).length;
+                        if (exactCount === 0) return null;
+                        return (
+                            <button
+                                onClick={() => handleAutoBindPolicies(100)}
+                                disabled={isAutoBindingPolicies || isMerging}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    padding: '0.35rem 0.85rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 700,
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(59, 130, 246, 0.45)',
+                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.22))',
+                                    color: '#3b82f6',
+                                    cursor: (isAutoBindingPolicies || isMerging) ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                title="Automatically bind all suspected policy variants with 100% match confidence"
+                            >
+                                {isAutoBindingPolicies ? (
+                                    <>
+                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                                        <span>Auto-Binding 100%...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Zap size={13} style={{ fill: 'currentColor' }} />
+                                        <span>Auto-Bind All ({exactCount} at 100%)</span>
+                                    </>
+                                )}
+                            </button>
+                        );
+                    })()}
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: 1.5, margin: '-0.75rem 0 0' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: 1.5, margin: '-0.25rem 0 0' }}>
                     Separate policy records that share the same base policy number. Binding extracts the sub-term&apos;s data (dates, premiums, documents) and attaches it to the root policy as an additional term.
                 </p>
 
@@ -792,7 +873,35 @@ export default function DuplicateReview() {
                                     <Copy size={13} style={{ color: "var(--status-info)", marginTop: "1px" }} />
                                     <span>{group.reason.replace('Shares identical Base Policy Number: ', 'Base Alignment: ')}</span>
                                 </div>
-                                <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontWeight: 600 }}>{group.confidence}% Match</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    {group.confidence === 100 && (
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                await handleMergePolicy(`policy-${groupIdx}`, group.survivor_id, group.merged_ids);
+                                            }}
+                                            disabled={isMerging || isAutoBindingPolicies}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '0.3rem',
+                                                padding: '0.25rem 0.55rem',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                background: 'rgba(59, 130, 246, 0.1)',
+                                                color: 'var(--accent-primary, #3b82f6)',
+                                                cursor: (isMerging || isAutoBindingPolicies) ? 'not-allowed' : 'pointer',
+                                            }}
+                                            title="Instantly bind this 100% match into root policy"
+                                        >
+                                            <Zap size={11} style={{ fill: 'currentColor' }} />
+                                            Quick Bind
+                                        </button>
+                                    )}
+                                    <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontWeight: 600 }}>{group.confidence}% Match</span>
+                                </div>
                             </div>
 
                             <div className={styles.entityList}>
