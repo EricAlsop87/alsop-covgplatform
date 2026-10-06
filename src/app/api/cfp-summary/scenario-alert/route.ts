@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isAuthError } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
+import { serverSummaryCache } from '../route';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,6 +75,9 @@ export async function POST(req: NextRequest) {
                 .eq('policy_id', policy_id)
                 .eq('field_name', 'scenario_alert');
 
+            // Invalidate server cache so summary returns updated state
+            serverSummaryCache.clear();
+
             return NextResponse.json({ success: true, scenario_alert: null, message: 'Scenario alert cleared' });
         }
 
@@ -96,6 +100,9 @@ export async function POST(req: NextRequest) {
         if (upsertErr) {
             return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 });
         }
+
+        // Invalidate server cache so summary returns updated state
+        serverSummaryCache.clear();
 
         return NextResponse.json({
             success: true,

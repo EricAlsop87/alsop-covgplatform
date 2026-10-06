@@ -12,6 +12,7 @@ import {
     Loader2,
     Mail,
     FileText,
+    Shield,
     ShieldAlert,
     Trash2,
 } from 'lucide-react';
@@ -28,6 +29,8 @@ import { toTitleCase } from './SendMailModal';
 
 export interface ScenarioAlertData {
     scenarios: ScenarioType[];
+    coverage_a?: number | null;
+    rce_replacement_cost?: number | null;
     otherStructureTypes?: string[];
     otherStructureCoverage?: number | null;
     propertyFeatures?: string[];
@@ -43,11 +46,13 @@ export interface ScenarioAlertModalProps {
     term: CFPTermRow | null;
     isOpen: boolean;
     onClose: () => void;
-    onSavedSuccess: (termId: string, alertData: ScenarioAlertData | null) => void;
+    onSavedSuccess: (policyId: string, alertData: ScenarioAlertData | null) => void;
 }
 
 export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: ScenarioAlertModalProps) {
     const [activeScenarios, setActiveScenarios] = useState<ScenarioType[]>([]);
+    const [coverageA, setCoverageA] = useState<number | null>(null);
+    const [rceCost, setRceCost] = useState<number | null>(null);
     const [otherStructureTypes, setOtherStructureTypes] = useState<string[]>(['Detached Garage', 'Shed']);
     const [otherStructureCoverage, setOtherStructureCoverage] = useState<number | null>(null);
     const [propertyFeatures, setPropertyFeatures] = useState<string[]>(['Wood-Burning Stove']);
@@ -66,6 +71,8 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
         if (term.scenario_alert) {
             const sa = term.scenario_alert;
             setActiveScenarios(Array.isArray(sa.scenarios) ? sa.scenarios : []);
+            setCoverageA(sa.coverage_a ?? (term as any).coverage_a ?? (term as any).limit_dwelling ?? null);
+            setRceCost(sa.rce_replacement_cost ?? term.rce_replacement_cost ?? null);
             setOtherStructureTypes(sa.otherStructureTypes || ['Detached Garage', 'Shed']);
             setOtherStructureCoverage(sa.otherStructureCoverage ?? null);
             setPropertyFeatures(sa.propertyFeatures || ['Wood-Burning Stove']);
@@ -93,6 +100,8 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
             }
 
             setActiveScenarios(detected);
+            setCoverageA((term as any).coverage_a ?? (term as any).limit_dwelling ?? null);
+            setRceCost(term.rce_replacement_cost ?? null);
             setOtherStructureTypes(['Detached Garage', 'Shed']);
             setOtherStructureCoverage(null);
             setPropertyFeatures(['Wood-Burning Stove']);
@@ -107,7 +116,7 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
     // Build the dynamic Client Email Draft based on active scenarios
     const clientEmailDraft = useMemo(() => {
         if (!term) return { subject: '', bodyText: '', bodyHtml: '' };
-        const effectiveRceCost = term.rce_replacement_cost;
+        const effectiveRceCost = rceCost ?? term.rce_replacement_cost;
         const effectiveCfpPrem = term.annual_premium || term.renewal_annual_premium;
 
         let bestCarrier = 'Bamboo';
@@ -129,7 +138,7 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
             clientName: term.named_insured ? toTitleCase(term.named_insured) : undefined,
             propertyAddress: term.property_address ? toTitleCase(term.property_address) : undefined,
             policyNumber: term.policy_number || undefined,
-            currentDwellingLimit: (term as any).coverage_a || null,
+            currentDwellingLimit: coverageA,
             rceValuationAmount: effectiveRceCost,
             rceCarrier: term.rce_carrier || 'Bamboo',
             otherStructureTypes,
@@ -145,15 +154,17 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
         };
 
         return generateCompositeClientEmail(activeScenarios, data);
-    }, [term, activeScenarios, otherStructureTypes, otherStructureCoverage, propertyFeatures, annualSavings, vaRemarks]);
+    }, [term, activeScenarios, coverageA, rceCost, otherStructureTypes, otherStructureCoverage, propertyFeatures, annualSavings, vaRemarks]);
 
     const handleSaveAlert = async () => {
         if (!term?.policy_id) return;
         setSaving(true);
         setError(null);
 
-        const alertPayload = activeScenarios.length > 0 || vaRemarks.trim() ? {
+        const alertPayload: ScenarioAlertData | null = activeScenarios.length > 0 || vaRemarks.trim() || coverageA != null || rceCost != null ? {
             scenarios: activeScenarios,
+            coverage_a: coverageA,
+            rce_replacement_cost: rceCost,
             otherStructureTypes: activeScenarios.includes('other_structures') ? otherStructureTypes : [],
             otherStructureCoverage: activeScenarios.includes('other_structures') ? otherStructureCoverage : null,
             propertyFeatures: activeScenarios.includes('property_feature') ? propertyFeatures : [],
@@ -165,11 +176,45 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            // 1. Sync Coverage A if entered
+            if (coverageA != null) {
+                await fetch('/api/cfp-summary/coverage-a', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({
+                        policy_id: term.policy_id,
+                        coverage_a: coverageA,
+                    }),
+                }).catch(e => console.error('Failed to sync Coverage A:', e));
+            }
+
+            // 2. Sync RCE Valuation if entered
+            if (rceCost != null) {
+                await fetch('/api/cfp-summary/rce-valuation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({
+                        policy_id: term.policy_id,
+                        replacement_cost: rceCost,
+                        carrier: term.rce_carrier || 'Bamboo',
+                    }),
+                }).catch(e => console.error('Failed to sync RCE:', e));
+            }
+
+            // 3. Save Scenario Alert
             const res = await fetch('/api/cfp-summary/scenario-alert', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
                 body: JSON.stringify({
                     policy_id: term.policy_id,
@@ -179,7 +224,8 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
 
             const json = await res.json();
             if (res.ok && json.success) {
-                onSavedSuccess(term.policy_term_id, alertPayload);
+                // Pass term.policy_id so table state updates accurately
+                onSavedSuccess(term.policy_id, alertPayload);
                 onClose();
             } else {
                 setError(json.error || 'Failed to save scenario alert.');
@@ -201,18 +247,20 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
         setSaving(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
             await fetch('/api/cfp-summary/scenario-alert', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
                 body: JSON.stringify({
                     policy_id: term.policy_id,
                     scenario_alert: null,
                 }),
             });
-            onSavedSuccess(term.policy_term_id, null);
+            // Pass term.policy_id so table state updates accurately
+            onSavedSuccess(term.policy_id, null);
             onClose();
         } catch {
             // Close modal
@@ -258,6 +306,58 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
                         </div>
                     )}
 
+                    {/* Key Policy Amounts: Coverage A & RCE Replacement Cost */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px 14px' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Shield size={14} color="#2563eb" /> Policy Coverage Limits for Client Review Draft:
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                            <div>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                                    Current FAIR Plan Dwelling (Cov A):
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.82rem', fontWeight: 600 }}>$</span>
+                                    <input
+                                        type="text"
+                                        style={{ width: '100%', padding: '6px 10px 6px 22px', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '5px', fontWeight: 600, color: '#0f172a' }}
+                                        placeholder="e.g. 500000"
+                                        value={coverageA ? String(Math.round(Number(coverageA))) : ''}
+                                        onChange={e => {
+                                            const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                            setCoverageA(raw ? parseFloat(raw) : null);
+                                        }}
+                                    />
+                                </div>
+                                <span style={{ fontSize: '0.68rem', color: coverageA ? '#16a34a' : '#dc2626', fontWeight: 500 }}>
+                                    {coverageA ? `✓ Set to $${Math.round(Number(coverageA)).toLocaleString()}` : '⚠️ Enter amount to display in draft email (parsed from Dec)'}
+                                </span>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                                    Estimated Replacement Cost (RCE):
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.82rem', fontWeight: 600 }}>$</span>
+                                    <input
+                                        type="text"
+                                        style={{ width: '100%', padding: '6px 10px 6px 22px', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '5px', fontWeight: 600, color: '#0f172a' }}
+                                        placeholder="e.g. 644530"
+                                        value={rceCost ? String(Math.round(Number(rceCost))) : ''}
+                                        onChange={e => {
+                                            const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                            setRceCost(raw ? parseFloat(raw) : null);
+                                        }}
+                                    />
+                                </div>
+                                <span style={{ fontSize: '0.68rem', color: rceCost ? '#16a34a' : '#64748b', fontWeight: 500 }}>
+                                    {rceCost ? `✓ Set to $${Math.round(Number(rceCost)).toLocaleString()}` : 'From RCE valuation report'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                             <ShieldAlert size={14} color="#d97706" /> Select Applicable Review Scenarios:
@@ -293,7 +393,25 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
                     {/* Specific Sub-Option Controls */}
                     {activeScenarios.includes('other_structures') && (
                         <div className={styles.subDetailsBox}>
-                            <strong style={{ color: '#1e40af' }}>Detached Other Structures Observed:</strong>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <strong style={{ color: '#1e40af' }}>Detached Other Structures Observed:</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Coverage B:</label>
+                                    <div style={{ position: 'relative', width: '110px' }}>
+                                        <span style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.78rem', fontWeight: 600 }}>$</span>
+                                        <input
+                                            type="text"
+                                            style={{ width: '100%', padding: '3px 6px 3px 16px', fontSize: '0.78rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 600 }}
+                                            placeholder="0"
+                                            value={otherStructureCoverage != null ? String(Math.round(Number(otherStructureCoverage))) : ''}
+                                            onChange={e => {
+                                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                                setOtherStructureCoverage(raw ? parseFloat(raw) : null);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                             <div className={styles.optionsRow}>
                                 {['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop'].map(st => {
                                     const checked = otherStructureTypes.includes(st);

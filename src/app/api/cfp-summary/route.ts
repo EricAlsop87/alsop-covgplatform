@@ -739,6 +739,12 @@ export async function GET(req: NextRequest) {
     const policyRenewalDecDocMap: Record<string, DecDocInfo> = {};
     const policyAddressMap: Record<string, string> = {};
     const termAddressMap: Record<string, string> = {};
+    const termDecLimitDwellingMap: Record<string, number> = {};
+    const policyDecLimitDwellingMap: Record<string, number> = {};
+    const termDecLimitOtherStructuresMap: Record<string, number> = {};
+    const policyDecLimitOtherStructuresMap: Record<string, number> = {};
+    const termDecPremiumMap: Record<string, number> = {};
+    const policyDecPremiumMap: Record<string, number> = {};
 
     for (const d of decPages) {
         const addr = d.property_location || d.mailing_address;
@@ -750,6 +756,24 @@ export async function GET(req: NextRequest) {
                 termAddressMap[d.policy_term_id] = addr;
             }
         }
+
+        const dLimitDwelling = d.limit_dwelling ? parseFloat(String(d.limit_dwelling).replace(/[^0-9.]/g, '')) : undefined;
+        const dLimitOtherStructures = d.limit_other_structures ? parseFloat(String(d.limit_other_structures).replace(/[^0-9.]/g, '')) : undefined;
+        const dPremium = d.total_annual_premium ? parseFloat(String(d.total_annual_premium).replace(/[^0-9.]/g, '')) : undefined;
+
+        if (dLimitDwelling && !isNaN(dLimitDwelling) && dLimitDwelling > 0) {
+            if (d.policy_id) policyDecLimitDwellingMap[d.policy_id] = dLimitDwelling;
+            if (d.policy_term_id) termDecLimitDwellingMap[d.policy_term_id] = dLimitDwelling;
+        }
+        if (dLimitOtherStructures && !isNaN(dLimitOtherStructures) && dLimitOtherStructures > 0) {
+            if (d.policy_id) policyDecLimitOtherStructuresMap[d.policy_id] = dLimitOtherStructures;
+            if (d.policy_term_id) termDecLimitOtherStructuresMap[d.policy_term_id] = dLimitOtherStructures;
+        }
+        if (dPremium && !isNaN(dPremium) && dPremium > 0) {
+            if (d.policy_id) policyDecPremiumMap[d.policy_id] = dPremium;
+            if (d.policy_term_id) termDecPremiumMap[d.policy_term_id] = dPremium;
+        }
+
         const sub = Array.isArray(d.dec_page_submissions) ? d.dec_page_submissions[0] : d.dec_page_submissions;
         const bucket = (sub?.bucket as 'cfp-raw-decpage' | 'cfp-platform-documents') || 'cfp-raw-decpage';
         const docInfo = {
@@ -757,9 +781,9 @@ export async function GET(req: NextRequest) {
             file_name: sub?.file_name,
             bucket,
             policy_number: d.policy_number || undefined,
-            total_premium: d.total_annual_premium ? parseFloat(String(d.total_annual_premium).replace(/[^0-9.]/g, '')) : undefined,
-            limit_dwelling: d.limit_dwelling ? parseFloat(String(d.limit_dwelling).replace(/[^0-9.]/g, '')) : undefined,
-            limit_other_structures: d.limit_other_structures ? parseFloat(String(d.limit_other_structures).replace(/[^0-9.]/g, '')) : undefined,
+            total_premium: dPremium,
+            limit_dwelling: dLimitDwelling,
+            limit_other_structures: dLimitOtherStructures,
         };
         if (sub?.storage_path && d.policy_id) {
             policyDecDocMap[d.policy_id] = docInfo;
@@ -1305,13 +1329,13 @@ export async function GET(req: NextRequest) {
             policy_status: policy?.status || 'active',
             annual_premium: manualFairPlanPremiumMap[policyId]
                 ?? (t.annual_premium ? parseFloat(t.annual_premium) : null)
-                ?? (termDec?.total_premium ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
+                ?? (termDecPremiumMap[t.id] ?? termDec?.total_premium ?? policyDecPremiumMap[policyId] ?? (policyDecDocMap[policyId] as any)?.total_premium ?? null),
             coverage_a: manualCoverageAMap[policyId]
                 ?? (t.limit_dwelling ? parseFloat(String(t.limit_dwelling).replace(/[^0-9.]/g, '')) : null)
-                ?? (termDec?.limit_dwelling ?? (policyDecDocMap[policyId] as any)?.limit_dwelling ?? null),
+                ?? (termDecLimitDwellingMap[t.id] ?? termDec?.limit_dwelling ?? policyDecLimitDwellingMap[policyId] ?? (policyDecDocMap[policyId] as any)?.limit_dwelling ?? null),
             coverage_b: manualCoverageBMap[policyId]
                 ?? (t.limit_other_structures ? parseFloat(String(t.limit_other_structures).replace(/[^0-9.]/g, '')) : null)
-                ?? (termDec?.limit_other_structures ?? (policyDecDocMap[policyId] as any)?.limit_other_structures ?? null),
+                ?? (termDecLimitOtherStructuresMap[t.id] ?? termDec?.limit_other_structures ?? policyDecLimitOtherStructuresMap[policyId] ?? (policyDecDocMap[policyId] as any)?.limit_other_structures ?? null),
             payment_status: t.payment_status,
             payment_plan: t.payment_plan,
             is_current: t.is_current,
@@ -1473,7 +1497,13 @@ export async function GET(req: NextRequest) {
         // 1. Find family-wide Title Pro (if any term was verified)
         const familyTitlePro = sorted.find(t => !!t.title_pro)?.title_pro || null;
 
-        // 2. Merge family-wide carrier quotes
+        // 2. Unify family-wide Coverage A, Coverage B, RCE and Scenario Alert
+        const familyCoverageA = sorted.find(t => t.coverage_a != null && t.coverage_a > 0)?.coverage_a || null;
+        const familyCoverageB = sorted.find(t => t.coverage_b != null && t.coverage_b > 0)?.coverage_b || null;
+        const familyRceCost = sorted.find(t => t.rce_replacement_cost != null && t.rce_replacement_cost > 0)?.rce_replacement_cost || null;
+        const familyScenarioAlert = sorted.find(t => !!t.scenario_alert)?.scenario_alert || null;
+
+        // 3. Merge family-wide carrier quotes
         const familyCarrierQuotes: any = {
             bamboo: sorted.find(t => !!t.carrier_quotes?.bamboo)?.carrier_quotes?.bamboo || null,
             aegis: sorted.find(t => !!t.carrier_quotes?.aegis)?.carrier_quotes?.aegis || null,
@@ -1482,7 +1512,7 @@ export async function GET(req: NextRequest) {
             psic: sorted.find(t => !!t.carrier_quotes?.psic)?.carrier_quotes?.psic || null,
         };
 
-        // 3. Find family-wide Renewal Dec & Renewal Premium
+        // 4. Find family-wide Renewal Dec & Renewal Premium
         const renewalTerm = sorted.find(t => t.has_renewal_dec || t.term_type === 'RENEWAL' || t.renewal_annual_premium);
         const familyRenewalPremium = renewalTerm?.renewal_annual_premium || (sorted.length > 1 && sorted[1].annual_premium ? sorted[1].annual_premium : null);
         const familyRenewalExp = renewalTerm?.renewal_expiration_date || (sorted.length > 1 && sorted[1].expiration_date ? sorted[1].expiration_date : null);
@@ -1492,6 +1522,18 @@ export async function GET(req: NextRequest) {
             row.term_type = i === 0 ? 'ORIGINAL' : 'RENEWAL';
             if (!row.title_pro && familyTitlePro) {
                 row.title_pro = familyTitlePro;
+            }
+            if (!row.coverage_a && familyCoverageA) {
+                row.coverage_a = familyCoverageA;
+            }
+            if (!row.coverage_b && familyCoverageB) {
+                row.coverage_b = familyCoverageB;
+            }
+            if (!row.rce_replacement_cost && familyRceCost) {
+                row.rce_replacement_cost = familyRceCost;
+            }
+            if (!row.scenario_alert && familyScenarioAlert) {
+                row.scenario_alert = familyScenarioAlert;
             }
             if (row.carrier_quotes) {
                 if (!row.carrier_quotes.bamboo && familyCarrierQuotes.bamboo) row.carrier_quotes.bamboo = familyCarrierQuotes.bamboo;

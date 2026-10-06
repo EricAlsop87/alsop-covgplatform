@@ -172,31 +172,44 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
     useEffect(() => {
         if (term) {
-            setRceReplacementCost(term.rce_replacement_cost || null);
+            setRceReplacementCost(term.scenario_alert?.rce_cost ?? term.rce_replacement_cost ?? null);
             setRceCarrier(term.rce_carrier || 'Bamboo');
             setFairPlanPremium(term.annual_premium || term.renewal_annual_premium || null);
-            setCoverageADwelling((term as any).coverage_a || (term as any).limit_dwelling || null);
+            setCoverageADwelling(term.scenario_alert?.coverage_a ?? (term as any).coverage_a ?? (term as any).limit_dwelling ?? null);
 
-            // Auto-detect scenarios from term data
-            const detectedScenarios: ScenarioType[] = [];
-            if (term.rce_replacement_cost) {
-                detectedScenarios.push('rce_review');
+            if (term.scenario_alert && Array.isArray(term.scenario_alert.scenarios) && term.scenario_alert.scenarios.length > 0) {
+                const sa = term.scenario_alert;
+                setActiveScenarios(sa.scenarios);
+                if (sa.otherStructureTypes) setOtherStructureTypes(sa.otherStructureTypes);
+                if (sa.otherStructureCoverage !== undefined) setOtherStructureCoverage(sa.otherStructureCoverage);
+                if (sa.propertyFeatures) setPropertyFeatures(sa.propertyFeatures);
+                if (sa.annualSavings !== undefined) setAnnualSavings(sa.annualSavings);
+                if (sa.vaRemarks) {
+                    setHasAdditionalAlert(true);
+                    setAdditionalAlertText(sa.vaRemarks);
+                }
+            } else {
+                // Auto-detect scenarios from term data
+                const detectedScenarios: ScenarioType[] = [];
+                if (term.rce_replacement_cost) {
+                    detectedScenarios.push('rce_review');
+                }
+
+                // Check if any companion quotes exist
+                const bPrem = term.carrier_quotes?.bamboo?.premium ? Number(term.carrier_quotes.bamboo.premium) : null;
+                const aPrem = term.carrier_quotes?.aegis?.premium ? Number(term.carrier_quotes.aegis.premium) : null;
+                const pPrem = term.carrier_quotes?.psic?.premium ? Number(term.carrier_quotes.psic.premium) : null;
+                const cfpPrem = term.annual_premium || term.renewal_annual_premium;
+
+                const bestPrem = bPrem || aPrem || pPrem;
+                if (bestPrem && cfpPrem && bestPrem < Number(cfpPrem)) {
+                    detectedScenarios.push('standard_savings');
+                } else if (bestPrem) {
+                    detectedScenarios.push('standard_no_savings');
+                }
+
+                setActiveScenarios(detectedScenarios);
             }
-
-            // Check if any companion quotes exist
-            const bPrem = term.carrier_quotes?.bamboo?.premium ? Number(term.carrier_quotes.bamboo.premium) : null;
-            const aPrem = term.carrier_quotes?.aegis?.premium ? Number(term.carrier_quotes.aegis.premium) : null;
-            const pPrem = term.carrier_quotes?.psic?.premium ? Number(term.carrier_quotes.psic.premium) : null;
-            const cfpPrem = term.annual_premium || term.renewal_annual_premium;
-
-            const bestPrem = bPrem || aPrem || pPrem;
-            if (bestPrem && cfpPrem && bestPrem < Number(cfpPrem)) {
-                detectedScenarios.push('standard_savings');
-            } else if (bestPrem) {
-                detectedScenarios.push('standard_no_savings');
-            }
-
-            setActiveScenarios(detectedScenarios);
         }
     }, [term]);
 

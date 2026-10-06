@@ -607,14 +607,25 @@ export function CFPSummaryTable({
     const handleSaveScenarioAlertSuccess = (policyId: string, alertData: ScenarioAlertData | null) => {
         setFamilies(prev =>
             prev.map(f => {
-                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId || t.policy_term_id === policyId);
                 return {
                     ...f,
-                    terms: f.terms.map(t =>
-                        t.policy_id === policyId || belongsToFamily
-                            ? { ...t, scenario_alert: alertData }
-                            : t
-                    ),
+                    terms: f.terms.map(t => {
+                        const isMatch = t.policy_id === policyId || t.policy_term_id === policyId || belongsToFamily;
+                        if (!isMatch) return t;
+                        const alertCovA = (alertData as any)?.coverage_a;
+                        const alertRce = (alertData as any)?.rce_replacement_cost;
+                        return {
+                            ...t,
+                            scenario_alert: alertData,
+                            coverage_a: alertCovA !== undefined && alertCovA !== null && !isNaN(Number(alertCovA))
+                                ? Number(alertCovA)
+                                : t.coverage_a,
+                            rce_replacement_cost: alertRce !== undefined && alertRce !== null && !isNaN(Number(alertRce))
+                                ? Number(alertRce)
+                                : t.rce_replacement_cost,
+                        };
+                    }),
                 };
             })
         );
