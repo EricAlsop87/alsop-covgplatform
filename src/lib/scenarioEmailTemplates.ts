@@ -74,7 +74,9 @@ I am also sharing the home replacement estimator with you. Please check if we mi
 
 Quick reminder: I’m not a contractor or professional estimator, and I don’t know the exact details of your home, so I can’t guarantee this amount will rebuild it. This estimator is a tool and should be considered the minimum amount to insure for. You are responsible for selecting the final dwelling limit.
 
-Please reply to let us know if you agree with the estimated amount, or if you would prefer a higher dwelling limit.
+Please reply with one of the following:
+1. You agree with the estimated amount, or
+2. You want a higher limit and tell me what amount you prefer.
 
 Best regards,`;
         },
@@ -232,55 +234,131 @@ export function generateCompositeClientEmail(
         return { subject, bodyText, bodyHtml };
     }
 
-    // Multi-scenario fusion
+    // ── Multi-Scenario Smart Fusion ──────────────────────────────────────────
     const client = data.clientName || '[Client Name]';
-    const subject = `Your Comprehensive Policy & Property Review – ${data.propertyAddress || '[Property Address]'}`;
+    const carrier = data.carrierName || 'Bamboo';
+    const hasStandardSavings = activeScenarios.includes('standard_savings');
+    const hasStandardNoSavings = activeScenarios.includes('standard_no_savings');
+    const hasStandardQuote = hasStandardSavings || hasStandardNoSavings;
+    const hasRce = activeScenarios.includes('rce_review');
+    const hasOtherStructures = activeScenarios.includes('other_structures');
+    const hasPropertyFeature = activeScenarios.includes('property_feature');
 
-    const points: string[] = [];
+    const sections: string[] = [];
+    let subject = `Your Home Coverage & Property Review – ${data.propertyAddress || '[Property Address]'}`;
 
-    if (activeScenarios.includes('rce_review')) {
-        const curDwell = formatCurrency(data.currentDwellingLimit);
-        const rceVal = formatCurrency(data.rceValuationAmount);
-        points.push(`Dwelling Coverage vs. Replacement Cost Estimate:\n• Current Dwelling Coverage: ${curDwell} | Estimated Replacement Cost: ${rceVal}\n• We are sharing the home replacement estimator with you. Quick reminder: This estimator is a tool and should be considered the minimum amount to insure for; you are responsible for selecting the final dwelling limit.`);
+    // ── Section 1: Standard Policy Opportunity Hook (If applicable) ─────────
+    if (hasStandardSavings) {
+        subject = `A New Homeowners Insurance Option for You – ${data.propertyAddress || '[Property Address]'}`;
+        const savingsStr = data.annualSavings ? formatCurrency(data.annualSavings) : null;
+        sections.push(`Hi ${client},
+
+I am thrilled to share some excellent news regarding your homeowners insurance.
+
+We successfully secured a standard homeowners insurance quote for your property through ${carrier}. This means we can transition you away from your current California FAIR Plan policy and companion DIC policy into one unified policy.
+
+Moving to a standard policy provides you with several major benefits:
+• Better Coverage: Your new policy bundles your fire, theft, liability, and water damage coverages into one seamless package.
+• Lower Costs: Standard policies offer competitive premium rates compared to the FAIR Plan.${savingsStr ? ` Estimated Annual Savings: ${savingsStr}.` : ''}
+• Single Deductible: You will no longer have to manage separate deductibles across two different insurance plans.
+• Easier Management: You will deal with just one insurance company, one bill, and one point of contact.`);
+    } else if (hasStandardNoSavings) {
+        subject = `Another Homeowners Insurance Option to Consider – ${data.propertyAddress || '[Property Address]'}`;
+        sections.push(`Hi ${client},
+
+We found a standard homeowners insurance option for your property through ${carrier} that I wanted to share with you.
+
+While this option may not lower the overall premium, it offers distinct advantages by combining your coverage into one standard homeowners policy instead of having separate California FAIR Plan and DIC policies:
+
+• Broader Coverage: Comprehensive protection bundling fire, theft, liability, and water damage under one master policy.
+• Single Deductible: No split deductibles between fire and standard perils.
+• Easier Management: One insurance company, one bill, and one direct point of contact.`);
+    } else {
+        // Renewal coverage review only (no standard quote)
+        sections.push(`Hi ${client},
+
+I hope you’re doing well. As part of your upcoming renewal review, I reviewed your current California FAIR Plan coverage together with the available replacement cost estimate and property records:`);
     }
 
-    if (activeScenarios.includes('other_structures')) {
+    // ── Section 2: Dwelling Coverage & RCE Review ──────────────────────────
+    if (hasRce) {
+        const curDwell = formatCurrency(data.currentDwellingLimit);
+        const rceVal = formatCurrency(data.rceValuationAmount);
+
+        const rceIntro = hasStandardQuote
+            ? `Dwelling Coverage & Replacement Cost Estimate:\nIn preparing this quote, we evaluated your current dwelling limit against the latest replacement cost estimate:\n• Current Dwelling Coverage: ${curDwell}\n• Estimated Replacement Cost: ${rceVal}`
+            : `Dwelling Coverage vs. Replacement Cost Estimate:\n• Current Dwelling Coverage: ${curDwell}\n• Estimated Replacement Cost: ${rceVal}`;
+
+        sections.push(`${rceIntro}
+
+I am also sharing the home replacement estimator with you. Please check if we missed anything.
+
+Quick reminder: I’m not a contractor or professional estimator, and I don’t know the exact details of your home, so I can’t guarantee this amount will rebuild it. This estimator is a tool and should be considered the minimum amount to insure for. You are responsible for selecting the final dwelling limit.`);
+    }
+
+    // ── Section 3: Other Structures (if applicable) ────────────────────────
+    if (hasOtherStructures) {
         const structures = (data.otherStructureTypes && data.otherStructureTypes.length > 0)
             ? data.otherStructureTypes.join(', ')
             : 'detached garage / shed / deck / fence';
         const covAmount = data.otherStructureCoverage ? formatCurrency(data.otherStructureCoverage) : 'None ($0)';
-        points.push(`Other Structures on Property:\n• We noticed additional detached structures (e.g. ${structures}). Current Other Structures coverage is ${covAmount}.\n• Please let us know if there are detached structures or additions we should properly protect.`);
+        sections.push(`Other Structures on Property:
+• We noticed additional detached structures (e.g. ${structures}). Current Other Structures coverage is ${covAmount}.
+• Please let us know if there are detached structures or additions we should properly protect.`);
     }
 
-    if (activeScenarios.includes('property_feature')) {
+    // ── Section 4: Property Features (if applicable) ───────────────────────
+    if (hasPropertyFeature) {
         const features = (data.propertyFeatures && data.propertyFeatures.length > 0)
             ? data.propertyFeatures.join(', ')
             : 'Wood-Burning Stove / Solar Panels / Propane Tank';
-        points.push(`Property Feature Confirmation:\n• Property records indicate: ${features}.\n• Please confirm if this feature is currently present so carrier underwriting details remain accurate.`);
+        sections.push(`Property Feature Confirmation:
+• Property records indicate: ${features}.
+• Please confirm if this feature is currently present so carrier underwriting details remain accurate.`);
     }
 
-    if (activeScenarios.includes('standard_savings')) {
-        const carrier = data.carrierName || 'Bamboo';
-        const savingsStr = data.annualSavings ? formatCurrency(data.annualSavings) : 'significant annual savings';
-        points.push(`Standard Replacement Policy Opportunity:\n• We secured a standard homeowners quote through ${carrier} offering broader bundled coverage, a single deductible, and estimated savings of ${savingsStr}.`);
-    } else if (activeScenarios.includes('standard_no_savings')) {
-        const carrier = data.carrierName || 'Bamboo';
-        points.push(`Standard Homeowners Option:\n• A standard policy option through ${carrier} is available to combine your separate FAIR Plan & DIC policies under one deductible and point of contact.`);
+    // ── Section 5: Next Steps & Clear Call to Action ───────────────────────
+    if (hasStandardQuote) {
+        const replyIntro = hasRce
+            ? `What happens next?
+We need to finalize the details to officially activate your new coverage and cancel your FAIR Plan policy. Please review the attached quote, estimator, and coverage summary.
+
+Please reply with one of the following:
+1. You agree with the estimated amount and wish to proceed with the new policy, or
+2. You want a higher dwelling limit or would like to discuss adjustments before activating.`
+            : `What happens next?
+We need to finalize the details to officially activate your new coverage and cancel your FAIR Plan policy. Please review the attached premium quote and coverage summary.
+
+Please confirm if you wish to proceed or if you would like to go over the coverage together.`;
+        sections.push(`${replyIntro}
+
+Best regards,`);
+    } else if (hasRce) {
+        sections.push(`Please reply with one of the following:
+1. You agree with the estimated amount, or
+2. You want a higher limit and tell me what amount you prefer.
+
+Best regards,`);
+    } else {
+        sections.push(`When you have a moment, please review the attached summary and let us know if you have any questions or would like to discuss adjustments.
+
+Best regards,`);
     }
 
-    const bodyText = `Hi ${client},
-
-As part of your upcoming renewal review, we evaluated your current California FAIR Plan coverage together with the latest replacement cost estimates, property records, and carrier options:
-
-${points.join('\n\n')}
-
-When you have a moment, please review the attached summary and let us know if you would like to discuss these items or adjust your coverage.
-
-Best regards,`;
+    const bodyText = sections.join('\n\n');
 
     const bodyHtml = bodyText
         .split('\n\n')
-        .map(p => `<p style="margin: 0 0 14px 0; line-height: 1.6; color: #1e293b;">${p.replace(/\n/g, '<br/>')}</p>`)
+        .map(p => {
+            const trimmed = p.trim();
+            if (trimmed.startsWith('•') || trimmed.includes('\n•')) {
+                return `<p style="margin: 0 0 14px 0; line-height: 1.6; color: #1e293b;">${trimmed.replace(/\n/g, '<br/>')}</p>`;
+            }
+            if (/^\d+\./.test(trimmed) || trimmed.includes('\n1.')) {
+                return `<p style="margin: 0 0 14px 0; line-height: 1.6; color: #1e293b; font-weight: 500;">${trimmed.replace(/\n/g, '<br/>')}</p>`;
+            }
+            return `<p style="margin: 0 0 14px 0; line-height: 1.6; color: #1e293b;">${trimmed.replace(/\n/g, '<br/>')}</p>`;
+        })
         .join('');
 
     return { subject, bodyText, bodyHtml };
