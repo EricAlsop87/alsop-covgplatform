@@ -812,42 +812,69 @@ export default function DuplicateReview() {
                         )}
                     </div>
 
-                    {/* Auto-Bind All 100% Button */}
+                    {/* Auto-Bind Buttons (100% and ≥90%) */}
                     {(() => {
-                        const exactCount = filteredPolicies.filter(g => g.confidence >= 100).length;
-                        if (exactCount === 0) return null;
+                        const count100 = filteredPolicies.filter(g => g.confidence >= 100).length;
+                        const count90 = filteredPolicies.filter(g => g.confidence >= 90).length;
+                        if (count90 === 0) return null;
                         return (
-                            <button
-                                onClick={() => handleAutoBindPolicies(100)}
-                                disabled={isAutoBindingPolicies || isMerging}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem',
-                                    padding: '0.35rem 0.85rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 700,
-                                    borderRadius: '8px',
-                                    border: '1px solid rgba(59, 130, 246, 0.45)',
-                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.22))',
-                                    color: '#3b82f6',
-                                    cursor: (isAutoBindingPolicies || isMerging) ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.15s ease',
-                                }}
-                                title="Automatically bind all suspected policy variants with 100% match confidence"
-                            >
-                                {isAutoBindingPolicies ? (
-                                    <>
-                                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                                        <span>Auto-Binding 100%...</span>
-                                    </>
-                                ) : (
-                                    <>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                {count100 > 0 && (
+                                    <button
+                                        onClick={() => handleAutoBindPolicies(100)}
+                                        disabled={isAutoBindingPolicies || isMerging}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.4rem',
+                                            padding: '0.35rem 0.85rem',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 700,
+                                            borderRadius: '8px',
+                                            border: '1px solid rgba(59, 130, 246, 0.45)',
+                                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.22))',
+                                            color: '#3b82f6',
+                                            cursor: (isAutoBindingPolicies || isMerging) ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.15s ease',
+                                        }}
+                                        title="Automatically bind all suspected policy variants with 100% match confidence"
+                                    >
                                         <Zap size={13} style={{ fill: 'currentColor' }} />
-                                        <span>Auto-Bind All ({exactCount} at 100%)</span>
-                                    </>
+                                        <span>Auto-Bind 100% ({count100})</span>
+                                    </button>
                                 )}
-                            </button>
+                                <button
+                                    onClick={() => handleAutoBindPolicies(90)}
+                                    disabled={isAutoBindingPolicies || isMerging}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
+                                        padding: '0.35rem 0.85rem',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700,
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(16, 185, 129, 0.45)',
+                                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.22))',
+                                        color: '#10b981',
+                                        cursor: (isAutoBindingPolicies || isMerging) ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                    title="Automatically bind all suspected policy variants with ≥90% match confidence"
+                                >
+                                    {isAutoBindingPolicies ? (
+                                        <>
+                                            <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                                            <span>Binding ≥90%...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Zap size={13} style={{ fill: 'currentColor' }} />
+                                            <span>Auto-Bind All ({count90} at ≥90%)</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         );
                     })()}
                 </div>
