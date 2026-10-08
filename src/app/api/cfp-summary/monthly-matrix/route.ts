@@ -39,6 +39,35 @@ const MONTH_NAMES = [
 const matrixCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL_MS = 60_000;
 
+/** Helper to fetch all rows using parallel range requests to bypass PostgREST 1000-row limit */
+async function fetchAllRowsParallel<T>(
+    queryFactory: (from: number, to: number) => PromiseLike<{ data: T[] | null; error?: any }>,
+    initialPages = 5,
+    pageSize = 1000
+): Promise<T[]> {
+    const pagePromises = Array.from({ length: initialPages }, (_, i) =>
+        queryFactory(i * pageSize, (i + 1) * pageSize - 1)
+    );
+    const results = await Promise.all(pagePromises);
+    const all: T[] = [];
+    for (const res of results) {
+        if (res.data && res.data.length > 0) {
+            all.push(...res.data);
+        }
+    }
+    let lastPageResult = results[results.length - 1];
+    let pageIndex = initialPages;
+    while (lastPageResult?.data && lastPageResult.data.length === pageSize) {
+        const nextRes = await queryFactory(pageIndex * pageSize, (pageIndex + 1) * pageSize - 1);
+        if (!nextRes.data || nextRes.data.length === 0) break;
+        all.push(...nextRes.data);
+        if (nextRes.data.length < pageSize) break;
+        pageIndex++;
+        lastPageResult = nextRes;
+    }
+    return all;
+}
+
 export async function GET(req: NextRequest) {
     const authResult = await authenticateRequest(req, { requiredRole: ['admin', 'service', 'agent', 'user'] });
     if (isAuthError(authResult)) {
@@ -114,20 +143,29 @@ export async function GET(req: NextRequest) {
             buildTermsQuery().range(1000, 1999),
             buildTermsQuery().range(2000, 2999),
             buildTermsQuery().range(3000, 3999),
-            admin
-                .from('dec_pages')
-                .select('id, policy_id, policy_term_id, policy_number, property_location, mailing_address, total_annual_premium, dec_page_submissions(storage_path, file_name, bucket)')
-                .limit(5000),
-            admin
-                .from('platform_documents')
-                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, raw_text, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, rce_replacement_cost), doc_data_rce(replacement_cost, sq_feet)')
-                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
-                .limit(5000),
-            admin
-                .from('manual_overrides')
-                .select('policy_id, field_name, new_value')
-                .in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'rce_valuation', 'rce_replacement_cost'])
-                .limit(5000)
+            fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('dec_pages')
+                    .select('id, policy_id, policy_term_id, policy_number, property_location, mailing_address, total_annual_premium, dec_page_submissions(storage_path, file_name, bucket)')
+                    .range(from, to),
+                2
+            ),
+            fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('platform_documents')
+                    .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, raw_text, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, rce_replacement_cost), doc_data_rce(replacement_cost, sq_feet)')
+                    .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
+                    .range(from, to),
+                3
+            ),
+            fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('manual_overrides')
+                    .select('policy_id, field_name, new_value')
+                    .in('field_name', ['has_bamboo_coverage', 'no_dic_available', 'carrier_quote_bamboo', 'carrier_quote_aegis', 'carrier_quote_am', 'carrier_quote_sagesure', 'carrier_quote_psic', 'rce_valuation', 'rce_replacement_cost'])
+                    .range(from, to),
+                6
+            )
         ]);
 
         const allTerms: any[] = [
@@ -137,9 +175,9 @@ export async function GET(req: NextRequest) {
             ...(chunk3.data || [])
         ];
 
-        const decPages = decPagesRes.data || [];
-        const docs = docsRes.data || [];
-        const overrides = overridesRes.data || [];
+        const decPages = decPagesRes || [];
+        const docs = docsRes || [];
+        const overrides = overridesRes || [];
 
         // Build lookups in memory
         const termsByPolicy: Record<string, any[]> = {};

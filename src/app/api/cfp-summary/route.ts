@@ -393,6 +393,36 @@ interface ServerCacheEntry {
 export const serverSummaryCache = new Map<string, ServerCacheEntry>();
 const SERVER_CACHE_TTL_MS = 180_000; // 3 min server cache for instant 0ms responses
 
+/** Helper to fetch all rows using parallel range requests to bypass PostgREST 1000-row limit */
+async function fetchAllRowsParallel<T>(
+    queryFactory: (from: number, to: number) => PromiseLike<{ data: T[] | null; error?: any }>,
+    initialPages = 5,
+    pageSize = 1000
+): Promise<T[]> {
+    const pagePromises = Array.from({ length: initialPages }, (_, i) =>
+        queryFactory(i * pageSize, (i + 1) * pageSize - 1)
+    );
+    const results = await Promise.all(pagePromises);
+    const all: T[] = [];
+    for (const res of results) {
+        if (res.data && res.data.length > 0) {
+            all.push(...res.data);
+        }
+    }
+    // If the last page was completely full, continue fetching sequentially until empty
+    let lastPageResult = results[results.length - 1];
+    let pageIndex = initialPages;
+    while (lastPageResult?.data && lastPageResult.data.length === pageSize) {
+        const nextRes = await queryFactory(pageIndex * pageSize, (pageIndex + 1) * pageSize - 1);
+        if (!nextRes.data || nextRes.data.length === 0) break;
+        all.push(...nextRes.data);
+        if (nextRes.data.length < pageSize) break;
+        pageIndex++;
+        lastPageResult = nextRes;
+    }
+    return all;
+}
+
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service'] });
@@ -659,12 +689,14 @@ export async function GET(req: NextRequest) {
     const [decPages, docs, bambooOverrides, notesData] = await Promise.all([
         // 1. Dec pages
         isLargeSlice
-            ? admin
-                .from('dec_pages')
-                .select('id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, limit_dwelling, limit_other_structures, dec_page_submissions(storage_path, file_name, bucket)')
-                .not('policy_id', 'is', null)
-                .limit(3000)
-                .then(res => (res.data || []).filter(d => policyIdSet.has(d.policy_id)))
+            ? fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('dec_pages')
+                    .select('id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, limit_dwelling, limit_other_structures, dec_page_submissions(storage_path, file_name, bucket)')
+                    .not('policy_id', 'is', null)
+                    .range(from, to),
+                2
+            ).then(rows => rows.filter(d => policyIdSet.has(d.policy_id)))
             : admin
                 .from('dec_pages')
                 .select('id, policy_id, policy_term_id, policy_number, policy_period_start, policy_period_end, property_location, mailing_address, total_annual_premium, limit_dwelling, limit_other_structures, dec_page_submissions(storage_path, file_name, bucket)')
@@ -673,13 +705,15 @@ export async function GET(req: NextRequest) {
 
         // 2. Platform documents (WITHOUT raw_text to eliminate MBs of network/JSON overhead)
         isLargeSlice
-            ? admin
-                .from('platform_documents')
-                .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, cov_b_other_struct, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
-                .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other', 'dec_page'])
-                .not('policy_id', 'is', null)
-                .limit(3000)
-                .then(res => (res.data || []).filter(d => policyIdSet.has(d.policy_id)))
+            ? fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('platform_documents')
+                    .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, cov_b_other_struct, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
+                    .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other', 'dec_page'])
+                    .not('policy_id', 'is', null)
+                    .range(from, to),
+                3
+            ).then(rows => rows.filter(d => policyIdSet.has(d.policy_id)))
             : admin
                 .from('platform_documents')
                 .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, basic_premium, total_charge, optional_premium, surcharges, credits, cov_a_dwelling, cov_b_other_struct, rce_replacement_cost, rce_living_area, rce_estimate_number, rce_quality_grade), doc_data_rce(replacement_cost, replacement_range_low, replacement_range_high, cost_per_sqft, sq_feet, source, valuation_id, created_by)')
@@ -689,12 +723,14 @@ export async function GET(req: NextRequest) {
 
         // 3. Manual overrides
         isLargeSlice
-            ? admin
-                .from('manual_overrides')
-                .select('policy_id, field_name, new_value, original_value')
-                .in('field_name', OVERRIDE_FIELDS)
-                .limit(5000)
-                .then(res => (res.data || []).filter(o => policyIdSet.has(o.policy_id)))
+            ? fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('manual_overrides')
+                    .select('policy_id, field_name, new_value, original_value')
+                    .in('field_name', OVERRIDE_FIELDS)
+                    .range(from, to),
+                6
+            ).then(rows => rows.filter(o => policyIdSet.has(o.policy_id)))
             : admin
                 .from('manual_overrides')
                 .select('policy_id, field_name, new_value, original_value')
@@ -704,12 +740,14 @@ export async function GET(req: NextRequest) {
 
         // 4. Notes
         isLargeSlice
-            ? admin
-                .from('notes')
-                .select('id, policy_id, body, meta, created_at')
-                .eq('is_archived', false)
-                .limit(4000)
-                .then(res => (res.data || []).filter(n => policyIdSet.has(n.policy_id)))
+            ? fetchAllRowsParallel<any>((from, to) =>
+                admin
+                    .from('notes')
+                    .select('id, policy_id, body, meta, created_at')
+                    .eq('is_archived', false)
+                    .range(from, to),
+                4
+            ).then(rows => rows.filter(n => policyIdSet.has(n.policy_id)))
             : admin
                 .from('notes')
                 .select('id, policy_id, body, meta, created_at')

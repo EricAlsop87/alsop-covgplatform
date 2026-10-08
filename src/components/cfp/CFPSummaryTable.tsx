@@ -2137,7 +2137,7 @@ export function CFPSummaryTable({
                     const titleText = [
                         `Scenario Alert (${count} active):`,
                         ...labels,
-                        alertData.vaRemarks ? `VA Remarks: "${alertData.vaRemarks}"` : '',
+                        alertData.vaRemarks ? `Remarks: "${alertData.vaRemarks}"` : '',
                         alertData.updated_by ? `Updated by: ${alertData.updated_by}` : '',
                         '(Click to view / edit / copy prepared email)'
                     ].filter(Boolean).join('\n');
