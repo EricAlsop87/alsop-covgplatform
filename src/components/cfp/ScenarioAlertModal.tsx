@@ -413,7 +413,7 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
                                 </div>
                             </div>
                             <div className={styles.optionsRow}>
-                                {['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop'].map(st => {
+                                {['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop', 'Pool'].map(st => {
                                     const checked = otherStructureTypes.includes(st);
                                     return (
                                         <label key={st} className={styles.checkboxOption}>

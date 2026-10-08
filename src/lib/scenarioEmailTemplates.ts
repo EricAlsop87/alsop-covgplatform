@@ -13,7 +13,7 @@ export interface PolicyScenarioData {
     currentDwellingLimit?: number | string | null;
     rceValuationAmount?: number | string | null;
     rceCarrier?: string;
-    otherStructureTypes?: string[]; // e.g. ['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn']
+    otherStructureTypes?: string[]; // e.g. ['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop', 'Pool']
     otherStructureCoverage?: number | string | null;
     propertyFeatures?: string[]; // e.g. ['Wood-Burning Stove', 'Solar Panels', 'Propane Tank']
     carrierName?: string; // e.g. 'Bamboo', 'Aegis', 'Pacific Specialty (PSIC)'
@@ -155,7 +155,7 @@ Best regards,`;
             const client = data.clientName || '[Client Name]';
             const structures = (data.otherStructureTypes && data.otherStructureTypes.length > 0)
                 ? data.otherStructureTypes.join(', ')
-                : 'fence / deck / detached garage / shed / barn';
+                : 'fence / deck / detached garage / shed / barn / pool';
             const covAmount = data.otherStructureCoverage !== undefined && data.otherStructureCoverage !== null && data.otherStructureCoverage !== ''
                 ? formatCurrency(data.otherStructureCoverage)
                 : 'None ($0)';
@@ -300,7 +300,7 @@ Quick reminder: I’m not a contractor or professional estimator, and I don’t 
     if (hasOtherStructures) {
         const structures = (data.otherStructureTypes && data.otherStructureTypes.length > 0)
             ? data.otherStructureTypes.join(', ')
-            : 'detached garage / shed / deck / fence';
+            : 'detached garage / shed / deck / fence / pool';
         const covAmount = data.otherStructureCoverage ? formatCurrency(data.otherStructureCoverage) : 'None ($0)';
         sections.push(`Other Structures on Property:
 • We noticed additional detached structures (e.g. ${structures}). Current Other Structures coverage is ${covAmount}.

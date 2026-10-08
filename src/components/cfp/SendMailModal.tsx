@@ -1743,7 +1743,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                     <div className={styles.scenarioDetailsBox}>
                                         <strong style={{ color: '#1e40af' }}>Other Structures Options:</strong>
                                         <div className={styles.scenarioInputsRow}>
-                                            {['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop'].map(st => {
+                                            {['Detached Garage', 'Shed', 'Deck', 'Fence', 'Barn', 'Workshop', 'Pool'].map(st => {
                                                 const hasSt = otherStructureTypes.includes(st);
                                                 return (
                                                     <label key={st} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.74rem' }}>
