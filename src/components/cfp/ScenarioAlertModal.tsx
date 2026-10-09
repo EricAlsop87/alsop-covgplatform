@@ -81,25 +81,8 @@ export function ScenarioAlertModal({ term, isOpen, onClose, onSavedSuccess }: Sc
             setVaRemarks(sa.vaRemarks || '');
             setAnnualSavings(sa.annualSavings ?? null);
         } else {
-            // Auto-detect based on term data
-            const detected: ScenarioType[] = [];
-            if (term.rce_replacement_cost) {
-                detected.push('rce_review');
-            }
-
-            const bPrem = term.carrier_quotes?.bamboo?.premium ? Number(term.carrier_quotes.bamboo.premium) : null;
-            const aPrem = term.carrier_quotes?.aegis?.premium ? Number(term.carrier_quotes.aegis.premium) : null;
-            const pPrem = term.carrier_quotes?.psic?.premium ? Number(term.carrier_quotes.psic.premium) : null;
-            const cfpPrem = term.annual_premium || term.renewal_annual_premium;
-
-            const bestPrem = bPrem || aPrem || pPrem;
-            if (bestPrem && cfpPrem && bestPrem < Number(cfpPrem)) {
-                detected.push('standard_savings');
-            } else if (bestPrem) {
-                detected.push('standard_no_savings');
-            }
-
-            setActiveScenarios(detected);
+            // If no alert has been set or saved, default to no active alert/scenarios
+            setActiveScenarios([]);
             setCoverageA((term as any).coverage_a ?? (term as any).limit_dwelling ?? null);
             setRceCost(term.rce_replacement_cost ?? null);
             setOtherStructureTypes(['Detached Garage', 'Shed']);

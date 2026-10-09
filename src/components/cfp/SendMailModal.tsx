@@ -189,26 +189,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     setAdditionalAlertText(sa.vaRemarks);
                 }
             } else {
-                // Auto-detect scenarios from term data
-                const detectedScenarios: ScenarioType[] = [];
-                if (term.rce_replacement_cost) {
-                    detectedScenarios.push('rce_review');
-                }
-
-                // Check if any companion quotes exist
-                const bPrem = term.carrier_quotes?.bamboo?.premium ? Number(term.carrier_quotes.bamboo.premium) : null;
-                const aPrem = term.carrier_quotes?.aegis?.premium ? Number(term.carrier_quotes.aegis.premium) : null;
-                const pPrem = term.carrier_quotes?.psic?.premium ? Number(term.carrier_quotes.psic.premium) : null;
-                const cfpPrem = term.annual_premium || term.renewal_annual_premium;
-
-                const bestPrem = bPrem || aPrem || pPrem;
-                if (bestPrem && cfpPrem && bestPrem < Number(cfpPrem)) {
-                    detectedScenarios.push('standard_savings');
-                } else if (bestPrem) {
-                    detectedScenarios.push('standard_no_savings');
-                }
-
-                setActiveScenarios(detectedScenarios);
+                // If no alert is set or alert was cleared, do not force default alerts
+                setActiveScenarios([]);
             }
         }
     }, [term]);
@@ -965,10 +947,8 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         </table>` : '';
 
         // High Priority Additional Alert / Difference Notice Box (Red Font & High Contrast)
-        const hasAlert = hasAdditionalAlert || !!additionalAlertText.trim();
-        const alertContent = additionalAlertText.trim()
-            ? additionalAlertText.trim().replace(/\n/g, '<br/>')
-            : 'This policy was flagged with differences between property details / RCE / coverage limits. Please review closely before proceeding.';
+        const hasAlert = (hasAdditionalAlert || !!additionalAlertText.trim()) && !!additionalAlertText.trim();
+        const alertContent = additionalAlertText.trim().replace(/\n/g, '<br/>');
 
         const additionalAlertHtml = hasAlert ? `
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-bottom:16px;border-collapse:collapse;background:#fef2f2;border:2px solid #ef4444;border-left:6px solid #dc2626;border-radius:6px;box-shadow:0 1px 3px rgba(220,38,38,0.08);">
@@ -1707,9 +1687,30 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                                         <AlertTriangle size={15} color="#d97706" />
                                         <span>Policy Review Scenarios &amp; Alerts</span>
                                     </div>
-                                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                                        {activeScenarios.length} selected
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                            {activeScenarios.length} selected
+                                        </span>
+                                        {activeScenarios.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveScenarios([])}
+                                                style={{
+                                                    fontSize: '0.72rem',
+                                                    color: '#ef4444',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 600,
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                }}
+                                                title="Clear all alerts and scenarios"
+                                            >
+                                                Clear All
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className={styles.scenarioSubtext}>
                                     Cross-check applicable scenarios to generate ready-to-forward client templates and alert management:
