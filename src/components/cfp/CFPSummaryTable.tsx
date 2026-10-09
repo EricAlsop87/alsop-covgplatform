@@ -174,9 +174,14 @@ type DocFilterType =
     | 'returned_from_se';
 
 export function isTermNotQuoted(t: CFPTermRow): boolean {
-    const hasBamboo = !!(t.carrier_quotes?.bamboo?.coverage_type || t.has_bamboo_coverage);
-    const hasAegis = !!(t.carrier_quotes?.aegis?.coverage_type);
-    const hasPsic = !!(t.carrier_quotes?.psic?.coverage_type);
+    const isRealQuote = (q?: any) => {
+        if (!q || !q.coverage_type) return false;
+        if (q.coverage_type === 'FULL' && !q.storage_path && !q.file_name) return false;
+        return true;
+    };
+    const hasBamboo = isRealQuote(t.carrier_quotes?.bamboo);
+    const hasAegis = isRealQuote(t.carrier_quotes?.aegis);
+    const hasPsic = isRealQuote(t.carrier_quotes?.psic);
     return !hasBamboo && !hasAegis && !hasPsic;
 }
 
@@ -201,17 +206,22 @@ export function isTermReadyForSending(t: CFPTermRow): boolean {
     if (!hasRceWithAmount) return false;
 
     // 3. Must have 3 quotes either full, quote, or marked unavailable/ineligible (none remaining as unquoted +Quote)
+    const isRealQuote = (q?: any) => {
+        if (!q || !q.coverage_type) return false;
+        if (q.coverage_type === 'FULL' && !q.storage_path && !q.file_name) return false;
+        return true;
+    };
     const resolvedCarriers = new Set<string>();
-    if (t.carrier_quotes?.bamboo || t.has_bamboo_coverage) resolvedCarriers.add('bamboo');
-    if (t.carrier_quotes?.aegis) resolvedCarriers.add('aegis');
-    if (t.carrier_quotes?.psic) resolvedCarriers.add('psic');
-    if (t.carrier_quotes?.am) resolvedCarriers.add('am');
-    if (t.carrier_quotes?.sagesure) resolvedCarriers.add('sagesure');
+    if (isRealQuote(t.carrier_quotes?.bamboo)) resolvedCarriers.add('bamboo');
+    if (isRealQuote(t.carrier_quotes?.aegis)) resolvedCarriers.add('aegis');
+    if (isRealQuote(t.carrier_quotes?.psic)) resolvedCarriers.add('psic');
+    if (isRealQuote(t.carrier_quotes?.am)) resolvedCarriers.add('am');
+    if (isRealQuote(t.carrier_quotes?.sagesure)) resolvedCarriers.add('sagesure');
 
     const hasCore3Resolved = (
-        (t.carrier_quotes?.bamboo || t.has_bamboo_coverage) &&
-        !!t.carrier_quotes?.aegis &&
-        !!t.carrier_quotes?.psic
+        isRealQuote(t.carrier_quotes?.bamboo) &&
+        isRealQuote(t.carrier_quotes?.aegis) &&
+        isRealQuote(t.carrier_quotes?.psic)
     );
 
     return hasCore3Resolved || resolvedCarriers.size >= 3;
@@ -1027,7 +1037,7 @@ export function CFPSummaryTable({
                     }
                     case 'has_full_quote': {
                         const quotes = Object.values(t.carrier_quotes || {});
-                        return quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
+                        return quotes.some(q => q?.coverage_type === 'FULL' && !!(q?.storage_path || q?.file_name));
                     }
                     case 'has_needs_uw': {
                         const quotes = Object.values(t.carrier_quotes || {});
@@ -1202,7 +1212,10 @@ export function CFPSummaryTable({
                 } else if (filterVal === 'dic') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'DIC');
                 } else if (filterVal === 'full') {
-                    result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'FULL');
+                    result = result.filter(t => {
+                        const q = t.carrier_quotes?.[cKey];
+                        return q?.coverage_type === 'FULL' && !!(q.storage_path || q.file_name);
+                    });
                 } else if (filterVal === 'quote_only') {
                     result = result.filter(t => t.carrier_quotes?.[cKey]?.coverage_type === 'QUOTE');
                 } else if (filterVal === 'agent_review') {
@@ -1312,7 +1325,7 @@ export function CFPSummaryTable({
 
             const quotes = Object.values(t.carrier_quotes || {});
             const hasDic = quotes.some(q => q?.coverage_type === 'DIC');
-            const hasFull = quotes.some(q => q?.coverage_type === 'FULL') || t.has_bamboo_coverage;
+            const hasFull = quotes.some(q => q?.coverage_type === 'FULL' && !!(q?.storage_path || q?.file_name));
             const hasQuote = quotes.some(q => q?.coverage_type === 'QUOTE');
             const hasUnavail = quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
 
@@ -1993,6 +2006,24 @@ export function CFPSummaryTable({
                 const cName = CARRIER_NAMES[carrierKey] || carrierKey.toUpperCase();
 
                 if (quote) {
+                    const hasPdf = !!(quote.storage_path || quote.file_name);
+                    // Do not display "FULL" if there is no actual PDF on it
+                    if (quote.coverage_type === 'FULL' && !hasPdf) {
+                        return (
+                            <button
+                                type="button"
+                                className={`${styles.carrierQuoteBadge} ${styles.unquoted}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveCarrierModal({ term, carrierKey });
+                                }}
+                                title={`Click to enter quote for ${cName}`}
+                            >
+                                <Plus size={10} /> <span>Quote</span>
+                            </button>
+                        );
+                    }
+
                     let badgeClass = styles.dic;
                     let label = 'DIC';
                     if (quote.coverage_type === 'FULL') {

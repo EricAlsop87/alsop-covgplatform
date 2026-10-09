@@ -1369,7 +1369,7 @@ export async function GET(req: NextRequest) {
                     storage_path: autoCarrierQuotes[policyId]?.bamboo?.storage_path || manualCarrierQuotes[policyId]?.bamboo?.storage_path || null,
                     file_name: autoCarrierQuotes[policyId]?.bamboo?.file_name || manualCarrierQuotes[policyId]?.bamboo?.file_name || null,
                 }
-                : autoCarrierQuotes[policyId]?.bamboo || (bambooCoverageSet.has(policyId) ? { carrier_key: 'bamboo', coverage_type: 'FULL' } : null),
+                : autoCarrierQuotes[policyId]?.bamboo || null,
             aegis: manualCarrierQuotes[policyId]?.aegis
                 ? {
                     ...autoCarrierQuotes[policyId]?.aegis,

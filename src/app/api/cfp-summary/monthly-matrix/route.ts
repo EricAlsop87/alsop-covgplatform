@@ -330,7 +330,7 @@ export async function GET(req: NextRequest) {
                 const hasRce = !!policyRceDoc[pid] || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
                 const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
                 const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
-                const isQuoted = bambooCoverageSet.has(pid) || quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
+                const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
 
                 if (!policyMap.has(key)) {
                     policyMap.set(key, {
@@ -405,7 +405,7 @@ export async function GET(req: NextRequest) {
             const hasRce = !!policyRceDoc[pid] || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
             const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
             const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
-            const isQuoted = bambooCoverageSet.has(pid) || quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
+            const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
 
             if (!globalPolicyMap.has(key)) {
                 globalPolicyMap.set(key, {
