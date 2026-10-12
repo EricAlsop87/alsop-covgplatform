@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
             fetchAllRowsParallel<any>((from, to) =>
                 admin
                     .from('platform_documents')
-                    .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, raw_text, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, rce_replacement_cost), doc_data_rce(replacement_cost, sq_feet)')
+                    .select('id, policy_id, policy_term_id, doc_type, file_name, storage_path, bucket, extracted_address, doc_data_dic(carrier_name, policy_number, document_type, has_dic_endorsement, rce_replacement_cost), doc_data_rce(replacement_cost, sq_feet)')
                     .in('doc_type', ['rce', 'dic_dec_page', 'es_doc', 'other'])
                     .range(from, to),
                 3
@@ -215,6 +215,7 @@ export async function GET(req: NextRequest) {
 
         const policyDocTypes: Record<string, Set<string>> = {};
         const policyRceDoc: Record<string, boolean> = {};
+        const termRceDoc: Record<string, boolean> = {};
         const autoQuotes: Record<string, boolean> = {};
 
         for (const doc of docs) {
@@ -226,7 +227,9 @@ export async function GET(req: NextRequest) {
             const dic = Array.isArray(doc.doc_data_dic) ? doc.doc_data_dic[0] : doc.doc_data_dic;
             const rce = Array.isArray(doc.doc_data_rce) ? doc.doc_data_rce[0] : doc.doc_data_rce;
 
-            const isCfpDecDoc = (
+            const isRce = doc.doc_type === 'rce' || (fn.includes('rce') && !fn.includes('quote')) || !!rce || !!dic?.rce_replacement_cost;
+
+            const isCfpDecDoc = !isRce && (
                 doc.doc_type === 'dec_page' ||
                 fn.includes('renewal_email_attachment') ||
                 fn.includes('renewal_offer') ||
@@ -247,18 +250,22 @@ export async function GET(req: NextRequest) {
             }
 
             const pid = doc.policy_id;
+            const tid = doc.policy_term_id;
             if (pid) {
                 if (!policyDocTypes[pid]) policyDocTypes[pid] = new Set<string>();
                 policyDocTypes[pid].add(doc.doc_type);
 
-                if (doc.doc_type === 'rce' || (fn.includes('rce') && !fn.includes('quote')) || !!rce || !!dic?.rce_replacement_cost) {
+                if (isRce) {
                     policyRceDoc[pid] = true;
                 }
 
-                const detectedQuote = detectCarrierQuoteInfo(doc.file_name, doc.raw_text, doc.doc_type, doc.doc_data_dic);
+                const detectedQuote = detectCarrierQuoteInfo(doc.file_name, null, doc.doc_type, doc.doc_data_dic);
                 if (detectedQuote && (detectedQuote.coverage_type === 'DIC' || detectedQuote.coverage_type === 'FULL' || detectedQuote.coverage_type === 'QUOTE')) {
                     autoQuotes[pid] = true;
                 }
+            }
+            if (tid && isRce) {
+                termRceDoc[tid] = true;
             }
         }
 
@@ -327,7 +334,7 @@ export async function GET(req: NextRequest) {
                 const key = basePolicy || polObj?.policy_number || pid;
 
                 const hasDec = !!termDecDocMap[tid] || (!!policyDecDocMap[pid] && (t.is_current || (termsByPolicy[pid] || []).length === 1)) || !!policyRenewalDecDocMap[pid];
-                const hasRce = !!policyRceDoc[pid] || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
+                const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
                 const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
                 const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
                 const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
@@ -402,7 +409,7 @@ export async function GET(req: NextRequest) {
             const key = basePolicy || polObj?.policy_number || pid;
 
             const hasDec = !!termDecDocMap[tid] || (!!policyDecDocMap[pid] && (t.is_current || (termsByPolicy[pid] || []).length === 1)) || !!policyRenewalDecDocMap[pid];
-            const hasRce = !!policyRceDoc[pid] || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
+            const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
             const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
             const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
             const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
