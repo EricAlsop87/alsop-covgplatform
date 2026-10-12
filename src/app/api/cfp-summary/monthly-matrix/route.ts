@@ -11,7 +11,9 @@ export interface MonthlyMatrixRow {
     monthName: string;
     totalUniquePolicies: number;
     decUploaded: number;
+    decNotUploaded: number;
     rceUploaded: number;
+    rceNotUploadedForDec: number;
     totalWithAddress: number;
     totalNoAddress: number;
     quotedCount: number;
@@ -22,7 +24,9 @@ export interface MonthlyMatrixRow {
 export interface MonthlyMatrixTotals {
     totalUniquePolicies: number;
     decUploaded: number;
+    decNotUploaded: number;
     rceUploaded: number;
+    rceNotUploadedForDec: number;
     totalWithAddress: number;
     totalNoAddress: number;
     quotedCount: number;
@@ -365,14 +369,23 @@ export async function GET(req: NextRequest) {
             const uniquePolicies = Array.from(policyMap.values());
 
             let decUploaded = 0;
+            let decNotUploaded = 0;
             let rceUploaded = 0;
+            let rceNotUploadedForDec = 0;
             let totalWithAddress = 0;
             let totalNoAddress = 0;
             let quotedCount = 0;
             let unquotableCount = 0;
 
             for (const item of uniquePolicies) {
-                if (item.hasDec) decUploaded++;
+                if (item.hasDec) {
+                    decUploaded++;
+                    if (!item.hasRce) {
+                        rceNotUploadedForDec++;
+                    }
+                } else {
+                    decNotUploaded++;
+                }
                 if (item.hasRce) rceUploaded++;
                 if (item.hasAddress) totalWithAddress++;
                 else totalNoAddress++;
@@ -387,7 +400,9 @@ export async function GET(req: NextRequest) {
                 monthName,
                 totalUniquePolicies: uniquePolicies.length,
                 decUploaded,
+                decNotUploaded,
                 rceUploaded,
+                rceNotUploadedForDec,
                 totalWithAddress,
                 totalNoAddress,
                 quotedCount,
@@ -439,14 +454,23 @@ export async function GET(req: NextRequest) {
 
         const globalUniqueList = Array.from(globalPolicyMap.values());
         let globalDecUploaded = 0;
+        let globalDecNotUploaded = 0;
         let globalRceUploaded = 0;
+        let globalRceNotUploadedForDec = 0;
         let globalWithAddress = 0;
         let globalNoAddress = 0;
         let globalQuotedCount = 0;
         let globalUnquotableCount = 0;
 
         for (const item of globalUniqueList) {
-            if (item.hasDec) globalDecUploaded++;
+            if (item.hasDec) {
+                globalDecUploaded++;
+                if (!item.hasRce) {
+                    globalRceNotUploadedForDec++;
+                }
+            } else {
+                globalDecNotUploaded++;
+            }
             if (item.hasRce) globalRceUploaded++;
             if (item.hasAddress) globalWithAddress++;
             else globalNoAddress++;
@@ -459,7 +483,9 @@ export async function GET(req: NextRequest) {
         const totals: MonthlyMatrixTotals = {
             totalUniquePolicies: globalUniqueList.length,
             decUploaded: globalDecUploaded,
+            decNotUploaded: globalDecNotUploaded,
             rceUploaded: globalRceUploaded,
+            rceNotUploadedForDec: globalRceNotUploadedForDec,
             totalWithAddress: globalWithAddress,
             totalNoAddress: globalNoAddress,
             quotedCount: globalQuotedCount,

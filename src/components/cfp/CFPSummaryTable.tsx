@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
     Search,
     ExternalLink,
@@ -474,9 +475,43 @@ export function CFPSummaryTable({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [previewDoc]);
 
+    const searchParams = useSearchParams();
+
     // ── Column-Specific Filters State ─────────────────────────────────────
     const [showColumnFilters, setShowColumnFilters] = useState(true);
-    const [columnFilters, setColumnFilters] = useState<ColumnFilters>({});
+    const [columnFilters, setColumnFilters] = useState<ColumnFilters>(() => {
+        const init: ColumnFilters = {};
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const decP = params.get('dec');
+            const rceP = params.get('rce');
+            if (decP) init.dec = decP;
+            if (rceP) init.rce = rceP;
+        }
+        return init;
+    });
+
+    useEffect(() => {
+        if (!searchParams) return;
+        const decP = searchParams.get('dec');
+        const rceP = searchParams.get('rce');
+        const docFilterP = searchParams.get('doc_filter');
+
+        setColumnFilters(prev => {
+            const next = { ...prev };
+            if (decP) next.dec = decP;
+            else if (searchParams.has('dec')) delete next.dec;
+
+            if (rceP) next.rce = rceP;
+            else if (searchParams.has('rce')) delete next.rce;
+            return next;
+        });
+
+        if (docFilterP) {
+            setDocFilter(docFilterP as any);
+        }
+        setCurrentPage(1);
+    }, [searchParams]);
 
     const activeFilterCount = useMemo(() => {
         return Object.values(columnFilters).filter(Boolean).length;
@@ -1184,7 +1219,7 @@ export function CFPSummaryTable({
 
         if (columnFilters.dec) {
             if (columnFilters.dec === 'uploaded') {
-                result = result.filter(t => t.has_dec);
+                result = result.filter(t => t.has_dec || t.has_renewal_dec);
             } else if (columnFilters.dec === 'renewal_offer') {
                 result = result.filter(t => t.has_renewal_dec);
             } else if (columnFilters.dec === 'missing') {
@@ -1194,9 +1229,9 @@ export function CFPSummaryTable({
 
         if (columnFilters.rce) {
             if (columnFilters.rce === 'has_rce') {
-                result = result.filter(t => t.has_rce || !!t.rce_carrier);
+                result = result.filter(t => t.has_rce || !!t.rce_carrier || t.rce_replacement_cost != null);
             } else if (columnFilters.rce === 'missing') {
-                result = result.filter(t => !t.has_rce && !t.rce_carrier);
+                result = result.filter(t => !t.has_rce && !t.rce_carrier && t.rce_replacement_cost == null);
             }
         }
 

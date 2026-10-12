@@ -300,6 +300,30 @@
                 letter-spacing: normal;
             }
 
+            &.thDec {
+                background: #f0fdf4;
+                .thTitle { color: #166534; }
+                .thSub { color: #15803d; }
+            }
+
+            &.thDecMissing {
+                background: #fef2f2;
+                .thTitle { color: #991b1b; }
+                .thSub { color: #b91c1c; }
+            }
+
+            &.thRce {
+                background: #f5f3ff;
+                .thTitle { color: #5b21b6; }
+                .thSub { color: #6d28d9; }
+            }
+
+            &.thRceMissing {
+                background: #fff7ed;
+                .thTitle { color: #9a3412; }
+                .thSub { color: #c2410c; }
+            }
+
             &.thQuoted {
                 background: #eff6ff;
                 .thTitle { color: #1d4ed8; }
@@ -533,6 +557,163 @@
     background: #fef2f2;
     color: #dc2626;
     font-weight: 700;
+}
+
+.metricLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    &.decUploadedPill {
+        background: #f0fdf4;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+
+        &:hover {
+            background: #16a34a;
+            color: #ffffff;
+            border-color: #16a34a;
+        }
+    }
+
+    &.decMissingPill {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+
+        &:hover {
+            background: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+    }
+
+    &.rceUploadedPill {
+        background: #f5f3ff;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+
+        &:hover {
+            background: #7c3aed;
+            color: #ffffff;
+            border-color: #7c3aed;
+        }
+    }
+
+    &.rceMissingPill {
+        background: #fff7ed;
+        color: #c2410c;
+        border: 1px solid #fed7aa;
+
+        &:hover {
+            background: #ea580c;
+            color: #ffffff;
+            border-color: #ea580c;
+        }
+    }
+
+    &.zeroValue {
+        opacity: 0.55;
+        background: #f8fafc;
+        color: #94a3b8;
+        border: 1px solid #e2e8f0;
+
+        &:hover {
+            background: #64748b;
+            color: #ffffff;
+            border-color: #64748b;
+            opacity: 1;
+        }
+    }
+}
+
+.footerMetricLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 800;
+    text-decoration: none;
+    font-size: 0.92rem;
+    transition: all 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.2);
+    }
+
+    &.footerDecUploaded {
+        color: #4ade80;
+        background: rgba(74, 222, 128, 0.12);
+        border: 1px solid rgba(74, 222, 128, 0.25);
+    }
+
+    &.footerDecMissing {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.12);
+        border: 1px solid rgba(248, 113, 113, 0.25);
+    }
+
+    &.footerRceUploaded {
+        color: #c084fc;
+        background: rgba(192, 132, 252, 0.12);
+        border: 1px solid rgba(192, 132, 252, 0.25);
+    }
+
+    &.footerRceMissing {
+        color: #fb923c;
+        background: rgba(251, 146, 60, 0.12);
+        border: 1px solid rgba(251, 146, 60, 0.25);
+    }
+}
+
+.viewModeToggle {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 0.15rem;
+    border-radius: 8px;
+    gap: 0.2rem;
+}
+
+.viewModeBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: #0f172a;
+    }
+
+    &.activeViewMode {
+        background: #ffffff;
+        color: #0f172a;
+        font-weight: 700;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
 }
 
 /* ========================================================

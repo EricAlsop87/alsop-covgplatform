@@ -20,7 +20,8 @@ import {
     CheckCircle2,
     Clock,
     AlertTriangle,
-    Info
+    Info,
+    SlidersHorizontal
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './CFPMonthlyMatrix.module.scss';
@@ -42,6 +43,7 @@ export function CFPMonthlyMatrix() {
         return 'all';
     });
 
+    const [viewMode, setViewMode] = useState<'upload_tracker' | 'all'>('upload_tracker');
     const cachedInitial = clientMatrixCache.get(`matrix_${year}`);
     const [matrix, setMatrix] = useState<MonthlyMatrixRow[]>(() => cachedInitial?.matrix || []);
     const [totals, setTotals] = useState<MonthlyMatrixTotals | null>(() => cachedInitial?.totals || null);
@@ -200,7 +202,9 @@ export function CFPMonthlyMatrix() {
             'Month',
             'Policies',
             'DEC Uploaded',
+            'DEC Not Uploaded',
             'RCE Uploaded',
+            'RCE Not Uploaded (For DEC)',
             'With Addr',
             'No Addr',
             'Quoted',
@@ -212,7 +216,9 @@ export function CFPMonthlyMatrix() {
             r.monthName,
             r.totalUniquePolicies,
             r.decUploaded,
+            r.decNotUploaded,
             r.rceUploaded,
+            r.rceNotUploadedForDec,
             r.totalWithAddress,
             r.totalNoAddress,
             r.quotedCount,
@@ -225,7 +231,9 @@ export function CFPMonthlyMatrix() {
                 'GRAND TOTAL (PORTFOLIO)',
                 totals.totalUniquePolicies,
                 totals.decUploaded,
+                totals.decNotUploaded,
                 totals.rceUploaded,
+                totals.rceNotUploadedForDec,
                 totals.totalWithAddress,
                 totals.totalNoAddress,
                 totals.quotedCount,
@@ -256,7 +264,9 @@ export function CFPMonthlyMatrix() {
             { header: 'Month', key: 'month', width: 16 },
             { header: 'Policies', key: 'unique_policies', width: 18 },
             { header: 'DEC Uploaded', key: 'dec_uploaded', width: 18 },
+            { header: 'DEC Not Uploaded', key: 'dec_not_uploaded', width: 20 },
             { header: 'RCE Uploaded', key: 'rce_uploaded', width: 18 },
+            { header: 'RCE Not Uploaded (For DEC)', key: 'rce_not_uploaded', width: 22 },
             { header: 'With Addr', key: 'with_address', width: 16 },
             { header: 'No Addr', key: 'no_address', width: 16 },
             { header: 'Quoted', key: 'quoted', width: 16 },
@@ -279,7 +289,9 @@ export function CFPMonthlyMatrix() {
                 month: row.monthName,
                 unique_policies: row.totalUniquePolicies,
                 dec_uploaded: row.decUploaded,
+                dec_not_uploaded: row.decNotUploaded,
                 rce_uploaded: row.rceUploaded,
+                rce_not_uploaded: row.rceNotUploadedForDec,
                 with_address: row.totalWithAddress,
                 no_address: row.totalNoAddress,
                 quoted: row.quotedCount,
@@ -296,7 +308,9 @@ export function CFPMonthlyMatrix() {
                 month: 'GRAND TOTAL (PORTFOLIO)',
                 unique_policies: totals.totalUniquePolicies,
                 dec_uploaded: totals.decUploaded,
+                dec_not_uploaded: totals.decNotUploaded,
                 rce_uploaded: totals.rceUploaded,
+                rce_not_uploaded: totals.rceNotUploadedForDec,
                 with_address: totals.totalWithAddress,
                 no_address: totals.totalNoAddress,
                 quoted: totals.quotedCount,
@@ -340,7 +354,7 @@ export function CFPMonthlyMatrix() {
                         <div className={styles.statInfo}>
                             <span className={styles.statLabel}>Unique Policies</span>
                             <span className={styles.statVal}>{totals.totalUniquePolicies.toLocaleString()}</span>
-                            <span className={styles.statSub}>🌿 66 Bamboo excluded</span>
+                            <span className={styles.statSub}>Base Families</span>
                         </div>
                     </div>
 
@@ -360,6 +374,19 @@ export function CFPMonthlyMatrix() {
                     </div>
 
                     <div className={styles.quickStatCard}>
+                        <div className={styles.statIcon} style={{ color: '#dc2626', background: '#fef2f2' }}>
+                            <AlertTriangle size={16} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <span className={styles.statLabel}>DEC Missing</span>
+                            <span className={styles.statVal} style={{ color: '#dc2626' }}>
+                                {totals.decNotUploaded.toLocaleString()}
+                            </span>
+                            <span className={styles.statSub}>Needs Dec Upload</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.quickStatCard}>
                         <div className={styles.statIcon} style={{ color: '#7c3aed', background: '#f5f3ff' }}>
                             <Calculator size={16} />
                         </div>
@@ -368,9 +395,20 @@ export function CFPMonthlyMatrix() {
                             <span className={styles.statVal} style={{ color: '#7c3aed' }}>
                                 {totals.rceUploaded.toLocaleString()}
                             </span>
-                            <span className={styles.statSub}>
-                                {totals.totalUniquePolicies > 0 ? `${((totals.rceUploaded / totals.totalUniquePolicies) * 100).toFixed(1)}%` : '0%'} on file
+                            <span className={styles.statSub}>360Value / Est.</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.quickStatCard}>
+                        <div className={styles.statIcon} style={{ color: '#ea580c', background: '#fff7ed' }}>
+                            <Clock size={16} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <span className={styles.statLabel}>RCE Missing (For DECs)</span>
+                            <span className={styles.statVal} style={{ color: '#ea580c' }}>
+                                {totals.rceNotUploadedForDec.toLocaleString()}
                             </span>
+                            <span className={styles.statSub}>Dec On File • Need RCE</span>
                         </div>
                     </div>
 
@@ -384,32 +422,6 @@ export function CFPMonthlyMatrix() {
                                 {totals.quotedCount.toLocaleString()}
                             </span>
                             <span className={styles.statSub}>Companion ready</span>
-                        </div>
-                    </div>
-
-                    <div className={styles.quickStatCard}>
-                        <div className={styles.statIcon} style={{ color: '#d97706', background: '#fffbeb' }}>
-                            <Clock size={16} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <span className={styles.statLabel}>For Quoting</span>
-                            <span className={styles.statVal} style={{ color: '#d97706' }}>
-                                {totals.forQuotingCount.toLocaleString()}
-                            </span>
-                            <span className={styles.statSub}>Quotable remaining</span>
-                        </div>
-                    </div>
-
-                    <div className={styles.quickStatCard}>
-                        <div className={styles.statIcon} style={{ color: '#dc2626', background: '#fef2f2' }}>
-                            <AlertTriangle size={16} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <span className={styles.statLabel}>Total Unquotable</span>
-                            <span className={styles.statVal} style={{ color: '#dc2626' }}>
-                                {totals.unquotableCount.toLocaleString()}
-                            </span>
-                            <span className={styles.statSub}>Missing DEC & Addr</span>
                         </div>
                     </div>
                 </div>
@@ -432,6 +444,27 @@ export function CFPMonthlyMatrix() {
                             <option value="2024">Year 2024</option>
                             <option value="2027">Year 2027</option>
                         </select>
+                    </div>
+
+                    <div className={styles.viewModeToggle}>
+                        <button
+                            type="button"
+                            className={`${styles.viewModeBtn} ${viewMode === 'upload_tracker' ? styles.activeViewMode : ''}`}
+                            onClick={() => setViewMode('upload_tracker')}
+                            title="Show Core Upload Columns (Month, Policies, Dec Uploaded, Dec Not Uploaded, RCE Uploaded, RCE Not Uploaded)"
+                        >
+                            <FileCheck size={13} />
+                            <span>Upload Tracker (6 Columns)</span>
+                        </button>
+                        <button
+                            type="button"
+                            className={`${styles.viewModeBtn} ${viewMode === 'all' ? styles.activeViewMode : ''}`}
+                            onClick={() => setViewMode('all')}
+                            title="Show All Operational & Quoting Pipeline Columns"
+                        >
+                            <SlidersHorizontal size={13} />
+                            <span>All Columns (9 Columns)</span>
+                        </button>
                     </div>
                 </div>
 
@@ -517,59 +550,73 @@ export function CFPMonthlyMatrix() {
                         <table className={styles.webTable}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: '15%' }}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '18%' : '14%' }}>
                                         <div className={styles.thTitle}>MONTH</div>
                                         <div className={styles.thSub}>Calendar Term</div>
                                     </th>
-                                    <th style={{ width: '10%' }} className={styles.center}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '9.5%' }} className={styles.center}>
                                         <div className={styles.thTitle}>POLICIES</div>
                                         <div className={styles.thSub}>Base Families</div>
                                     </th>
-                                    <th style={{ width: '11%' }} className={styles.center}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '10.5%' }} className={`${styles.center} ${styles.thDec}`}>
                                         <div className={styles.thTitle}>DEC UPLOADED</div>
                                         <div className={styles.thSub}>Active Dec on File</div>
                                     </th>
-                                    <th style={{ width: '11%' }} className={styles.center}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '10.5%' }} className={`${styles.center} ${styles.thDecMissing}`}>
+                                        <div className={styles.thTitle}>DEC NOT UPLOADED</div>
+                                        <div className={styles.thSub}>Based on Policies Available</div>
+                                    </th>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '10.5%' }} className={`${styles.center} ${styles.thRce}`}>
                                         <div className={styles.thTitle}>RCE UPLOADED</div>
                                         <div className={styles.thSub}>360Value / Est.</div>
                                     </th>
-                                    <th style={{ width: '10%' }} className={styles.center}>
-                                        <div className={styles.thTitle}>WITH ADDR</div>
-                                        <div className={styles.thSub}>Verified Location</div>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '11%' }} className={`${styles.center} ${styles.thRceMissing}`}>
+                                        <div className={styles.thTitle}>RCE NOT UPLOADED</div>
+                                        <div className={styles.thSub}>Based on Uploaded Dec</div>
                                     </th>
-                                    <th style={{ width: '10%' }} className={styles.center}>
-                                        <div className={styles.thTitle}>NO ADDR</div>
-                                        <div className={styles.thSub}>Missing Location</div>
-                                    </th>
-                                    <th style={{ width: '11%' }} className={`${styles.center} ${styles.thQuoted}`}>
-                                        <div className={styles.thTitle}>QUOTED</div>
-                                        <div className={styles.thSub}>Carrier Ready (≥1)</div>
-                                    </th>
-                                    <th style={{ width: '11%' }} className={`${styles.center} ${styles.thForQuoting}`}>
-                                        <div className={styles.thTitle}>FOR QUOTING</div>
-                                        <div className={styles.thSub}>Remaining in Queue</div>
-                                    </th>
-                                    <th style={{ width: '11%' }} className={`${styles.center} ${styles.thUnquotable}`}>
-                                        <div className={styles.thTitle}>UNQUOTABLE</div>
-                                        <div className={styles.thSub}>No DEC & No Addr</div>
-                                    </th>
+                                    {viewMode === 'all' && (
+                                        <>
+                                            <th style={{ width: '9%' }} className={styles.center}>
+                                                <div className={styles.thTitle}>WITH ADDR</div>
+                                                <div className={styles.thSub}>Verified Location</div>
+                                            </th>
+                                            <th style={{ width: '9%' }} className={styles.center}>
+                                                <div className={styles.thTitle}>NO ADDR</div>
+                                                <div className={styles.thSub}>Missing Location</div>
+                                            </th>
+                                            <th style={{ width: '9%' }} className={`${styles.center} ${styles.thQuoted}`}>
+                                                <div className={styles.thTitle}>QUOTED</div>
+                                                <div className={styles.thSub}>Carrier Ready (≥1)</div>
+                                            </th>
+                                            <th style={{ width: '9%' }} className={`${styles.center} ${styles.thForQuoting}`}>
+                                                <div className={styles.thTitle}>FOR QUOTING</div>
+                                                <div className={styles.thSub}>Remaining in Queue</div>
+                                            </th>
+                                            <th style={{ width: '9%' }} className={`${styles.center} ${styles.thUnquotable}`}>
+                                                <div className={styles.thTitle}>UNQUOTABLE</div>
+                                                <div className={styles.thSub}>No DEC & No Addr</div>
+                                            </th>
+                                        </>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody>
                                 {matrix.map((row) => {
                                     const isCurrentMonth = String(row.month) === String(CURRENT_MONTH) && (year === CURRENT_YEAR || year === 'all');
+                                    const paramYear = year === 'all' ? '' : year;
                                     return (
                                         <tr key={row.month} className={isCurrentMonth ? styles.currentMonthRow : ''}>
                                             <td>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${year === 'all' ? '' : year}`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
-                                                            localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
                                                         }
                                                     }}
                                                     className={styles.monthLink}
+                                                    title={`View all ${row.monthName} policies`}
                                                 >
                                                     <span className={styles.monthNumberPill}>#{row.month}</span>
                                                     <span className={styles.monthNameText}>{row.monthName}</span>
@@ -578,47 +625,109 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${year === 'all' ? '' : year}`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
-                                                            localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
                                                         }
                                                     }}
                                                     className={styles.policyPill}
-                                                    title={`View ${row.monthName} policies`}
+                                                    title={`View ${row.totalUniquePolicies.toLocaleString()} base policies in ${row.monthName}`}
                                                 >
                                                     <span>{row.totalUniquePolicies.toLocaleString()}</span>
                                                     <ArrowUpRight size={12} color="#64748b" />
                                                 </Link>
                                             </td>
-                                            <td className={`${styles.center} ${styles.tdDec}`}>
-                                                {row.decUploaded.toLocaleString()}
+                                            <td className={styles.center}>
+                                                <Link
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=uploaded`}
+                                                    onClick={() => {
+                                                        if (typeof window !== 'undefined') {
+                                                            localStorage.setItem('ccn_cfp_summary_month', String(row.month));
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                        }
+                                                    }}
+                                                    className={`${styles.metricLink} ${styles.decUploadedPill} ${row.decUploaded === 0 ? styles.zeroValue : ''}`}
+                                                    title={`Filter to ${row.decUploaded} policies with DEC Uploaded in ${row.monthName}`}
+                                                >
+                                                    <span>{row.decUploaded.toLocaleString()}</span>
+                                                    <ArrowUpRight size={11} />
+                                                </Link>
                                             </td>
-                                            <td className={`${styles.center} ${styles.tdRce}`}>
-                                                {row.rceUploaded.toLocaleString()}
+                                            <td className={styles.center}>
+                                                <Link
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=missing`}
+                                                    onClick={() => {
+                                                        if (typeof window !== 'undefined') {
+                                                            localStorage.setItem('ccn_cfp_summary_month', String(row.month));
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                        }
+                                                    }}
+                                                    className={`${styles.metricLink} ${styles.decMissingPill} ${row.decNotUploaded === 0 ? styles.zeroValue : ''}`}
+                                                    title={`Filter to ${row.decNotUploaded} policies needing DEC Upload in ${row.monthName}`}
+                                                >
+                                                    <span>{row.decNotUploaded.toLocaleString()}</span>
+                                                    <ArrowUpRight size={11} />
+                                                </Link>
                                             </td>
-                                            <td className={`${styles.center} ${styles.tdWithAddr}`}>
-                                                {row.totalWithAddress.toLocaleString()}
+                                            <td className={styles.center}>
+                                                <Link
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=has_rce`}
+                                                    onClick={() => {
+                                                        if (typeof window !== 'undefined') {
+                                                            localStorage.setItem('ccn_cfp_summary_month', String(row.month));
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                        }
+                                                    }}
+                                                    className={`${styles.metricLink} ${styles.rceUploadedPill} ${row.rceUploaded === 0 ? styles.zeroValue : ''}`}
+                                                    title={`Filter to ${row.rceUploaded} policies with RCE Uploaded in ${row.monthName}`}
+                                                >
+                                                    <span>{row.rceUploaded.toLocaleString()}</span>
+                                                    <ArrowUpRight size={11} />
+                                                </Link>
                                             </td>
-                                            <td className={`${styles.center} ${styles.tdNoAddr}`}>
-                                                {row.totalNoAddress.toLocaleString()}
+                                            <td className={styles.center}>
+                                                <Link
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=uploaded&rce=missing`}
+                                                    onClick={() => {
+                                                        if (typeof window !== 'undefined') {
+                                                            localStorage.setItem('ccn_cfp_summary_month', String(row.month));
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                        }
+                                                    }}
+                                                    className={`${styles.metricLink} ${styles.rceMissingPill} ${row.rceNotUploadedForDec === 0 ? styles.zeroValue : ''}`}
+                                                    title={`Filter to ${row.rceNotUploadedForDec} policies with DEC Uploaded that still need RCE in ${row.monthName}`}
+                                                >
+                                                    <span>{row.rceNotUploadedForDec.toLocaleString()}</span>
+                                                    <ArrowUpRight size={11} />
+                                                </Link>
                                             </td>
-                                            <td className={`${styles.center} ${styles.tdQuoted}`}>
-                                                <span className={styles.numBadgeBlue}>
-                                                    {row.quotedCount.toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className={`${styles.center} ${styles.tdForQuoting}`}>
-                                                <span className={styles.numBadgeAmber}>
-                                                    {row.forQuotingCount.toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className={`${styles.center} ${styles.tdUnquotable}`}>
-                                                <span className={styles.numBadgeRed}>
-                                                    {row.unquotableCount.toLocaleString()}
-                                                </span>
-                                            </td>
+                                            {viewMode === 'all' && (
+                                                <>
+                                                    <td className={`${styles.center} ${styles.tdWithAddr}`}>
+                                                        {row.totalWithAddress.toLocaleString()}
+                                                    </td>
+                                                    <td className={`${styles.center} ${styles.tdNoAddr}`}>
+                                                        {row.totalNoAddress.toLocaleString()}
+                                                    </td>
+                                                    <td className={`${styles.center} ${styles.tdQuoted}`}>
+                                                        <span className={styles.numBadgeBlue}>
+                                                            {row.quotedCount.toLocaleString()}
+                                                        </span>
+                                                    </td>
+                                                    <td className={`${styles.center} ${styles.tdForQuoting}`}>
+                                                        <span className={styles.numBadgeAmber}>
+                                                            {row.forQuotingCount.toLocaleString()}
+                                                        </span>
+                                                    </td>
+                                                    <td className={`${styles.center} ${styles.tdUnquotable}`}>
+                                                        <span className={styles.numBadgeRed}>
+                                                            {row.unquotableCount.toLocaleString()}
+                                                        </span>
+                                                    </td>
+                                                </>
+                                            )}
                                         </tr>
                                     );
                                 })}
@@ -634,30 +743,75 @@ export function CFPMonthlyMatrix() {
                                                 Annual Deduplicated Portfolio
                                             </div>
                                         </td>
-                                        <td className={styles.center} style={{ fontSize: '1rem', fontWeight: 800 }}>
-                                            {totals.totalUniquePolicies.toLocaleString()}
+                                        <td className={styles.center}>
+                                            <Link
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}`}
+                                                className={styles.policyPill}
+                                                title="View all portfolio policies in CFP Summary"
+                                            >
+                                                <span>{totals.totalUniquePolicies.toLocaleString()}</span>
+                                                <ArrowUpRight size={12} color="#64748b" />
+                                            </Link>
                                         </td>
-                                        <td className={`${styles.center} ${styles.tdDec}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.decUploaded.toLocaleString()}
+                                        <td className={styles.center}>
+                                            <Link
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=uploaded`}
+                                                className={`${styles.footerMetricLink} ${styles.footerDecUploaded}`}
+                                                title="View all policies with DEC Uploaded"
+                                            >
+                                                <span>{totals.decUploaded.toLocaleString()}</span>
+                                                <ArrowUpRight size={12} />
+                                            </Link>
                                         </td>
-                                        <td className={`${styles.center} ${styles.tdRce}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.rceUploaded.toLocaleString()}
+                                        <td className={styles.center}>
+                                            <Link
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=missing`}
+                                                className={`${styles.footerMetricLink} ${styles.footerDecMissing}`}
+                                                title="View all policies needing DEC Upload"
+                                            >
+                                                <span>{totals.decNotUploaded.toLocaleString()}</span>
+                                                <ArrowUpRight size={12} />
+                                            </Link>
                                         </td>
-                                        <td className={`${styles.center} ${styles.tdWithAddr}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.totalWithAddress.toLocaleString()}
+                                        <td className={styles.center}>
+                                            <Link
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=has_rce`}
+                                                className={`${styles.footerMetricLink} ${styles.footerRceUploaded}`}
+                                                title="View all policies with RCE Uploaded"
+                                            >
+                                                <span>{totals.rceUploaded.toLocaleString()}</span>
+                                                <ArrowUpRight size={12} />
+                                            </Link>
                                         </td>
-                                        <td className={`${styles.center} ${styles.tdNoAddr}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.totalNoAddress.toLocaleString()}
+                                        <td className={styles.center}>
+                                            <Link
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=uploaded&rce=missing`}
+                                                className={`${styles.footerMetricLink} ${styles.footerRceMissing}`}
+                                                title="View all policies with DEC Uploaded that still need RCE"
+                                            >
+                                                <span>{totals.rceNotUploadedForDec.toLocaleString()}</span>
+                                                <ArrowUpRight size={12} />
+                                            </Link>
                                         </td>
-                                        <td className={`${styles.center} ${styles.tdQuoted}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.quotedCount.toLocaleString()}
-                                        </td>
-                                        <td className={`${styles.center} ${styles.tdForQuoting}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.forQuotingCount.toLocaleString()}
-                                        </td>
-                                        <td className={`${styles.center} ${styles.tdUnquotable}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                                            {totals.unquotableCount.toLocaleString()}
-                                        </td>
+                                        {viewMode === 'all' && (
+                                            <>
+                                                <td className={`${styles.center} ${styles.tdWithAddr}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                                                    {totals.totalWithAddress.toLocaleString()}
+                                                </td>
+                                                <td className={`${styles.center} ${styles.tdNoAddr}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                                                    {totals.totalNoAddress.toLocaleString()}
+                                                </td>
+                                                <td className={`${styles.center} ${styles.tdQuoted}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                                                    {totals.quotedCount.toLocaleString()}
+                                                </td>
+                                                <td className={`${styles.center} ${styles.tdForQuoting}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                                                    {totals.forQuotingCount.toLocaleString()}
+                                                </td>
+                                                <td className={`${styles.center} ${styles.tdUnquotable}`} style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                                                    {totals.unquotableCount.toLocaleString()}
+                                                </td>
+                                            </>
+                                        )}
                                     </tr>
                                 </tfoot>
                             )}
@@ -674,8 +828,19 @@ export function CFPMonthlyMatrix() {
                         <span>Policy Counting & Exclusions</span>
                     </div>
                     <p>
-                        <strong>Total Unique Policies (2,910):</strong> Groups multiple terms/renewals (00, 01) into singular base families. 
-                        <strong> Excludes 66 floating Bamboo pipeline policies</strong> without confirmed CFP filings.
+                        <strong>Total Unique Policies:</strong> Groups multiple renewal terms into base families.
+                        <strong> Goal:</strong> Every active policy must have an active DEC page and an RCE on file.
+                    </p>
+                </div>
+
+                <div className={styles.defCard}>
+                    <div className={styles.defHeader}>
+                        <AlertTriangle size={14} color="#dc2626" />
+                        <span>DEC & RCE Upload Requirements</span>
+                    </div>
+                    <p>
+                        <strong>DEC Not Uploaded:</strong> Policies available minus uploaded DEC pages.
+                        <strong> RCE Not Uploaded:</strong> Policies that already have a DEC uploaded, but are still awaiting an RCE (360Value / Est.).
                     </p>
                 </div>
 
@@ -685,19 +850,8 @@ export function CFPMonthlyMatrix() {
                         <span>Quoting Pipeline Logic</span>
                     </div>
                     <p>
-                        <strong>Quoted (530):</strong> Policies with companion quotes ready in Bamboo, Aegis, AM, PSIC, or SageSure. 
-                        <strong> For Quoting (1,772):</strong> Quotable policies with verified property addresses waiting in queue for quoting.
-                    </p>
-                </div>
-
-                <div className={styles.defCard}>
-                    <div className={styles.defHeader}>
-                        <AlertTriangle size={14} color="#dc2626" />
-                        <span>Address & Quotability Math</span>
-                    </div>
-                    <p>
-                        <strong>Unquotable (608):</strong> Policies missing both a DEC and property address. 
-                        <em> Math: Quoted (530) + For Quoting (1,772) + Unquotable (608) = 2,910 Total Unique Policies.</em>
+                        <strong>Quoted:</strong> Companion quotes in Bamboo, Aegis, AM, PSIC, or SageSure.
+                        <strong> Click any number:</strong> Jumps straight to the filtered list in CFP Summary.
                     </p>
                 </div>
             </div>
@@ -706,7 +860,7 @@ export function CFPMonthlyMatrix() {
               =======================================================
               DEDICATED EMAIL EXPORT CARD (Off-screen / Fixed 820px)
               This card is captured at 2.5x retina resolution when clicking "Copy Image for Email"
-              ALL 9 columns fit with perfect proportions and zero cut-off!
+              ALL columns fit with perfect proportions and zero cut-off!
               =======================================================
             */}
             <div className={styles.hiddenCaptureWrapper} aria-hidden="true">
@@ -727,19 +881,19 @@ export function CFPMonthlyMatrix() {
                         </div>
                     </div>
 
-                    {/* Compact All-9-Column Table */}
+                    {/* Compact Table */}
                     <table className={styles.emailTable}>
                         <thead>
                             <tr>
-                                <th style={{ width: '16%' }}>MONTH</th>
-                                <th style={{ width: '10.5%' }} className={styles.center}>POLICIES</th>
-                                <th style={{ width: '11%' }} className={styles.center}>DEC UPLOADED</th>
-                                <th style={{ width: '11%' }} className={styles.center}>RCE UPLOADED</th>
-                                <th style={{ width: '10%' }} className={styles.center}>WITH ADDR</th>
-                                <th style={{ width: '9.5%' }} className={styles.center}>NO ADDR</th>
+                                <th style={{ width: '15%' }}>MONTH</th>
+                                <th style={{ width: '10%' }} className={styles.center}>POLICIES</th>
+                                <th style={{ width: '11%' }} className={styles.center}>DEC UPL.</th>
+                                <th style={{ width: '11%' }} className={styles.center}>DEC MISSING</th>
+                                <th style={{ width: '11%' }} className={styles.center}>RCE UPL.</th>
+                                <th style={{ width: '11%' }} className={styles.center}>RCE MISSING</th>
                                 <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
                                 <th style={{ width: '11%' }} className={`${styles.center} ${styles.emailThForQuoting}`}>FOR QUOTING</th>
-                                <th style={{ width: '11%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
+                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -755,14 +909,14 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center} ${styles.emailTdDec}`}>
                                         {row.decUploaded.toLocaleString()}
                                     </td>
+                                    <td className={`${styles.center}`} style={{ color: '#dc2626', fontWeight: 700 }}>
+                                        {row.decNotUploaded.toLocaleString()}
+                                    </td>
                                     <td className={`${styles.center} ${styles.emailTdRce}`}>
                                         {row.rceUploaded.toLocaleString()}
                                     </td>
-                                    <td className={`${styles.center} ${styles.emailTdWithAddr}`}>
-                                        {row.totalWithAddress.toLocaleString()}
-                                    </td>
-                                    <td className={`${styles.center} ${styles.emailTdNoAddr}`}>
-                                        {row.totalNoAddress.toLocaleString()}
+                                    <td className={`${styles.center}`} style={{ color: '#ea580c', fontWeight: 700 }}>
+                                        {row.rceNotUploadedForDec.toLocaleString()}
                                     </td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>
                                         {row.quotedCount.toLocaleString()}
@@ -782,9 +936,9 @@ export function CFPMonthlyMatrix() {
                                     <td>GRAND TOTAL (PORTFOLIO)</td>
                                     <td className={styles.center}>{totals.totalUniquePolicies.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdDec}`}>{totals.decUploaded.toLocaleString()}</td>
+                                    <td className={styles.center} style={{ color: '#f87171' }}>{totals.decNotUploaded.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdRce}`}>{totals.rceUploaded.toLocaleString()}</td>
-                                    <td className={`${styles.center} ${styles.emailTdWithAddr}`}>{totals.totalWithAddress.toLocaleString()}</td>
-                                    <td className={`${styles.center} ${styles.emailTdNoAddr}`}>{totals.totalNoAddress.toLocaleString()}</td>
+                                    <td className={styles.center} style={{ color: '#fb923c' }}>{totals.rceNotUploadedForDec.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>{totals.quotedCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdForQuoting}`}>{totals.forQuotingCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdUnquotable}`}>{totals.unquotableCount.toLocaleString()}</td>
@@ -796,7 +950,7 @@ export function CFPMonthlyMatrix() {
                     {/* Muted Sub-Footer */}
                     <div className={styles.emailCardFooter}>
                         <span>Exported: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • Alsop Coverage Check Platform</span>
-                        <span>🌿 Excludes 66 floating Bamboo policies</span>
+                        <span>🎯 All active policies must have DEC & RCE uploaded</span>
                     </div>
                 </div>
             </div>
