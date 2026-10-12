@@ -226,14 +226,20 @@ export async function GET(req: NextRequest) {
             const fn = (doc.file_name || '').toLowerCase();
             const dic = Array.isArray(doc.doc_data_dic) ? doc.doc_data_dic[0] : doc.doc_data_dic;
             const rce = Array.isArray(doc.doc_data_rce) ? doc.doc_data_rce[0] : doc.doc_data_rce;
+            const dicType = (dic?.document_type || '').toLowerCase();
+            const dicCarrierName = (dic?.carrier_name || '').toLowerCase();
+            const isFairPlanCarrier = dicCarrierName.includes('fair plan') || dicCarrierName.includes('california fair') || fn.includes('fair plan') || fn.includes('california fair');
+            const isQuoteDoc = fn.includes('quote') || dicType.includes('quote');
 
             const isRce = doc.doc_type === 'rce' || (fn.includes('rce') && !fn.includes('quote')) || !!rce || !!dic?.rce_replacement_cost;
 
             const isCfpDecDoc = !isRce && (
                 doc.doc_type === 'dec_page' ||
+                isFairPlanCarrier ||
                 fn.includes('renewal_email_attachment') ||
                 fn.includes('renewal_offer') ||
-                (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('quote') && !fn.includes('dic'))
+                (fn.includes('cfp') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic')) ||
+                (fn.includes('dec page') && !fn.includes('bamboo') && !fn.includes('aegis') && !fn.includes('american modern') && !fn.includes('sagesure') && !fn.includes('psic') && !isQuoteDoc && !fn.includes('dic'))
             );
 
             if (isCfpDecDoc && doc.storage_path) {
@@ -333,7 +339,7 @@ export async function GET(req: NextRequest) {
                 const { basePolicy } = normalizePolicyNumber(termPolicyNum);
                 const key = basePolicy || polObj?.policy_number || pid;
 
-                const hasDec = !!termDecDocMap[tid] || (!!policyDecDocMap[pid] && (t.is_current || (termsByPolicy[pid] || []).length === 1)) || !!policyRenewalDecDocMap[pid];
+                const hasDec = !!termDecDocMap[tid] || !!policyDecDocMap[pid] || !!policyRenewalDecDocMap[pid];
                 const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
                 const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
                 const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
@@ -408,7 +414,7 @@ export async function GET(req: NextRequest) {
             const { basePolicy } = normalizePolicyNumber(termPolicyNum);
             const key = basePolicy || polObj?.policy_number || pid;
 
-            const hasDec = !!termDecDocMap[tid] || (!!policyDecDocMap[pid] && (t.is_current || (termsByPolicy[pid] || []).length === 1)) || !!policyRenewalDecDocMap[pid];
+            const hasDec = !!termDecDocMap[tid] || !!policyDecDocMap[pid] || !!policyRenewalDecDocMap[pid];
             const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
             const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
             const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
