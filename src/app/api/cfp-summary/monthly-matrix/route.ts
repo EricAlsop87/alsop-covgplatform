@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
                     is_current,
                     dic_exists,
                     es_exists,
+                    property_location,
                     policies!inner (
                         id,
                         policy_number,
@@ -345,7 +346,7 @@ export async function GET(req: NextRequest) {
 
                 const hasDec = !!termDecDocMap[tid] || !!policyDecDocMap[pid] || !!policyRenewalDecDocMap[pid];
                 const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
-                const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
+                const rawAddr = t.property_location || polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
                 const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
                 const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
 
@@ -431,7 +432,7 @@ export async function GET(req: NextRequest) {
 
             const hasDec = !!termDecDocMap[tid] || !!policyDecDocMap[pid] || !!policyRenewalDecDocMap[pid];
             const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
-            const rawAddr = polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
+            const rawAddr = t.property_location || polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
             const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
             const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
 

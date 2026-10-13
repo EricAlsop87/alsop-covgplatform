@@ -474,6 +474,7 @@ export async function GET(req: NextRequest) {
             source_dec_page_id,
             import_batch_id,
             sold_by,
+            property_location,
             policies!inner (
                 id,
                 policy_number,
@@ -1409,7 +1410,7 @@ export async function GET(req: NextRequest) {
             policy_number: termPolicyNum,
             base_policy: basePolicy || termPolicyNum,
             suffix: suffix || null,
-            property_address: policy?.property_address_raw || termAddressMap[t.id] || policyAddressMap[policyId] || '',
+            property_address: t.property_location || policy?.property_address_raw || termAddressMap[t.id] || policyAddressMap[policyId] || '',
             mailing_address: client?.mailing_address_raw || (termDec as any)?.mailing_address || '',
             carrier_name: policy?.carrier_name || '',
             has_bamboo_coverage: bambooCoverageSet.has(policyId),
