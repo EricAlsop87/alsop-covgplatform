@@ -408,7 +408,10 @@ export function CFPMonthlyMatrix() {
                             <span className={styles.statVal} style={{ color: '#ea580c' }}>
                                 {totals.rceNotUploaded.toLocaleString()}
                             </span>
-                            <span className={styles.statSub}>Needs RCE Upload</span>
+                            <span className={styles.statSub}>
+                                {totals.rcePending != null ? `${totals.rcePending.toLocaleString()} pending` : 'Needs RCE Upload'}
+                                {(totals.rceUnable || 0) > 0 && ` • ${(totals.rceUnable || 0).toLocaleString()} unable`}
+                            </span>
                         </div>
                     </div>
 
@@ -689,7 +692,7 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=missing`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=all_missing`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
@@ -697,11 +700,27 @@ export function CFPMonthlyMatrix() {
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.rceMissingPill} ${row.rceNotUploaded === 0 ? styles.zeroValue : ''}`}
-                                                    title={`Filter to ${row.rceNotUploaded} policies needing RCE in ${row.monthName}`}
+                                                    title={`Filter to ${row.rceNotUploaded} policies not uploaded in ${row.monthName} (${row.rcePending ?? (row.rceNotUploaded - (row.rceUnable || 0))} pending, ${row.rceUnable || 0} unable)`}
                                                 >
                                                     <span>{row.rceNotUploaded.toLocaleString()}</span>
                                                     <ArrowUpRight size={11} />
                                                 </Link>
+                                                {(row.rceUnable || 0) > 0 && (
+                                                    <Link
+                                                        href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=unable`}
+                                                        className={styles.subUnableLink}
+                                                        title={`View ${row.rceUnable} policies unable to get RCE in ${row.monthName}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (typeof window !== 'undefined') {
+                                                                localStorage.setItem('ccn_cfp_summary_month', String(row.month));
+                                                                localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            }
+                                                        }}
+                                                    >
+                                                        ({row.rceUnable} unable)
+                                                    </Link>
+                                                )}
                                             </td>
                                             {viewMode === 'all' && (
                                                 <>
@@ -785,13 +804,23 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=missing`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=all_missing`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceMissing}`}
-                                                title="View all policies needing RCE"
+                                                title={`View all ${totals.rceNotUploaded} policies needing RCE (${totals.rcePending ?? (totals.rceNotUploaded - (totals.rceUnable || 0))} pending, ${totals.rceUnable || 0} unable)`}
                                             >
                                                 <span>{totals.rceNotUploaded.toLocaleString()}</span>
                                                 <ArrowUpRight size={12} />
                                             </Link>
+                                            {(totals.rceUnable || 0) > 0 && (
+                                                <Link
+                                                    href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=unable`}
+                                                    className={styles.subUnableLink}
+                                                    title={`View ${totals.rceUnable || 0} policies unable to get RCE across portfolio`}
+                                                    style={{ color: '#fca5a5' }}
+                                                >
+                                                    ({(totals.rceUnable || 0).toLocaleString()} unable)
+                                                </Link>
+                                            )}
                                         </td>
                                         {viewMode === 'all' && (
                                             <>

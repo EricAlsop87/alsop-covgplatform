@@ -14,6 +14,8 @@ export interface MonthlyMatrixRow {
     decNotUploaded: number;
     rceUploaded: number;
     rceNotUploaded: number;
+    rceUnable?: number;
+    rcePending?: number;
     rceNotUploadedForDec: number;
     totalWithAddress: number;
     totalNoAddress: number;
@@ -28,6 +30,8 @@ export interface MonthlyMatrixTotals {
     decNotUploaded: number;
     rceUploaded: number;
     rceNotUploaded: number;
+    rceUnable?: number;
+    rcePending?: number;
     rceNotUploadedForDec: number;
     totalWithAddress: number;
     totalNoAddress: number;
@@ -285,6 +289,10 @@ export async function GET(req: NextRequest) {
         const bambooCoverageSet = new Set<string>();
         const quotedOverrides = new Set<string>();
         const manualRceSet = new Set<string>();
+        const bambooUnavailable = new Set<string>();
+        const aegisUnavailable = new Set<string>();
+        const psicUnavailable = new Set<string>();
+        const rceUnavailableSet = new Set<string>();
 
         for (const ov of overrides) {
             if (ov.field_name === 'has_bamboo_coverage' && ov.new_value === 'true') {
@@ -292,9 +300,28 @@ export async function GET(req: NextRequest) {
             }
             if (ov.field_name.startsWith('carrier_quote_')) {
                 quotedOverrides.add(ov.policy_id);
+                try {
+                    const parsed = JSON.parse(ov.new_value);
+                    if (parsed?.coverage_type === 'UNAVAILABLE') {
+                        if (ov.field_name === 'carrier_quote_bamboo') bambooUnavailable.add(ov.policy_id);
+                        if (ov.field_name === 'carrier_quote_aegis') aegisUnavailable.add(ov.policy_id);
+                        if (ov.field_name === 'carrier_quote_psic') psicUnavailable.add(ov.policy_id);
+                    }
+                } catch {
+                    // ignore
+                }
             }
             if (ov.field_name === 'rce_valuation' || ov.field_name === 'rce_replacement_cost') {
-                manualRceSet.add(ov.policy_id);
+                try {
+                    const parsed = JSON.parse(ov.new_value);
+                    if (parsed?.carrier === 'Unavailable' || parsed?.status === 'unavailable') {
+                        rceUnavailableSet.add(ov.policy_id);
+                    } else if (parsed?.replacement_cost || (parsed?.carrier && parsed.carrier !== 'Unavailable')) {
+                        manualRceSet.add(ov.policy_id);
+                    }
+                } catch {
+                    manualRceSet.add(ov.policy_id);
+                }
             }
         }
 
@@ -333,6 +360,7 @@ export async function GET(req: NextRequest) {
                 policyId: string;
                 hasDec: boolean;
                 hasRce: boolean;
+                isRceUnable: boolean;
                 hasAddress: boolean;
                 isQuoted: boolean;
             }>();
@@ -348,6 +376,10 @@ export async function GET(req: NextRequest) {
 
                 const hasDec = !!termDecDocMap[tid] || !!policyDecDocMap[pid] || !!policyRenewalDecDocMap[pid];
                 const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
+                const isRceUnable = !hasRce && (
+                    rceUnavailableSet.has(pid) ||
+                    (bambooUnavailable.has(pid) && aegisUnavailable.has(pid) && psicUnavailable.has(pid))
+                );
                 const rawAddr = t.property_location || polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
                 const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
                 const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
@@ -357,6 +389,7 @@ export async function GET(req: NextRequest) {
                         policyId: pid,
                         hasDec,
                         hasRce,
+                        isRceUnable,
                         hasAddress,
                         isQuoted,
                     });
@@ -364,6 +397,7 @@ export async function GET(req: NextRequest) {
                     const existing = policyMap.get(key)!;
                     if (hasDec) existing.hasDec = true;
                     if (hasRce) existing.hasRce = true;
+                    if (isRceUnable) existing.isRceUnable = true;
                     if (hasAddress) existing.hasAddress = true;
                     if (isQuoted) existing.isQuoted = true;
                 }
@@ -375,6 +409,8 @@ export async function GET(req: NextRequest) {
             let decNotUploaded = 0;
             let rceUploaded = 0;
             let rceNotUploaded = 0;
+            let rceUnable = 0;
+            let rcePending = 0;
             let rceNotUploadedForDec = 0;
             let totalWithAddress = 0;
             let totalNoAddress = 0;
@@ -394,6 +430,11 @@ export async function GET(req: NextRequest) {
                     rceUploaded++;
                 } else {
                     rceNotUploaded++;
+                    if (item.isRceUnable) {
+                        rceUnable++;
+                    } else {
+                        rcePending++;
+                    }
                 }
                 if (item.hasAddress) totalWithAddress++;
                 else totalNoAddress++;
@@ -411,6 +452,8 @@ export async function GET(req: NextRequest) {
                 decNotUploaded,
                 rceUploaded,
                 rceNotUploaded,
+                rceUnable,
+                rcePending,
                 rceNotUploadedForDec,
                 totalWithAddress,
                 totalNoAddress,
@@ -425,6 +468,7 @@ export async function GET(req: NextRequest) {
             policyId: string;
             hasDec: boolean;
             hasRce: boolean;
+            isRceUnable: boolean;
             hasAddress: boolean;
             isQuoted: boolean;
         }>();
@@ -440,6 +484,10 @@ export async function GET(req: NextRequest) {
 
             const hasDec = !!termDecDocMap[tid] || !!policyDecDocMap[pid] || !!policyRenewalDecDocMap[pid];
             const hasRce = !!policyRceDoc[pid] || (!!tid && !!termRceDoc[tid]) || manualRceSet.has(pid) || (policyDocTypes[pid]?.has('rce') ?? false);
+            const isRceUnable = !hasRce && (
+                rceUnavailableSet.has(pid) ||
+                (bambooUnavailable.has(pid) && aegisUnavailable.has(pid) && psicUnavailable.has(pid))
+            );
             const rawAddr = t.property_location || polObj?.property_address_raw || termAddressMap[tid] || policyAddressMap[pid] || '';
             const hasAddress = !!rawAddr && rawAddr.trim().length > 3 && rawAddr.trim() !== '—' && rawAddr.trim().toLowerCase() !== 'unknown';
             const isQuoted = quotedOverrides.has(pid) || !!autoQuotes[pid] || !!t.dic_exists || !!t.es_exists;
@@ -449,6 +497,7 @@ export async function GET(req: NextRequest) {
                     policyId: pid,
                     hasDec,
                     hasRce,
+                    isRceUnable,
                     hasAddress,
                     isQuoted,
                 });
@@ -456,6 +505,7 @@ export async function GET(req: NextRequest) {
                 const existing = globalPolicyMap.get(key)!;
                 if (hasDec) existing.hasDec = true;
                 if (hasRce) existing.hasRce = true;
+                if (isRceUnable) existing.isRceUnable = true;
                 if (hasAddress) existing.hasAddress = true;
                 if (isQuoted) existing.isQuoted = true;
             }
@@ -466,6 +516,8 @@ export async function GET(req: NextRequest) {
         let globalDecNotUploaded = 0;
         let globalRceUploaded = 0;
         let globalRceNotUploaded = 0;
+        let globalRceUnable = 0;
+        let globalRcePending = 0;
         let globalRceNotUploadedForDec = 0;
         let globalWithAddress = 0;
         let globalNoAddress = 0;
@@ -485,6 +537,11 @@ export async function GET(req: NextRequest) {
                 globalRceUploaded++;
             } else {
                 globalRceNotUploaded++;
+                if (item.isRceUnable) {
+                    globalRceUnable++;
+                } else {
+                    globalRcePending++;
+                }
             }
             if (item.hasAddress) globalWithAddress++;
             else globalNoAddress++;
@@ -500,6 +557,8 @@ export async function GET(req: NextRequest) {
             decNotUploaded: globalDecNotUploaded,
             rceUploaded: globalRceUploaded,
             rceNotUploaded: globalRceNotUploaded,
+            rceUnable: globalRceUnable,
+            rcePending: globalRcePending,
             rceNotUploadedForDec: globalRceNotUploadedForDec,
             totalWithAddress: globalWithAddress,
             totalNoAddress: globalNoAddress,

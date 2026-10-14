@@ -65,6 +65,8 @@ export interface CFPTermRow {
     rce_replacement_cost?: number | null;
     rce_sq_feet?: number | null;
     rce_cost_per_sqft?: number | null;
+    rce_notes?: string | null;
+    rce_unavailable?: boolean;
     has_dic: boolean;
     dic_carrier: string | null;
     dic_storage_path?: string | null;
@@ -1448,6 +1450,8 @@ export async function GET(req: NextRequest) {
             rce_replacement_cost: finalRceReplacementCost,
             rce_sq_feet: finalRceSqFeet,
             rce_cost_per_sqft: finalRceCostPerSqft,
+            rce_notes: manualRce?.notes || null,
+            rce_unavailable: manualRce?.carrier === 'Unavailable' || (manualRce as any)?.status === 'unavailable',
             has_dic: hasDic,
             dic_carrier: dicCarrier,
             dic_storage_path: dicDoc?.storage_path || null,

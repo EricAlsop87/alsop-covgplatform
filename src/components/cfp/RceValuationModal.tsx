@@ -51,11 +51,21 @@ export function RceValuationModal({
     onSaveSuccess,
     onPreviewDoc,
 }: RceValuationModalProps) {
+    const isInitiallyUnable = term.rce_carrier === 'Unavailable' || (
+        !term.rce_replacement_cost &&
+        !term.has_rce &&
+        term.carrier_quotes?.bamboo?.coverage_type === 'UNAVAILABLE' &&
+        term.carrier_quotes?.aegis?.coverage_type === 'UNAVAILABLE' &&
+        term.carrier_quotes?.psic?.coverage_type === 'UNAVAILABLE'
+    );
+    const [status, setStatus] = useState<'available' | 'unavailable'>(
+        isInitiallyUnable ? 'unavailable' : 'available'
+    );
     const [replacementCost, setReplacementCost] = useState<string>(
         term.rce_replacement_cost ? String(Math.round(Number(term.rce_replacement_cost))) : ''
     );
     const [carrier, setCarrier] = useState<string>(
-        term.rce_carrier || 'Bamboo'
+        term.rce_carrier && term.rce_carrier !== 'Unavailable' ? term.rce_carrier : 'Bamboo'
     );
     const [sqFeet, setSqFeet] = useState<string>(
         term.rce_sq_feet ? String(term.rce_sq_feet) : ''
@@ -63,7 +73,21 @@ export function RceValuationModal({
     const [costPerSqft, setCostPerSqft] = useState<string>(
         term.rce_cost_per_sqft ? String(term.rce_cost_per_sqft) : ''
     );
-    const [notes, setNotes] = useState<string>('');
+    const [notes, setNotes] = useState<string>(() => {
+        if (term.carrier_quotes) {
+            const bNote = term.carrier_quotes.bamboo?.notes;
+            const aNote = term.carrier_quotes.aegis?.notes;
+            const pNote = term.carrier_quotes.psic?.notes;
+            if (isInitiallyUnable && (bNote || aNote || pNote)) {
+                const parts: string[] = [];
+                if (bNote) parts.push(`Bamboo: ${bNote}`);
+                if (aNote) parts.push(`Aegis: ${aNote}`);
+                if (pNote) parts.push(`PSIC: ${pNote}`);
+                return parts.join('\n');
+            }
+        }
+        return '';
+    });
     const [saving, setSaving] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -128,10 +152,12 @@ export function RceValuationModal({
                 },
                 body: JSON.stringify({
                     policy_id: term.policy_id,
-                    replacement_cost: replacementCost ? parseFloat(replacementCost.replace(/[^0-9.]/g, '')) : null,
-                    carrier: carrier.trim(),
-                    sq_feet: sqFeet ? parseFloat(sqFeet.replace(/[^0-9.]/g, '')) : null,
-                    cost_per_sqft: costPerSqft ? parseFloat(costPerSqft.replace(/[^0-9.]/g, '')) : null,
+                    replacement_cost: status === 'unavailable'
+                        ? null
+                        : (replacementCost ? parseFloat(replacementCost.replace(/[^0-9.]/g, '')) : null),
+                    carrier: status === 'unavailable' ? 'Unavailable' : carrier.trim(),
+                    sq_feet: status === 'unavailable' ? null : (sqFeet ? parseFloat(sqFeet.replace(/[^0-9.]/g, '')) : null),
+                    cost_per_sqft: status === 'unavailable' ? null : (costPerSqft ? parseFloat(costPerSqft.replace(/[^0-9.]/g, '')) : null),
                     notes: notes.slice(0, 500).trim(),
                     storage_path: term.rce_storage_path || null,
                     file_name: term.rce_file_name || null,
@@ -269,6 +295,44 @@ export function RceValuationModal({
                         </div>
                     )}
 
+                    {/* Status Toggle Cards */}
+                    <div className={styles.statusGrid}>
+                        <div
+                            className={`${styles.statusCard} ${styles.available} ${status === 'available' ? styles.active : ''}`}
+                            onClick={() => setStatus('available')}
+                        >
+                            <span className={styles.statusCardTitle}>
+                                🟢 RCE Obtained
+                            </span>
+                            <span className={styles.statusCardSub}>
+                                Valuation & replacement cost available
+                            </span>
+                        </div>
+                        <div
+                            className={`${styles.statusCard} ${styles.unavailable} ${status === 'unavailable' ? styles.active : ''}`}
+                            onClick={() => setStatus('unavailable')}
+                        >
+                            <span className={styles.statusCardTitle}>
+                                🔴 Unable to Obtain RCE
+                            </span>
+                            <span className={styles.statusCardSub}>
+                                3 carriers declined / risk ineligible
+                            </span>
+                        </div>
+                    </div>
+
+                    {status === 'unavailable' && (
+                        <div className={styles.unavailableBanner}>
+                            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                                <strong>Marked as Unable to Obtain RCE</strong>
+                                <p style={{ margin: '0.25rem 0 0 0', opacity: 0.9 }}>
+                                    All 3 companion carriers (Bamboo, Aegis, PSIC) are unable to quote or risk is ineligible. This policy will be counted and flagged as unquotable.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Attached RCE PDF Document (if any) */}
                     {term.rce_storage_path && (
                         <div className={styles.docAttachmentCard}>
@@ -306,98 +370,107 @@ export function RceValuationModal({
                         </div>
                     )}
 
-                    {/* Replacement Cost & Carrier / Provider */}
-                    <div className={styles.formRow2}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>
-                                Replacement Cost ($) *
-                            </label>
-                            <div className={styles.inputWrapper}>
-                                <DollarSign size={15} className={styles.inputIcon} />
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. 625183"
-                                    value={replacementCost}
-                                    onChange={e => handleCostChange(e.target.value)}
-                                    className={`${styles.textInput} ${styles.hasIcon}`}
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
+                    {status === 'available' && (
+                        <>
+                            {/* Replacement Cost & Carrier / Provider */}
+                            <div className={styles.formRow2}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>
+                                        Replacement Cost ($) *
+                                    </label>
+                                    <div className={styles.inputWrapper}>
+                                        <DollarSign size={15} className={styles.inputIcon} />
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. 625183"
+                                            value={replacementCost}
+                                            onChange={e => handleCostChange(e.target.value)}
+                                            className={`${styles.textInput} ${styles.hasIcon}`}
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>
-                                Valuation Provider
-                            </label>
-                            <div className={styles.inputWrapper}>
-                                <select
-                                    value={carrier}
-                                    onChange={e => setCarrier(e.target.value)}
-                                    className={styles.selectInput}
-                                >
-                                    {VALUATION_PROVIDERS.map(p => (
-                                        <option key={p} value={p}>
-                                            {p}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>
+                                        Valuation Provider
+                                    </label>
+                                    <div className={styles.inputWrapper}>
+                                        <select
+                                            value={carrier}
+                                            onChange={e => setCarrier(e.target.value)}
+                                            className={styles.selectInput}
+                                        >
+                                            {VALUATION_PROVIDERS.map(p => (
+                                                <option key={p} value={p}>
+                                                    {p}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Square Feet & Cost per Sq Ft */}
-                    <div className={styles.formRow2}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>
-                                Living Area (Sq Ft)
-                            </label>
-                            <div className={styles.inputWrapper}>
-                                <Home size={15} className={styles.inputIcon} />
-                                <input
-                                    type="text"
-                                    placeholder="e.g. 2375"
-                                    value={sqFeet}
-                                    onChange={e => handleSqftChange(e.target.value)}
-                                    className={`${styles.textInput} ${styles.hasIcon}`}
-                                />
-                            </div>
-                        </div>
+                            {/* Square Feet & Cost per Sq Ft */}
+                            <div className={styles.formRow2}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>
+                                        Living Area (Sq Ft)
+                                    </label>
+                                    <div className={styles.inputWrapper}>
+                                        <Home size={15} className={styles.inputIcon} />
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. 2375"
+                                            value={sqFeet}
+                                            onChange={e => handleSqftChange(e.target.value)}
+                                            className={`${styles.textInput} ${styles.hasIcon}`}
+                                        />
+                                    </div>
+                                </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>
-                                Cost / Sq Ft ($/sqft)
-                            </label>
-                            <div className={styles.inputWrapper}>
-                                <Calculator size={15} className={styles.inputIcon} />
-                                <input
-                                    type="text"
-                                    placeholder="Auto-calculated or manual"
-                                    value={costPerSqft}
-                                    onChange={e => setCostPerSqft(e.target.value)}
-                                    className={`${styles.textInput} ${styles.hasIcon}`}
-                                />
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>
+                                        Cost / Sq Ft ($/sqft)
+                                    </label>
+                                    <div className={styles.inputWrapper}>
+                                        <Calculator size={15} className={styles.inputIcon} />
+                                        <input
+                                            type="text"
+                                            placeholder="Auto-calculated or manual"
+                                            value={costPerSqft}
+                                            onChange={e => setCostPerSqft(e.target.value)}
+                                            className={`${styles.textInput} ${styles.hasIcon}`}
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
 
                     {/* Remarks / Notes */}
                     <div className={styles.formGroup}>
                         <label className={styles.formLabel}>
-                            Remarks / Notes (Optional)
+                            {status === 'unavailable'
+                                ? 'Decline / Ineligibility Reason (from carrier portals)'
+                                : 'Remarks / Notes (Optional)'}
                         </label>
                         <textarea
-                            placeholder="e.g. Grade: Above Average, 1991 build, 3 bed / 3 bath..."
+                            placeholder={status === 'unavailable'
+                                ? 'e.g. Moratorium in area, snow accumulation weight risk, brush score too high...'
+                                : 'e.g. Grade: Above Average, 1991 build, 3 bed / 3 bath...'}
                             value={notes}
                             onChange={e => setNotes(e.target.value)}
                             className={styles.textareaInput}
+                            rows={status === 'unavailable' ? 3 : 2}
                         />
                     </div>
 
                     {/* Footer */}
                     <div className={styles.modalFooter}>
                         <div className={styles.footerLeft}>
-                            {term.rce_replacement_cost ? (
+                            {term.rce_replacement_cost || term.rce_carrier === 'Unavailable' ? (
                                 <button
                                     type="button"
                                     className={styles.clearBtn}

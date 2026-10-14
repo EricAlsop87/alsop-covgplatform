@@ -749,6 +749,17 @@
             border-color: rgba(239, 68, 68, 0.3);
         }
     }
+
+    &.unavailable {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+
+        &:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+    }
 }
 
 :global([data-theme='dark']) .carrierBadge {
@@ -792,6 +803,17 @@
         background: rgba(239, 68, 68, 0.1);
         color: #fca5a5;
         border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    &.unavailable {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: #f87171;
+        }
     }
 }
 
@@ -2277,6 +2299,52 @@
     padding: 0.1rem 0.35rem;
     border-radius: 9999px;
     margin-left: 0.35rem;
+}
+
+.pillCountDanger {
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    margin-left: 0.35rem;
+}
+
+.unablePill {
+    border-color: rgba(220, 38, 38, 0.4) !important;
+    color: #dc2626 !important;
+    background: #fef2f2 !important;
+    font-weight: 700 !important;
+
+    &:hover {
+        background: #fee2e2 !important;
+        border-color: #dc2626 !important;
+        transform: translateY(-1px);
+    }
+
+    &.active {
+        background: #dc2626 !important;
+        color: #ffffff !important;
+        border-color: #b91c1c !important;
+    }
+}
+
+:global([data-theme='dark']) .unablePill {
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #fca5a5 !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.25) !important;
+        border-color: #f87171 !important;
+    }
+
+    &.active {
+        background: #dc2626 !important;
+        color: #ffffff !important;
+        border-color: #ef4444 !important;
+    }
 }
 
 .readySentPill {

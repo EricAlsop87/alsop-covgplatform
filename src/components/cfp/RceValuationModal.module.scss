@@ -421,3 +421,92 @@
         cursor: not-allowed;
     }
 }
+
+/* ── RCE Status Cards ── */
+.statusGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.statusCard {
+    border: 1.5px solid var(--border-default, #cbd5e1);
+    border-radius: 8px;
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+    background: var(--bg-surface, #ffffff);
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    user-select: none;
+
+    &:hover {
+        border-color: #94a3b8;
+        transform: translateY(-1px);
+    }
+
+    &.active {
+        border-width: 2px;
+    }
+
+    &.available.active {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+
+    &.unavailable.active {
+        border-color: #ef4444;
+        background: #fef2f2;
+    }
+}
+
+:global([data-theme='dark']) .statusCard {
+    background: rgba(30, 41, 59, 0.4);
+    border-color: #334155;
+
+    &.available.active {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
+    }
+
+    &.unavailable.active {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.15);
+    }
+}
+
+.statusCardTitle {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-high, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.statusCardSub {
+    font-size: 0.6875rem;
+    color: var(--text-muted, #64748b);
+}
+
+.unavailableBanner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+}
+
+:global([data-theme='dark']) .unavailableBanner {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+

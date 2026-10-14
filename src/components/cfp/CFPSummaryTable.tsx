@@ -172,7 +172,37 @@ type DocFilterType =
     | 'not_quoted'
     | 'has_unavailable'
     | 'has_comments'
+    | 'rce_unable'
     | 'returned_from_se';
+
+export function isTermHasRce(t: CFPTermRow): boolean {
+    if (t.rce_carrier === 'Unavailable') return false;
+    return Boolean(
+        t.has_rce ||
+        (t.rce_carrier && t.rce_carrier !== 'Unavailable') ||
+        !!t.rce_storage_path ||
+        !!t.rce_file_name ||
+        (t.rce_replacement_cost != null && Number(t.rce_replacement_cost) > 0)
+    );
+}
+
+export function isTermRceUnable(t: CFPTermRow): boolean {
+    if (isTermHasRce(t)) return false;
+
+    // Explicitly marked unavailable
+    if (t.rce_carrier === 'Unavailable' || (t as any).rce_unavailable) return true;
+
+    // All 3 core companion carriers (Bamboo, Aegis, PSIC) are marked UNAVAILABLE
+    const b = t.carrier_quotes?.bamboo;
+    const a = t.carrier_quotes?.aegis;
+    const p = t.carrier_quotes?.psic;
+
+    return Boolean(
+        b?.coverage_type === 'UNAVAILABLE' &&
+        a?.coverage_type === 'UNAVAILABLE' &&
+        p?.coverage_type === 'UNAVAILABLE'
+    );
+}
 
 export function isTermNotQuoted(t: CFPTermRow): boolean {
     const isRealQuote = (q?: any) => {
@@ -252,7 +282,39 @@ function renderCarrierBadge(
     rceAmount?: number | null,
     onEdit?: () => void
 ) {
+    if (carrier?.toLowerCase() === 'unavailable') {
+        return (
+            <button
+                type="button"
+                className={`${styles.carrierBadge} ${styles.unavailable} ${styles.clickableBadge}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (onEdit) onEdit();
+                    else if (onPreview) onPreview();
+                }}
+                title={`Unable to obtain ${docName} — click to view/edit valuation status`}
+            >
+                <X size={11} /> Unable
+            </button>
+        );
+    }
+
     if (!carrier && !rceAmount) {
+        if (onEdit) {
+            return (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit();
+                    }}
+                    className={`${styles.docBadge} ${styles.no} ${styles.clickableBadge}`}
+                    title={`Missing ${docName} — click to enter valuation or mark unable`}
+                >
+                    <Plus size={12} /> None
+                </button>
+            );
+        }
         return (
             <Link
                 href={`/upload-document?policy_id=${policyId || ''}&doc_type=${docName.toLowerCase()}`}
@@ -615,13 +677,14 @@ export function CFPSummaryTable({
                     ...f,
                     terms: f.terms.map(t => {
                         if (t.policy_id !== policyId && !belongsToFamily) return t;
+                        const isUnavail = updatedData?.carrier === 'Unavailable';
                         return {
                             ...t,
-                            has_rce: !!updatedData?.replacement_cost || t.has_rce,
-                            rce_carrier: updatedData?.carrier || t.rce_carrier || 'Bamboo',
-                            rce_replacement_cost: updatedData ? updatedData.replacement_cost : null,
-                            rce_sq_feet: updatedData ? (updatedData.sq_feet ?? t.rce_sq_feet) : null,
-                            rce_cost_per_sqft: updatedData ? (updatedData.cost_per_sqft ?? t.rce_cost_per_sqft) : null,
+                            has_rce: isUnavail ? false : (!!updatedData?.replacement_cost || (updatedData ? false : t.has_rce)),
+                            rce_carrier: updatedData ? (updatedData.carrier || (isUnavail ? 'Unavailable' : 'Bamboo')) : null,
+                            rce_replacement_cost: isUnavail ? null : (updatedData ? updatedData.replacement_cost : null),
+                            rce_sq_feet: isUnavail ? null : (updatedData ? (updatedData.sq_feet ?? t.rce_sq_feet) : null),
+                            rce_cost_per_sqft: isUnavail ? null : (updatedData ? (updatedData.cost_per_sqft ?? t.rce_cost_per_sqft) : null),
                         };
                     }),
                 };
@@ -1088,6 +1151,8 @@ export function CFPSummaryTable({
                         const quotes = Object.values(t.carrier_quotes || {});
                         return quotes.some(q => q?.coverage_type === 'UNAVAILABLE');
                     }
+                    case 'rce_unable':
+                        return isTermRceUnable(t);
                     case 'returned_from_se':
                         return !!t.returned_from_se;
                     case 'has_comments':
@@ -1229,9 +1294,15 @@ export function CFPSummaryTable({
 
         if (columnFilters.rce) {
             if (columnFilters.rce === 'has_rce') {
-                result = result.filter(t => t.has_rce || !!t.rce_carrier || t.rce_replacement_cost != null);
+                result = result.filter(t => isTermHasRce(t));
             } else if (columnFilters.rce === 'missing') {
-                result = result.filter(t => !t.has_rce && !t.rce_carrier && t.rce_replacement_cost == null);
+                result = result.filter(t => !isTermHasRce(t) && !isTermRceUnable(t));
+            } else if (columnFilters.rce === 'unable') {
+                result = result.filter(t => isTermRceUnable(t));
+            } else if (columnFilters.rce === 'all_missing') {
+                result = result.filter(t => !isTermHasRce(t));
+            } else {
+                result = result.filter(t => t.rce_carrier?.toLowerCase() === columnFilters.rce?.toLowerCase());
             }
         }
 
@@ -1320,6 +1391,7 @@ export function CFPSummaryTable({
         const uniquePolicyMap = new Map<string, {
             has_dec: boolean;
             has_rce: boolean;
+            has_rce_unable: boolean;
             has_dic: boolean;
             has_full: boolean;
             has_any_quote: boolean;
@@ -1336,6 +1408,7 @@ export function CFPSummaryTable({
                 uniquePolicyMap.set(pKey, {
                     has_dec: false,
                     has_rce: false,
+                    has_rce_unable: false,
                     has_dic: false,
                     has_full: false,
                     has_any_quote: false,
@@ -1350,7 +1423,8 @@ export function CFPSummaryTable({
             if (t.client_id) uniqueAccounts.add(t.client_id);
 
             if (t.has_dec || t.has_renewal_dec) item.has_dec = true;
-            if (t.has_rce || t.rce_carrier) item.has_rce = true;
+            if (isTermHasRce(t)) item.has_rce = true;
+            if (isTermRceUnable(t)) item.has_rce_unable = true;
 
             const isNamed = !!t.named_insured && t.named_insured.trim() !== '' && t.named_insured !== '—' && t.named_insured.toLowerCase() !== 'unknown';
             const isAddressed = !!t.property_address && t.property_address.trim() !== '' && t.property_address !== '—' && t.property_address.toLowerCase() !== 'unknown';
@@ -1373,6 +1447,7 @@ export function CFPSummaryTable({
         const uniquePolicies = uniquePolicyMap.size || total;
         let decAvailable = 0;
         let rceAvailable = 0;
+        let rceUnable = 0;
         let dicAvailable = 0;
         let fullAvailable = 0;
         let quoteAvailable = 0;
@@ -1384,6 +1459,7 @@ export function CFPSummaryTable({
         for (const item of uniquePolicyMap.values()) {
             if (item.has_dec) decAvailable++;
             if (item.has_rce) rceAvailable++;
+            else if (item.has_rce_unable) rceUnable++;
             if (item.has_dic) dicAvailable++;
             if (item.has_full) fullAvailable++;
             if (item.has_any_quote) quoteAvailable++;
@@ -1416,6 +1492,8 @@ export function CFPSummaryTable({
         }
 
         const quotesLeft = Math.max(0, uniquePolicies - quoteAvailable);
+        const rceMissing = Math.max(0, uniquePolicies - rceAvailable);
+        const rcePending = Math.max(0, rceMissing - rceUnable);
 
         return {
             total,
@@ -1428,7 +1506,9 @@ export function CFPSummaryTable({
             decMissing: Math.max(0, uniquePolicies - decAvailable),
             decPercent: uniquePolicies > 0 ? ((decAvailable / uniquePolicies) * 100).toFixed(1) : '0',
             rceAvailable,
-            rceMissing: Math.max(0, uniquePolicies - rceAvailable),
+            rceMissing,
+            rceUnable,
+            rcePending,
             rcePercent: uniquePolicies > 0 ? ((rceAvailable / uniquePolicies) * 100).toFixed(1) : '0',
             dicAvailable,
             fullAvailable,
@@ -2003,26 +2083,55 @@ export function CFPSummaryTable({
             }
 
             case 'rce': {
-                const rceNode = renderCarrierBadge(
-                    term.rce_carrier,
-                    'RCE',
-                    term.policy_id,
-                    () => {
-                        handlePreviewDoc({
-                            title: `RCE Document — ${term.rce_carrier || 'Uploaded'} (${term.policy_number})`,
-                            subtitle: term.named_insured || undefined,
-                            docType: 'rce',
-                            storagePath: term.rce_storage_path,
-                            bucket: 'cfp-platform-documents',
-                            fileName: term.rce_file_name || `${term.policy_number}_RCE.pdf`,
-                            policyId: term.policy_id,
-                        });
-                    },
-                    term.rce_replacement_cost,
-                    () => {
-                        setActiveRceModalTerm(term);
-                    }
-                );
+                const isUnable = isTermRceUnable(term);
+                let rceNode: React.ReactNode;
+                if (isUnable) {
+                    const unavailableReasons = [
+                        term.carrier_quotes?.bamboo?.notes,
+                        term.carrier_quotes?.aegis?.notes,
+                        term.carrier_quotes?.psic?.notes,
+                        term.rce_notes,
+                    ].filter(Boolean);
+                    const reasonText = unavailableReasons.length > 0
+                        ? `\nNotes: ${unavailableReasons.join(' | ')}`
+                        : '\nAll 3 companion carriers (Bamboo, Aegis, PSIC) are unavailable / ineligible.';
+
+                    rceNode = (
+                        <button
+                            type="button"
+                            className={`${styles.carrierBadge} ${styles.unavailable} ${styles.clickableBadge}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveRceModalTerm(term);
+                            }}
+                            title={`Unable to obtain RCE${reasonText}\nClick to view or edit valuation status`}
+                        >
+                            <X size={11} /> Unable
+                        </button>
+                    );
+                } else {
+                    rceNode = renderCarrierBadge(
+                        term.rce_carrier,
+                        'RCE',
+                        term.policy_id,
+                        () => {
+                            handlePreviewDoc({
+                                title: `RCE Document — ${term.rce_carrier || 'Uploaded'} (${term.policy_number})`,
+                                subtitle: term.named_insured || undefined,
+                                docType: 'rce',
+                                storagePath: term.rce_storage_path,
+                                bucket: 'cfp-platform-documents',
+                                fileName: term.rce_file_name || `${term.policy_number}_RCE.pdf`,
+                                policyId: term.policy_id,
+                            });
+                        },
+                        term.rce_replacement_cost,
+                        () => {
+                            setActiveRceModalTerm(term);
+                        }
+                    );
+                }
+
                 return (
                     <div className={styles.cellWithComment}>
                         {rceNode}
@@ -2452,8 +2561,10 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters.rce ? styles.activeFilter : ''}`}
                     >
                         <option value="">All RCE</option>
-                        <option value="has_rce">Has RCE</option>
-                        <option value="missing">Missing RCE</option>
+                        <option value="has_rce">Has RCE (✔)</option>
+                        <option value="missing">Pending Upload (+ None)</option>
+                        <option value="unable">Unable to Get RCE (✕)</option>
+                        <option value="all_missing">All Not Uploaded (Pending + Unable)</option>
                         <option value="Bamboo">Bamboo</option>
                         <option value="AM">American Modern</option>
                         <option value="Aegis">Aegis</option>
@@ -2840,7 +2951,10 @@ export function CFPSummaryTable({
                                 </span>
                             </div>
                             <span className={styles.miniCardSub}>
-                                {periodStats.rceMissing.toLocaleString()} waiting for upload
+                                {periodStats.rcePending.toLocaleString()} waiting for upload
+                                {periodStats.rceUnable > 0 && (
+                                    <> • <strong style={{ color: '#dc2626' }}>{periodStats.rceUnable.toLocaleString()} unable</strong></>
+                                )}
                             </span>
                             <div className={styles.miniProgressBar}>
                                 <div 
@@ -2973,6 +3087,17 @@ export function CFPSummaryTable({
                         Not Quoted
                         {periodStats.notQuotedCount > 0 && (
                             <span className={styles.pillCountNeutral}>{periodStats.notQuotedCount}</span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.filterPill} ${styles.unablePill} ${docFilter === 'rce_unable' ? styles.active : ''}`}
+                        onClick={() => { setDocFilter('rce_unable'); setCurrentPage(1); }}
+                        title="Policies unable to obtain RCE (e.g. marked unavailable or ineligible across Bamboo, Aegis, PSIC)"
+                    >
+                        🚫 Unable RCE / 3 Carriers
+                        {periodStats.rceUnable > 0 && (
+                            <span className={styles.pillCountDanger}>{periodStats.rceUnable}</span>
                         )}
                     </button>
                     <button

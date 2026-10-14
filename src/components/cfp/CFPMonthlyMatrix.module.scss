@@ -640,6 +640,21 @@
     }
 }
 
+.subUnableLink {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #dc2626;
+    margin-top: 0.2rem;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+        opacity: 0.8;
+        text-decoration: underline;
+    }
+}
+
 .footerMetricLink {
     display: inline-flex;
     align-items: center;
