@@ -21,7 +21,8 @@ import {
     Clock,
     AlertTriangle,
     Info,
-    SlidersHorizontal
+    SlidersHorizontal,
+    ShieldOff,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './CFPMonthlyMatrix.module.scss';
@@ -205,6 +206,7 @@ export function CFPMonthlyMatrix() {
             'DEC Not Uploaded',
             'RCE Uploaded',
             'RCE Not Uploaded',
+            'Unable to Get RCE',
             'With Addr',
             'No Addr',
             'Quoted',
@@ -219,6 +221,7 @@ export function CFPMonthlyMatrix() {
             r.decNotUploaded,
             r.rceUploaded,
             r.rceNotUploaded,
+            r.rceUnable || 0,
             r.totalWithAddress,
             r.totalNoAddress,
             r.quotedCount,
@@ -234,6 +237,7 @@ export function CFPMonthlyMatrix() {
                 totals.decNotUploaded,
                 totals.rceUploaded,
                 totals.rceNotUploaded,
+                totals.rceUnable || 0,
                 totals.totalWithAddress,
                 totals.totalNoAddress,
                 totals.quotedCount,
@@ -267,6 +271,7 @@ export function CFPMonthlyMatrix() {
             { header: 'DEC Not Uploaded', key: 'dec_not_uploaded', width: 20 },
             { header: 'RCE Uploaded', key: 'rce_uploaded', width: 18 },
             { header: 'RCE Not Uploaded', key: 'rce_not_uploaded', width: 20 },
+            { header: 'Unable to Get RCE', key: 'rce_unable', width: 20 },
             { header: 'With Addr', key: 'with_address', width: 16 },
             { header: 'No Addr', key: 'no_address', width: 16 },
             { header: 'Quoted', key: 'quoted', width: 16 },
@@ -292,6 +297,7 @@ export function CFPMonthlyMatrix() {
                 dec_not_uploaded: row.decNotUploaded,
                 rce_uploaded: row.rceUploaded,
                 rce_not_uploaded: row.rceNotUploaded,
+                rce_unable: row.rceUnable || 0,
                 with_address: row.totalWithAddress,
                 no_address: row.totalNoAddress,
                 quoted: row.quotedCount,
@@ -311,6 +317,7 @@ export function CFPMonthlyMatrix() {
                 dec_not_uploaded: totals.decNotUploaded,
                 rce_uploaded: totals.rceUploaded,
                 rce_not_uploaded: totals.rceNotUploaded,
+                rce_unable: totals.rceUnable || 0,
                 with_address: totals.totalWithAddress,
                 no_address: totals.totalNoAddress,
                 quoted: totals.quotedCount,
@@ -412,6 +419,19 @@ export function CFPMonthlyMatrix() {
                                 {totals.rcePending != null ? `${totals.rcePending.toLocaleString()} pending` : 'Needs RCE Upload'}
                                 {(totals.rceUnable || 0) > 0 && ` • ${(totals.rceUnable || 0).toLocaleString()} unable`}
                             </span>
+                        </div>
+                    </div>
+
+                    <div className={styles.quickStatCard}>
+                        <div className={styles.statIcon} style={{ color: '#dc2626', background: '#fef2f2' }}>
+                            <ShieldOff size={16} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <span className={styles.statLabel}>Unable to Get RCE</span>
+                            <span className={styles.statVal} style={{ color: '#dc2626' }}>
+                                {(totals.rceUnable || 0).toLocaleString()}
+                            </span>
+                            <span className={styles.statSub}>3 Carriers Ineligible</span>
                         </div>
                     </div>
 
@@ -553,29 +573,33 @@ export function CFPMonthlyMatrix() {
                         <table className={styles.webTable}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: viewMode === 'upload_tracker' ? '18%' : '14%' }}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '15%' : '11%' }}>
                                         <div className={styles.thTitle}>MONTH</div>
                                         <div className={styles.thSub}>Calendar Term</div>
                                     </th>
-                                    <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '9.5%' }} className={styles.center}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '11%' : '7.5%' }} className={styles.center}>
                                         <div className={styles.thTitle}>POLICIES</div>
                                         <div className={styles.thSub}>Base Families</div>
                                     </th>
-                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '10.5%' }} className={`${styles.center} ${styles.thDec}`}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '15%' : '8.5%' }} className={`${styles.center} ${styles.thDec}`}>
                                         <div className={styles.thTitle}>DEC UPLOADED</div>
                                         <div className={styles.thSub}>Active Dec on File</div>
                                     </th>
-                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '10.5%' }} className={`${styles.center} ${styles.thDecMissing}`}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '15%' : '8.5%' }} className={`${styles.center} ${styles.thDecMissing}`}>
                                         <div className={styles.thTitle}>DEC NOT UPLOADED</div>
                                         <div className={styles.thSub}>Based on Policies Available</div>
                                     </th>
-                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '10.5%' }} className={`${styles.center} ${styles.thRce}`}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '15%' : '8.5%' }} className={`${styles.center} ${styles.thRce}`}>
                                         <div className={styles.thTitle}>RCE UPLOADED</div>
                                         <div className={styles.thSub}>360Value / Est.</div>
                                     </th>
-                                    <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '11%' }} className={`${styles.center} ${styles.thRceMissing}`}>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '15%' : '8.5%' }} className={`${styles.center} ${styles.thRceMissing}`}>
                                         <div className={styles.thTitle}>RCE NOT UPLOADED</div>
                                         <div className={styles.thSub}>Based on Policies Available</div>
+                                    </th>
+                                    <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '8.5%' }} className={`${styles.center} ${styles.thRceUnable}`}>
+                                        <div className={styles.thTitle}>UNABLE TO GET RCE</div>
+                                        <div className={styles.thSub}>3 Carriers Ineligible</div>
                                     </th>
                                     {viewMode === 'all' && (
                                         <>
@@ -700,27 +724,27 @@ export function CFPMonthlyMatrix() {
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.rceMissingPill} ${row.rceNotUploaded === 0 ? styles.zeroValue : ''}`}
-                                                    title={`Filter to ${row.rceNotUploaded} policies not uploaded in ${row.monthName} (${row.rcePending ?? (row.rceNotUploaded - (row.rceUnable || 0))} pending, ${row.rceUnable || 0} unable)`}
+                                                    title={`Filter to ${row.rceNotUploaded} policies not uploaded in ${row.monthName}`}
                                                 >
                                                     <span>{row.rceNotUploaded.toLocaleString()}</span>
                                                     <ArrowUpRight size={11} />
                                                 </Link>
-                                                {(row.rceUnable || 0) > 0 && (
-                                                    <Link
-                                                        href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=unable`}
-                                                        className={styles.subUnableLink}
-                                                        title={`View ${row.rceUnable} policies unable to get RCE in ${row.monthName}`}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (typeof window !== 'undefined') {
-                                                                localStorage.setItem('ccn_cfp_summary_month', String(row.month));
-                                                                localStorage.setItem('ccn_cfp_summary_year', paramYear);
-                                                            }
-                                                        }}
-                                                    >
-                                                        ({row.rceUnable} unable)
-                                                    </Link>
-                                                )}
+                                            </td>
+                                            <td className={styles.center}>
+                                                <Link
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=unable`}
+                                                    onClick={() => {
+                                                        if (typeof window !== 'undefined') {
+                                                            localStorage.setItem('ccn_cfp_summary_month', String(row.month));
+                                                            localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                        }
+                                                    }}
+                                                    className={`${styles.metricLink} ${styles.rceUnablePill} ${(row.rceUnable || 0) === 0 ? styles.zeroValue : ''}`}
+                                                    title={`Filter to ${row.rceUnable || 0} policies unable to get RCE in ${row.monthName}`}
+                                                >
+                                                    <span>{(row.rceUnable || 0).toLocaleString()}</span>
+                                                    <ArrowUpRight size={11} />
+                                                </Link>
                                             </td>
                                             {viewMode === 'all' && (
                                                 <>
@@ -806,21 +830,21 @@ export function CFPMonthlyMatrix() {
                                             <Link
                                                 href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=all_missing`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceMissing}`}
-                                                title={`View all ${totals.rceNotUploaded} policies needing RCE (${totals.rcePending ?? (totals.rceNotUploaded - (totals.rceUnable || 0))} pending, ${totals.rceUnable || 0} unable)`}
+                                                title={`View all ${totals.rceNotUploaded} policies needing RCE`}
                                             >
                                                 <span>{totals.rceNotUploaded.toLocaleString()}</span>
                                                 <ArrowUpRight size={12} />
                                             </Link>
-                                            {(totals.rceUnable || 0) > 0 && (
-                                                <Link
-                                                    href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=unable`}
-                                                    className={styles.subUnableLink}
-                                                    title={`View ${totals.rceUnable || 0} policies unable to get RCE across portfolio`}
-                                                    style={{ color: '#fca5a5' }}
-                                                >
-                                                    ({(totals.rceUnable || 0).toLocaleString()} unable)
-                                                </Link>
-                                            )}
+                                        </td>
+                                        <td className={styles.center}>
+                                            <Link
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=unable`}
+                                                className={`${styles.footerMetricLink} ${styles.footerRceUnable}`}
+                                                title={`View all ${totals.rceUnable || 0} policies unable to get RCE across portfolio`}
+                                            >
+                                                <span>{(totals.rceUnable || 0).toLocaleString()}</span>
+                                                <ArrowUpRight size={12} />
+                                            </Link>
                                         </td>
                                         {viewMode === 'all' && (
                                             <>
@@ -914,15 +938,16 @@ export function CFPMonthlyMatrix() {
                     <table className={styles.emailTable}>
                         <thead>
                             <tr>
-                                <th style={{ width: '15%' }}>MONTH</th>
-                                <th style={{ width: '10%' }} className={styles.center}>POLICIES</th>
-                                <th style={{ width: '11%' }} className={styles.center}>DEC UPL.</th>
-                                <th style={{ width: '11%' }} className={styles.center}>DEC MISSING</th>
-                                <th style={{ width: '11%' }} className={styles.center}>RCE UPL.</th>
-                                <th style={{ width: '11%' }} className={styles.center}>RCE MISSING</th>
-                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
-                                <th style={{ width: '11%' }} className={`${styles.center} ${styles.emailThForQuoting}`}>FOR QUOTING</th>
-                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
+                                <th style={{ width: '13%' }}>MONTH</th>
+                                <th style={{ width: '9%' }} className={styles.center}>POLICIES</th>
+                                <th style={{ width: '10%' }} className={styles.center}>DEC UPL.</th>
+                                <th style={{ width: '10%' }} className={styles.center}>DEC MISSING</th>
+                                <th style={{ width: '10%' }} className={styles.center}>RCE UPL.</th>
+                                <th style={{ width: '10%' }} className={styles.center}>RCE MISSING</th>
+                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThRceUnable}`}>UNABLE RCE</th>
+                                <th style={{ width: '9%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
+                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThForQuoting}`}>FOR QUOTING</th>
+                                <th style={{ width: '9%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -947,6 +972,9 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center}`} style={{ color: '#ea580c', fontWeight: 700 }}>
                                         {row.rceNotUploaded.toLocaleString()}
                                     </td>
+                                    <td className={`${styles.center} ${styles.emailTdRceUnable}`}>
+                                        {(row.rceUnable || 0).toLocaleString()}
+                                    </td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>
                                         {row.quotedCount.toLocaleString()}
                                     </td>
@@ -968,6 +996,7 @@ export function CFPMonthlyMatrix() {
                                     <td className={styles.center} style={{ color: '#f87171' }}>{totals.decNotUploaded.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdRce}`}>{totals.rceUploaded.toLocaleString()}</td>
                                     <td className={styles.center} style={{ color: '#fb923c' }}>{totals.rceNotUploaded.toLocaleString()}</td>
+                                    <td className={`${styles.center} ${styles.emailTdRceUnable}`} style={{ color: '#f87171' }}>{(totals.rceUnable || 0).toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>{totals.quotedCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdForQuoting}`}>{totals.forQuotingCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdUnquotable}`}>{totals.unquotableCount.toLocaleString()}</td>

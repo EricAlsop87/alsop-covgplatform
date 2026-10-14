@@ -324,6 +324,12 @@
                 .thSub { color: #c2410c; }
             }
 
+            &.thRceUnable {
+                background: #fef2f2;
+                .thTitle { color: #b91c1c; }
+                .thSub { color: #dc2626; }
+            }
+
             &.thQuoted {
                 background: #eff6ff;
                 .thTitle { color: #1d4ed8; }
@@ -625,6 +631,18 @@
         }
     }
 
+    &.rceUnablePill {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+
+        &:hover {
+            background: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+    }
+
     &.zeroValue {
         opacity: 0.55;
         background: #f8fafc;
@@ -693,6 +711,12 @@
         color: #fb923c;
         background: rgba(251, 146, 60, 0.12);
         border: 1px solid rgba(251, 146, 60, 0.25);
+    }
+
+    &.footerRceUnable {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.12);
+        border: 1px solid rgba(248, 113, 113, 0.25);
     }
 }
 
@@ -887,6 +911,11 @@
                 text-align: center;
             }
 
+            &.emailThRceUnable {
+                color: #b91c1c;
+                background: #fef2f2;
+            }
+
             &.emailThQuoted {
                 color: #1d4ed8;
                 background: #e0f2fe;
@@ -942,6 +971,11 @@
             &.emailTdRce {
                 color: #7c3aed;
                 font-weight: 600;
+            }
+
+            &.emailTdRceUnable {
+                color: #dc2626;
+                font-weight: 700;
             }
 
             &.emailTdWithAddr {
