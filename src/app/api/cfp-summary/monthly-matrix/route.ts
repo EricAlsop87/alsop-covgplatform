@@ -13,6 +13,7 @@ export interface MonthlyMatrixRow {
     decUploaded: number;
     decNotUploaded: number;
     rceUploaded: number;
+    rceNotUploaded: number;
     rceNotUploadedForDec: number;
     totalWithAddress: number;
     totalNoAddress: number;
@@ -26,6 +27,7 @@ export interface MonthlyMatrixTotals {
     decUploaded: number;
     decNotUploaded: number;
     rceUploaded: number;
+    rceNotUploaded: number;
     rceNotUploadedForDec: number;
     totalWithAddress: number;
     totalNoAddress: number;
@@ -372,6 +374,7 @@ export async function GET(req: NextRequest) {
             let decUploaded = 0;
             let decNotUploaded = 0;
             let rceUploaded = 0;
+            let rceNotUploaded = 0;
             let rceNotUploadedForDec = 0;
             let totalWithAddress = 0;
             let totalNoAddress = 0;
@@ -387,7 +390,11 @@ export async function GET(req: NextRequest) {
                 } else {
                     decNotUploaded++;
                 }
-                if (item.hasRce) rceUploaded++;
+                if (item.hasRce) {
+                    rceUploaded++;
+                } else {
+                    rceNotUploaded++;
+                }
                 if (item.hasAddress) totalWithAddress++;
                 else totalNoAddress++;
                 if (item.isQuoted) quotedCount++;
@@ -403,6 +410,7 @@ export async function GET(req: NextRequest) {
                 decUploaded,
                 decNotUploaded,
                 rceUploaded,
+                rceNotUploaded,
                 rceNotUploadedForDec,
                 totalWithAddress,
                 totalNoAddress,
@@ -457,6 +465,7 @@ export async function GET(req: NextRequest) {
         let globalDecUploaded = 0;
         let globalDecNotUploaded = 0;
         let globalRceUploaded = 0;
+        let globalRceNotUploaded = 0;
         let globalRceNotUploadedForDec = 0;
         let globalWithAddress = 0;
         let globalNoAddress = 0;
@@ -472,7 +481,11 @@ export async function GET(req: NextRequest) {
             } else {
                 globalDecNotUploaded++;
             }
-            if (item.hasRce) globalRceUploaded++;
+            if (item.hasRce) {
+                globalRceUploaded++;
+            } else {
+                globalRceNotUploaded++;
+            }
             if (item.hasAddress) globalWithAddress++;
             else globalNoAddress++;
             if (item.isQuoted) globalQuotedCount++;
@@ -486,6 +499,7 @@ export async function GET(req: NextRequest) {
             decUploaded: globalDecUploaded,
             decNotUploaded: globalDecNotUploaded,
             rceUploaded: globalRceUploaded,
+            rceNotUploaded: globalRceNotUploaded,
             rceNotUploadedForDec: globalRceNotUploadedForDec,
             totalWithAddress: globalWithAddress,
             totalNoAddress: globalNoAddress,

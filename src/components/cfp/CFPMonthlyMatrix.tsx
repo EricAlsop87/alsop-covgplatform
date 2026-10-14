@@ -204,7 +204,7 @@ export function CFPMonthlyMatrix() {
             'DEC Uploaded',
             'DEC Not Uploaded',
             'RCE Uploaded',
-            'RCE Not Uploaded (For DEC)',
+            'RCE Not Uploaded',
             'With Addr',
             'No Addr',
             'Quoted',
@@ -218,7 +218,7 @@ export function CFPMonthlyMatrix() {
             r.decUploaded,
             r.decNotUploaded,
             r.rceUploaded,
-            r.rceNotUploadedForDec,
+            r.rceNotUploaded,
             r.totalWithAddress,
             r.totalNoAddress,
             r.quotedCount,
@@ -233,7 +233,7 @@ export function CFPMonthlyMatrix() {
                 totals.decUploaded,
                 totals.decNotUploaded,
                 totals.rceUploaded,
-                totals.rceNotUploadedForDec,
+                totals.rceNotUploaded,
                 totals.totalWithAddress,
                 totals.totalNoAddress,
                 totals.quotedCount,
@@ -266,7 +266,7 @@ export function CFPMonthlyMatrix() {
             { header: 'DEC Uploaded', key: 'dec_uploaded', width: 18 },
             { header: 'DEC Not Uploaded', key: 'dec_not_uploaded', width: 20 },
             { header: 'RCE Uploaded', key: 'rce_uploaded', width: 18 },
-            { header: 'RCE Not Uploaded (For DEC)', key: 'rce_not_uploaded', width: 22 },
+            { header: 'RCE Not Uploaded', key: 'rce_not_uploaded', width: 20 },
             { header: 'With Addr', key: 'with_address', width: 16 },
             { header: 'No Addr', key: 'no_address', width: 16 },
             { header: 'Quoted', key: 'quoted', width: 16 },
@@ -291,7 +291,7 @@ export function CFPMonthlyMatrix() {
                 dec_uploaded: row.decUploaded,
                 dec_not_uploaded: row.decNotUploaded,
                 rce_uploaded: row.rceUploaded,
-                rce_not_uploaded: row.rceNotUploadedForDec,
+                rce_not_uploaded: row.rceNotUploaded,
                 with_address: row.totalWithAddress,
                 no_address: row.totalNoAddress,
                 quoted: row.quotedCount,
@@ -310,7 +310,7 @@ export function CFPMonthlyMatrix() {
                 dec_uploaded: totals.decUploaded,
                 dec_not_uploaded: totals.decNotUploaded,
                 rce_uploaded: totals.rceUploaded,
-                rce_not_uploaded: totals.rceNotUploadedForDec,
+                rce_not_uploaded: totals.rceNotUploaded,
                 with_address: totals.totalWithAddress,
                 no_address: totals.totalNoAddress,
                 quoted: totals.quotedCount,
@@ -404,11 +404,11 @@ export function CFPMonthlyMatrix() {
                             <Clock size={16} />
                         </div>
                         <div className={styles.statInfo}>
-                            <span className={styles.statLabel}>RCE Missing (For DECs)</span>
+                            <span className={styles.statLabel}>RCE Missing</span>
                             <span className={styles.statVal} style={{ color: '#ea580c' }}>
-                                {totals.rceNotUploadedForDec.toLocaleString()}
+                                {totals.rceNotUploaded.toLocaleString()}
                             </span>
-                            <span className={styles.statSub}>Dec On File • Need RCE</span>
+                            <span className={styles.statSub}>Needs RCE Upload</span>
                         </div>
                     </div>
 
@@ -572,7 +572,7 @@ export function CFPMonthlyMatrix() {
                                     </th>
                                     <th style={{ width: viewMode === 'upload_tracker' ? '17%' : '11%' }} className={`${styles.center} ${styles.thRceMissing}`}>
                                         <div className={styles.thTitle}>RCE NOT UPLOADED</div>
-                                        <div className={styles.thSub}>Based on Uploaded Dec</div>
+                                        <div className={styles.thSub}>Based on Policies Available</div>
                                     </th>
                                     {viewMode === 'all' && (
                                         <>
@@ -689,17 +689,17 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=uploaded&rce=missing`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=missing`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
                                                         }
                                                     }}
-                                                    className={`${styles.metricLink} ${styles.rceMissingPill} ${row.rceNotUploadedForDec === 0 ? styles.zeroValue : ''}`}
-                                                    title={`Filter to ${row.rceNotUploadedForDec} policies with DEC Uploaded that still need RCE in ${row.monthName}`}
+                                                    className={`${styles.metricLink} ${styles.rceMissingPill} ${row.rceNotUploaded === 0 ? styles.zeroValue : ''}`}
+                                                    title={`Filter to ${row.rceNotUploaded} policies needing RCE in ${row.monthName}`}
                                                 >
-                                                    <span>{row.rceNotUploadedForDec.toLocaleString()}</span>
+                                                    <span>{row.rceNotUploaded.toLocaleString()}</span>
                                                     <ArrowUpRight size={11} />
                                                 </Link>
                                             </td>
@@ -785,11 +785,11 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=uploaded&rce=missing`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=missing`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceMissing}`}
-                                                title="View all policies with DEC Uploaded that still need RCE"
+                                                title="View all policies needing RCE"
                                             >
-                                                <span>{totals.rceNotUploadedForDec.toLocaleString()}</span>
+                                                <span>{totals.rceNotUploaded.toLocaleString()}</span>
                                                 <ArrowUpRight size={12} />
                                             </Link>
                                         </td>
@@ -840,7 +840,7 @@ export function CFPMonthlyMatrix() {
                     </div>
                     <p>
                         <strong>DEC Not Uploaded:</strong> Policies available minus uploaded DEC pages.
-                        <strong> RCE Not Uploaded:</strong> Policies that already have a DEC uploaded, but are still awaiting an RCE (360Value / Est.).
+                        <strong> RCE Not Uploaded:</strong> Policies available minus uploaded RCE estimates.
                     </p>
                 </div>
 
@@ -916,7 +916,7 @@ export function CFPMonthlyMatrix() {
                                         {row.rceUploaded.toLocaleString()}
                                     </td>
                                     <td className={`${styles.center}`} style={{ color: '#ea580c', fontWeight: 700 }}>
-                                        {row.rceNotUploadedForDec.toLocaleString()}
+                                        {row.rceNotUploaded.toLocaleString()}
                                     </td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>
                                         {row.quotedCount.toLocaleString()}
@@ -938,7 +938,7 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center} ${styles.emailTdDec}`}>{totals.decUploaded.toLocaleString()}</td>
                                     <td className={styles.center} style={{ color: '#f87171' }}>{totals.decNotUploaded.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdRce}`}>{totals.rceUploaded.toLocaleString()}</td>
-                                    <td className={styles.center} style={{ color: '#fb923c' }}>{totals.rceNotUploadedForDec.toLocaleString()}</td>
+                                    <td className={styles.center} style={{ color: '#fb923c' }}>{totals.rceNotUploaded.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdQuoted}`}>{totals.quotedCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdForQuoting}`}>{totals.forQuotingCount.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdUnquotable}`}>{totals.unquotableCount.toLocaleString()}</td>
