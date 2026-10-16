@@ -415,10 +415,7 @@ export function CFPMonthlyMatrix() {
                             <span className={styles.statVal} style={{ color: '#ea580c' }}>
                                 {totals.rceNotUploaded.toLocaleString()}
                             </span>
-                            <span className={styles.statSub}>
-                                {totals.rcePending != null ? `${totals.rcePending.toLocaleString()} pending` : 'Needs RCE Upload'}
-                                {(totals.rceUnable || 0) > 0 && ` • ${(totals.rceUnable || 0).toLocaleString()} unable`}
-                            </span>
+                            <span className={styles.statSub}>Pending RCE Upload</span>
                         </div>
                     </div>
 
@@ -716,7 +713,7 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=all_missing`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=missing`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
@@ -828,7 +825,7 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=all_missing`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=missing`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceMissing}`}
                                                 title={`View all ${totals.rceNotUploaded} policies needing RCE`}
                                             >

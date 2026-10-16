@@ -428,13 +428,11 @@ export async function GET(req: NextRequest) {
                 }
                 if (item.hasRce) {
                     rceUploaded++;
+                } else if (item.isRceUnable) {
+                    rceUnable++;
                 } else {
                     rceNotUploaded++;
-                    if (item.isRceUnable) {
-                        rceUnable++;
-                    } else {
-                        rcePending++;
-                    }
+                    rcePending++;
                 }
                 if (item.hasAddress) totalWithAddress++;
                 else totalNoAddress++;
@@ -535,13 +533,11 @@ export async function GET(req: NextRequest) {
             }
             if (item.hasRce) {
                 globalRceUploaded++;
+            } else if (item.isRceUnable) {
+                globalRceUnable++;
             } else {
                 globalRceNotUploaded++;
-                if (item.isRceUnable) {
-                    globalRceUnable++;
-                } else {
-                    globalRcePending++;
-                }
+                globalRcePending++;
             }
             if (item.hasAddress) globalWithAddress++;
             else globalNoAddress++;
