@@ -432,18 +432,20 @@ export function CFPMonthlyMatrix() {
                         </div>
                     </div>
 
-                    <div className={styles.quickStatCard}>
-                        <div className={styles.statIcon} style={{ color: '#2563eb', background: '#eff6ff' }}>
-                            <CheckCircle2 size={16} />
+                    {viewMode === 'all' && (
+                        <div className={styles.quickStatCard}>
+                            <div className={styles.statIcon} style={{ color: '#2563eb', background: '#eff6ff' }}>
+                                <CheckCircle2 size={16} />
+                            </div>
+                            <div className={styles.statInfo}>
+                                <span className={styles.statLabel}>Quoted (≥1 Carrier)</span>
+                                <span className={styles.statVal} style={{ color: '#2563eb' }}>
+                                    {totals.quotedCount.toLocaleString()}
+                                </span>
+                                <span className={styles.statSub}>Companion ready</span>
+                            </div>
                         </div>
-                        <div className={styles.statInfo}>
-                            <span className={styles.statLabel}>Quoted (≥1 Carrier)</span>
-                            <span className={styles.statVal} style={{ color: '#2563eb' }}>
-                                {totals.quotedCount.toLocaleString()}
-                            </span>
-                            <span className={styles.statSub}>Companion ready</span>
-                        </div>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -471,10 +473,10 @@ export function CFPMonthlyMatrix() {
                             type="button"
                             className={`${styles.viewModeBtn} ${viewMode === 'upload_tracker' ? styles.activeViewMode : ''}`}
                             onClick={() => setViewMode('upload_tracker')}
-                            title="Show Core Upload Columns (Month, Policies, Dec Uploaded, Dec Not Uploaded, RCE Uploaded, RCE Not Uploaded)"
+                            title="Show Core Upload Columns (Month, Policies, Dec Uploaded, Dec Not Uploaded, RCE Uploaded, RCE Not Uploaded, Unable RCE)"
                         >
                             <FileCheck size={13} />
-                            <span>Upload Tracker (6 Columns)</span>
+                            <span>Upload Tracker (7 Columns)</span>
                         </button>
                         <button
                             type="button"
@@ -483,7 +485,7 @@ export function CFPMonthlyMatrix() {
                             title="Show All Operational & Quoting Pipeline Columns"
                         >
                             <SlidersHorizontal size={13} />
-                            <span>All Columns (9 Columns)</span>
+                            <span>All Columns (10 Columns)</span>
                         </button>
                     </div>
                 </div>
@@ -895,16 +897,28 @@ export function CFPMonthlyMatrix() {
                     </p>
                 </div>
 
-                <div className={styles.defCard}>
-                    <div className={styles.defHeader}>
-                        <Clock size={14} color="#d97706" />
-                        <span>Quoting Pipeline Logic</span>
+                {viewMode === 'all' ? (
+                    <div className={styles.defCard}>
+                        <div className={styles.defHeader}>
+                            <Clock size={14} color="#d97706" />
+                            <span>Quoting Pipeline Logic</span>
+                        </div>
+                        <p>
+                            <strong>Quoted:</strong> Companion quotes in Bamboo, Aegis, AM, PSIC, or SageSure.
+                            <strong> Click any number:</strong> Jumps straight to the filtered list in CFP Summary.
+                        </p>
                     </div>
-                    <p>
-                        <strong>Quoted:</strong> Companion quotes in Bamboo, Aegis, AM, PSIC, or SageSure.
-                        <strong> Click any number:</strong> Jumps straight to the filtered list in CFP Summary.
-                    </p>
-                </div>
+                ) : (
+                    <div className={styles.defCard}>
+                        <div className={styles.defHeader}>
+                            <ArrowUpRight size={14} color="#2563eb" />
+                            <span>Interactive Navigation</span>
+                        </div>
+                        <p>
+                            <strong>Click any number:</strong> Jumps straight to the pre-filtered list in CFP Summary to view or export that exact list.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* 
@@ -936,16 +950,20 @@ export function CFPMonthlyMatrix() {
                     <table className={styles.emailTable}>
                         <thead>
                             <tr>
-                                <th style={{ width: '13%' }}>MONTH</th>
-                                <th style={{ width: '9%' }} className={styles.center}>POLICIES</th>
-                                <th style={{ width: '10%' }} className={styles.center}>DEC UPL.</th>
-                                <th style={{ width: '10%' }} className={styles.center}>DEC MISSING</th>
-                                <th style={{ width: '10%' }} className={styles.center}>RCE UPL.</th>
-                                <th style={{ width: '10%' }} className={styles.center}>RCE MISSING</th>
-                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThRceUnable}`}>UNABLE RCE</th>
-                                <th style={{ width: '9%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
-                                <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThForQuoting}`}>FOR QUOTING</th>
-                                <th style={{ width: '9%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '16%' : '13%' }}>MONTH</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '9%' }} className={styles.center}>POLICIES</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '10%' }} className={styles.center}>DEC UPL.</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '10%' }} className={styles.center}>DEC MISSING</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '10%' }} className={styles.center}>RCE UPL.</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '10%' }} className={styles.center}>RCE MISSING</th>
+                                <th style={{ width: viewMode === 'upload_tracker' ? '14%' : '10%' }} className={`${styles.center} ${styles.emailThRceUnable}`}>UNABLE RCE</th>
+                                {viewMode === 'all' && (
+                                    <>
+                                        <th style={{ width: '9%' }} className={`${styles.center} ${styles.emailThQuoted}`}>QUOTED</th>
+                                        <th style={{ width: '10%' }} className={`${styles.center} ${styles.emailThForQuoting}`}>FOR QUOTING</th>
+                                        <th style={{ width: '9%' }} className={`${styles.center} ${styles.emailThUnquotable}`}>UNQUOTABLE</th>
+                                    </>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
@@ -973,15 +991,19 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center} ${styles.emailTdRceUnable}`}>
                                         {(row.rceUnable || 0).toLocaleString()}
                                     </td>
-                                    <td className={`${styles.center} ${styles.emailTdQuoted}`}>
-                                        {row.quotedCount.toLocaleString()}
-                                    </td>
-                                    <td className={`${styles.center} ${styles.emailTdForQuoting}`}>
-                                        {row.forQuotingCount.toLocaleString()}
-                                    </td>
-                                    <td className={`${styles.center} ${styles.emailTdUnquotable}`}>
-                                        {row.unquotableCount.toLocaleString()}
-                                    </td>
+                                    {viewMode === 'all' && (
+                                        <>
+                                            <td className={`${styles.center} ${styles.emailTdQuoted}`}>
+                                                {row.quotedCount.toLocaleString()}
+                                            </td>
+                                            <td className={`${styles.center} ${styles.emailTdForQuoting}`}>
+                                                {row.forQuotingCount.toLocaleString()}
+                                            </td>
+                                            <td className={`${styles.center} ${styles.emailTdUnquotable}`}>
+                                                {row.unquotableCount.toLocaleString()}
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -995,9 +1017,13 @@ export function CFPMonthlyMatrix() {
                                     <td className={`${styles.center} ${styles.emailTdRce}`}>{totals.rceUploaded.toLocaleString()}</td>
                                     <td className={styles.center} style={{ color: '#fb923c' }}>{totals.rceNotUploaded.toLocaleString()}</td>
                                     <td className={`${styles.center} ${styles.emailTdRceUnable}`} style={{ color: '#f87171' }}>{(totals.rceUnable || 0).toLocaleString()}</td>
-                                    <td className={`${styles.center} ${styles.emailTdQuoted}`}>{totals.quotedCount.toLocaleString()}</td>
-                                    <td className={`${styles.center} ${styles.emailTdForQuoting}`}>{totals.forQuotingCount.toLocaleString()}</td>
-                                    <td className={`${styles.center} ${styles.emailTdUnquotable}`}>{totals.unquotableCount.toLocaleString()}</td>
+                                    {viewMode === 'all' && (
+                                        <>
+                                            <td className={`${styles.center} ${styles.emailTdQuoted}`}>{totals.quotedCount.toLocaleString()}</td>
+                                            <td className={`${styles.center} ${styles.emailTdForQuoting}`}>{totals.forQuotingCount.toLocaleString()}</td>
+                                            <td className={`${styles.center} ${styles.emailTdUnquotable}`}>{totals.unquotableCount.toLocaleString()}</td>
+                                        </>
+                                    )}
                                 </tr>
                             </tfoot>
                         )}
