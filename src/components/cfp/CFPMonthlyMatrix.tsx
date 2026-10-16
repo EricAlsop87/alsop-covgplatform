@@ -879,7 +879,7 @@ export function CFPMonthlyMatrix() {
                     </div>
                     <p>
                         <strong>Total Unique Policies:</strong> Groups multiple renewal terms into base families.
-                        <strong> Goal:</strong> Every active policy must have an active DEC page and an RCE on file.
+                        <strong> Goal:</strong> Every active policy must have an active DEC page and an RCE on file (or verified unable).
                     </p>
                 </div>
 
@@ -890,7 +890,8 @@ export function CFPMonthlyMatrix() {
                     </div>
                     <p>
                         <strong>DEC Not Uploaded:</strong> Policies available minus uploaded DEC pages.
-                        <strong> RCE Not Uploaded:</strong> Policies available minus uploaded RCE estimates.
+                        <strong> RCE Not Uploaded:</strong> Policies pending RCE upload (excluding unable accounts).
+                        <strong> Unable to Get RCE:</strong> Accounts ineligible or unable to obtain an RCE across the 3 carriers.
                     </p>
                 </div>
 
