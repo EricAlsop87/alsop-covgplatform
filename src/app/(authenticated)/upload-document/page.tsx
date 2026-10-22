@@ -427,13 +427,26 @@ export default function UploadDocumentPage() {
                 return;
             }
 
-            // Step 1: Classify document
+            // Compute SHA-256 hash upfront for deduplication & verification
+            let fileHash = '';
+            try {
+                const buffer = await item.file.arrayBuffer();
+                const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                fileHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch {
+                // Non-fatal fallback
+            }
+
+            // Step 1: Classify document (Send 1MB slice if file > 1.5MB to bypass Vercel 4.5MB payload limit)
             updateItem(itemId, { status: 'classifying', currentStep: 'Classifying document...' });
 
-            let classifiedType: DocTypeKey = 'other';
+            let classifiedType: DocTypeKey = (item.detectedType as DocTypeKey) || 'other';
             try {
                 const classifyForm = new FormData();
-                classifyForm.set('file', item.file);
+                const classifySlice = item.file.size > 1.5 * 1024 * 1024
+                    ? item.file.slice(0, 1024 * 1024, 'application/pdf')
+                    : item.file;
+                classifyForm.set('file', classifySlice, item.file.name);
                 const classifyRes = await fetch('/api/documents/classify', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${session.access_token}` },
@@ -446,7 +459,7 @@ export default function UploadDocumentPage() {
                     }
                 }
             } catch {
-                classifiedType = 'other';
+                classifiedType = (item.detectedType as DocTypeKey) || 'other';
             }
 
             updateItem(itemId, { detectedType: classifiedType });
@@ -579,42 +592,62 @@ export default function UploadDocumentPage() {
                 }, 3000);
 
             } else {
-                // ── Platform Documents Pipeline ──
-                updateItem(itemId, { status: 'uploading', currentStep: 'Uploading document...', uploadProgress: 50 });
-
-                const formData = new FormData();
-                formData.set('file', item.file);
+                // ── Platform Documents Pipeline (Direct to Storage to bypass Vercel 4.5MB payload limit) ──
                 const uploadDocType = (classifiedType as string) === 'quote' ? 'dic_dec_page' : classifiedType;
-                formData.set('doc_type', uploadDocType);
+                const targetPolicyId = item.policyId || searchParams.get('policy_id') || searchParams.get('policyId') || undefined;
 
-                const res = await fetch('/api/documents/upload', {
+                updateItem(itemId, { status: 'uploading', currentStep: 'Preparing secure direct upload...', uploadProgress: 10 });
+
+                // Step 2a: Request signed direct-upload URL from backend
+                const urlRes = await fetch('/api/documents/upload-direct', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${session.access_token}` },
-                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'get-upload-url',
+                        fileName: item.file.name,
+                        fileSize: item.file.size,
+                        fileHash,
+                        docType: uploadDocType,
+                        policyId: targetPolicyId,
+                    }),
                 });
 
-                const json = await res.json();
+                if (urlRes.status === 409) {
+                    let existingId: string | undefined;
+                    try {
+                        const dupJson = await urlRes.json();
+                        existingId = dupJson.data?.existingDocumentId;
+                    } catch {}
 
-                if (res.status === 409) {
-                    // Duplicate found
-                    const existingId = json.data?.existingDocumentId;
                     if (existingId) {
-                        const statusRes = await fetch(`/api/documents/upload/status?ids=${existingId}`, {
-                            headers: { 'Authorization': `Bearer ${session.access_token}` },
-                        });
-                        const statusJson = await statusRes.json();
-                        const existingDoc = statusJson.documents?.[0] as DocumentStatus | undefined;
-                        updateItem(itemId, {
-                            status: 'duplicate',
-                            documentId: existingId,
-                            docStatus: existingDoc,
-                            isDuplicate: true,
-                            policyId: existingDoc?.policy_id || undefined,
-                            policyNumber: existingDoc?.policies?.policy_number || undefined,
-                            clientName: existingDoc?.clients?.named_insured || existingDoc?.extracted_owner_name || undefined,
-                            currentStep: 'Duplicate — already uploaded',
-                            completedAt: Date.now(),
-                        });
+                        try {
+                            const statusRes = await fetch(`/api/documents/upload/status?ids=${existingId}`, {
+                                headers: { 'Authorization': `Bearer ${session.access_token}` },
+                            });
+                            const statusJson = await statusRes.json();
+                            const existingDoc = statusJson.documents?.[0] as DocumentStatus | undefined;
+                            updateItem(itemId, {
+                                status: 'duplicate',
+                                documentId: existingId,
+                                docStatus: existingDoc,
+                                isDuplicate: true,
+                                policyId: existingDoc?.policy_id || undefined,
+                                policyNumber: existingDoc?.policies?.policy_number || undefined,
+                                clientName: existingDoc?.clients?.named_insured || existingDoc?.extracted_owner_name || undefined,
+                                currentStep: 'Duplicate — already uploaded',
+                                completedAt: Date.now(),
+                            });
+                        } catch {
+                            updateItem(itemId, {
+                                status: 'duplicate',
+                                isDuplicate: true,
+                                currentStep: 'Duplicate — already uploaded',
+                                completedAt: Date.now(),
+                            });
+                        }
                     } else {
                         updateItem(itemId, {
                             status: 'duplicate',
@@ -627,16 +660,88 @@ export default function UploadDocumentPage() {
                     return;
                 }
 
-                if (!res.ok || !json.success || !json.data?.documentId) {
-                    updateItem(itemId, {
-                        status: 'failed',
-                        errorMessage: json.message || 'Upload failed.',
-                    });
+                if (!urlRes.ok) {
+                    let errorMsg = 'Failed to initiate upload.';
+                    try {
+                        const errJson = await urlRes.json();
+                        if (errJson?.message) errorMsg = errJson.message;
+                    } catch {
+                        if (urlRes.status === 413) errorMsg = 'File exceeds upload limit (50 MB).';
+                    }
+                    updateItem(itemId, { status: 'failed', errorMessage: errorMsg });
                     activeProcessingRef.current.delete(itemId);
                     return;
                 }
 
-                const docId = json.data.documentId as string;
+                const urlJson = await urlRes.json();
+                if (!urlJson.success || !urlJson.data?.signedUrl) {
+                    updateItem(itemId, { status: 'failed', errorMessage: urlJson.message || 'Failed to get upload authorization.' });
+                    activeProcessingRef.current.delete(itemId);
+                    return;
+                }
+
+                const { documentId: directDocId, signedUrl, storagePath } = urlJson.data;
+
+                // Step 2b: Direct upload to Supabase Storage via PUT with progress tracking
+                updateItem(itemId, { currentStep: 'Uploading file directly to storage...', uploadProgress: 25 });
+
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.upload.addEventListener('progress', (event) => {
+                        if (event.lengthComputable) {
+                            const pct = Math.round(25 + (event.loaded / event.total) * 65);
+                            updateItem(itemId, { uploadProgress: Math.min(92, pct) });
+                        }
+                    });
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(undefined);
+                        } else {
+                            reject(new Error(`Storage direct upload failed (HTTP ${xhr.status})`));
+                        }
+                    });
+                    xhr.addEventListener('error', () => reject(new Error('Network error uploading file to storage.')));
+                    xhr.addEventListener('abort', () => reject(new Error('Upload was cancelled.')));
+                    xhr.addEventListener('timeout', () => reject(new Error('Upload timed out.')));
+                    xhr.timeout = 180000;
+                    xhr.open('PUT', signedUrl);
+                    xhr.setRequestHeader('Content-Type', 'application/pdf');
+                    xhr.send(item.file);
+                });
+
+                // Step 2c: Confirm upload with backend (atomic DB record creation + queue ingestion)
+                updateItem(itemId, { currentStep: 'Confirming upload and queuing...', uploadProgress: 95 });
+
+                const confirmRes = await fetch('/api/documents/upload-direct', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'confirm',
+                        documentId: directDocId,
+                        storagePath,
+                        fileName: item.file.name,
+                        fileSize: item.file.size,
+                        fileHash,
+                        docType: uploadDocType,
+                        policyId: targetPolicyId,
+                    }),
+                });
+
+                if (!confirmRes.ok) {
+                    let errorMsg = 'Failed to confirm upload with server.';
+                    try {
+                        const confirmJson = await confirmRes.json();
+                        if (confirmJson?.message) errorMsg = confirmJson.message;
+                    } catch {}
+                    updateItem(itemId, { status: 'failed', errorMessage: errorMsg });
+                    activeProcessingRef.current.delete(itemId);
+                    return;
+                }
+
+                const docId = directDocId as string;
                 updateItem(itemId, {
                     status: 'polling',
                     documentId: docId,
@@ -756,14 +861,14 @@ export default function UploadDocumentPage() {
         // Dec page batch limit is 20 files
         let validFiles = fileArray.filter(file => {
             const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-            return ext === '.pdf' && file.size > 0 && file.size <= 10 * 1024 * 1024;
+            return ext === '.pdf' && file.size > 0 && file.size <= 50 * 1024 * 1024;
         });
 
         if (fileArray.length > 20) {
             setUploadError(`Batch limit is 20 files per upload. Queuing the first 20 valid PDF files.`);
             validFiles = validFiles.slice(0, 20);
         } else if (validFiles.length < fileArray.length) {
-            setUploadError('Some files were skipped because they are not valid PDFs or exceed 10MB.');
+            setUploadError('Some files were skipped because they are not valid PDFs or exceed 50MB.');
         }
 
         if (validFiles.length === 0) return;
@@ -1227,7 +1332,7 @@ export default function UploadDocumentPage() {
                                         : <>Drop single or multiple PDFs here, or <span style={{ color: 'var(--accent-primary)' }}>browse files</span></>}
                                 </p>
                                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-                                    Batch up to 20 Dec Pages · Max 10MB per PDF · Upload more anytime while processing
+                                    Batch up to 20 Dec Pages · Max 50MB per PDF · Direct secure upload
                                 </p>
                             </div>
                         </div>
