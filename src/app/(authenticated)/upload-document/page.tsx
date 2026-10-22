@@ -549,7 +549,7 @@ export default function UploadDocumentPage() {
                             stepLabel = matchedStep ? matchedStep.label : step;
                         }
 
-                        if (status === 'parsed') {
+                        if (status === 'parsed' || step === 'complete') {
                             clearInterval(pollInterval);
                             activeProcessingRef.current.delete(itemId);
                             updateItem(itemId, {
@@ -764,8 +764,8 @@ export default function UploadDocumentPage() {
                         const doc = pollJson.documents?.[0] as DocumentStatus | undefined;
                         if (!doc) return;
 
-                        const isParsed = doc.parse_status === 'parsed' && doc.match_status === 'matched';
-                        const isReview = doc.parse_status === 'needs_review' || doc.match_status === 'needs_review' || doc.match_status === 'no_match';
+                        const isParsed = (doc.parse_status === 'parsed' && (doc.match_status === 'matched' || doc.match_status === 'manual' || !!doc.policy_id)) || doc.processing_step === 'complete';
+                        const isReview = !isParsed && (doc.parse_status === 'needs_review' || doc.match_status === 'needs_review' || doc.match_status === 'no_match' || (doc.parse_status === 'parsed' && !doc.policy_id));
                         const isFailed = doc.parse_status === 'failed';
 
                         let stepLabel = doc.processing_step || 'Processing...';
