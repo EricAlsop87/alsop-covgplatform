@@ -47,6 +47,7 @@ import type { RceValuationData } from '@/app/api/cfp-summary/rce-valuation/route
 import { SendMailModal, type SentMailDetails } from './SendMailModal';
 import { SentMailInfoPopover } from './SentMailInfoPopover';
 import { ProducerModal } from './ProducerModal';
+import { StatusPopover } from './StatusPopover';
 import { ScenarioAlertModal, type ScenarioAlertData } from './ScenarioAlertModal';
 import { SCENARIO_DEFINITIONS, type ScenarioType } from '@/lib/scenarioEmailTemplates';
 
@@ -765,6 +766,25 @@ export function CFPSummaryTable({
         );
     };
 
+    const handleStatusUpdated = (policyId: string, newStatus: string) => {
+        setFamilies(prev =>
+            prev.map(f => {
+                const belongsToFamily = f.terms.some(t => t.policy_id === policyId);
+                return {
+                    ...f,
+                    terms: f.terms.map(t =>
+                        t.policy_id === policyId || belongsToFamily
+                            ? {
+                                  ...t,
+                                  carrier_status: newStatus,
+                              }
+                            : t
+                    ),
+                };
+            })
+        );
+    };
+
     const handleMailSentSuccess = (policyId: string, details: SentMailDetails | string[]) => {
         const isDetailsObj = typeof details === 'object' && !Array.isArray(details);
         const sentTo = isDetailsObj ? details.sent_to : (Array.isArray(details) ? details : []);
@@ -1213,6 +1233,12 @@ export function CFPSummaryTable({
             const filterS = columnFilters.status.toLowerCase();
             result = result.filter(t => {
                 const s = (t.carrier_status || (t.is_pending_dec ? 'pending_dec' : 'active')).toLowerCase();
+                if (filterS === 'needs_quote') {
+                    return !s.includes('cancel');
+                }
+                if (filterS === 'cancel') {
+                    return s.includes('cancel');
+                }
                 if (filterS === 'pending_dec') {
                     return t.is_pending_dec || s.includes('pending');
                 }
@@ -1790,45 +1816,32 @@ export function CFPSummaryTable({
                 );
 
             case 'status': {
-                const statusStr = term.carrier_status || (term.is_pending_dec ? 'Pending DEC' : 'Active');
-                const sLower = statusStr.toLowerCase();
-                let badgeStyle: React.CSSProperties = {
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.02em',
-                };
-
-                if (sLower.includes('cancel')) {
-                    badgeStyle = { ...badgeStyle, background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' };
-                } else if (sLower.includes('nonrenew') || sLower.includes('non-renew')) {
-                    badgeStyle = { ...badgeStyle, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' };
-                } else if (sLower === 'new') {
-                    badgeStyle = { ...badgeStyle, background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe' };
-                } else if (sLower === 'renew') {
-                    badgeStyle = { ...badgeStyle, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' };
-                } else if (sLower === 'endorse') {
-                    badgeStyle = { ...badgeStyle, background: '#f3e8ff', color: '#6b21a8', border: '1px solid #e9d5ff' };
-                } else if (sLower === 'reinstate') {
-                    badgeStyle = { ...badgeStyle, background: '#ccfbf1', color: '#115e59', border: '1px solid #99f6e4' };
-                } else if (sLower === 'rewrite') {
-                    badgeStyle = { ...badgeStyle, background: '#ffedd5', color: '#9a3412', border: '1px solid #fed7aa' };
-                } else if (term.is_pending_dec) {
-                    badgeStyle = { ...badgeStyle, background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' };
-                } else {
-                    // Standard Active
-                    badgeStyle = { ...badgeStyle, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
-                }
-
+                const isCancelled = (term.carrier_status || '').toLowerCase().includes('cancel');
                 return (
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={badgeStyle} title={`Status: ${statusStr}`}>
-                            {statusStr}
-                        </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                        <StatusPopover
+                            policyId={term.policy_id}
+                            policyTermId={term.policy_term_id}
+                            policyNumber={term.policy_number}
+                            currentStatus={term.carrier_status}
+                            isPendingDec={term.is_pending_dec}
+                            onStatusUpdated={handleStatusUpdated}
+                        />
+                        {isCancelled && (
+                            <span
+                                style={{
+                                    fontSize: '0.62rem',
+                                    color: '#b91c1c',
+                                    fontWeight: 700,
+                                    letterSpacing: '0.02em',
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1,
+                                }}
+                                title="No Quoting Required for Cancelled Policy"
+                            >
+                                No Quote Needed
+                            </span>
+                        )}
                     </div>
                 );
             }
@@ -2223,6 +2236,24 @@ export function CFPSummaryTable({
                     );
                 }
 
+                const isCancelled = (term.carrier_status || '').toLowerCase().includes('cancel');
+                if (isCancelled) {
+                    return (
+                        <button
+                            type="button"
+                            className={`${styles.carrierQuoteBadge} ${styles.unquoted}`}
+                            style={{ opacity: 0.5, borderStyle: 'dashed' }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveCarrierModal({ term, carrierKey });
+                            }}
+                            title={`Policy Cancelled — Quoting Not Required. Click if you still need to enter quote for ${cName}.`}
+                        >
+                            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>—</span>
+                        </button>
+                    );
+                }
+
                 return (
                     <button
                         type="button"
@@ -2476,13 +2507,15 @@ export function CFPSummaryTable({
                         className={`${styles.columnFilterSelect} ${columnFilters.status ? styles.activeFilter : ''}`}
                     >
                         <option value="">All Status</option>
+                        <option value="cancel">🚫 Cancelled (No Quote)</option>
+                        <option value="needs_quote">✓ Needs Quoting (Hide Cancelled)</option>
                         <option value="active">Active</option>
+                        <option value="inforce">Inforce</option>
                         <option value="renew">Renew</option>
                         <option value="new">New</option>
                         <option value="endorse">Endorse</option>
                         <option value="reinstate">Reinstate</option>
                         <option value="rewrite">Rewrite</option>
-                        <option value="cancel">Cancel</option>
                         <option value="nonrenew">NonRenew</option>
                         <option value="pending_dec">Pending DEC</option>
                     </select>

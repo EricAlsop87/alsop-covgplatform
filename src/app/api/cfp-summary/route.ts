@@ -684,7 +684,7 @@ export async function GET(req: NextRequest) {
         'carrier_quote_psic', 'cfp_mail_sent', 'rce_valuation',
         'rce_replacement_cost', 'fair_plan_premium', 'annual_premium',
         'coverage_a', 'coverage_b', 'limit_dwelling',
-        'producer_override', 'scenario_alert'
+        'producer_override', 'scenario_alert', 'carrier_status'
     ];
 
     const isLargeSlice = policyIds.length > 300;
@@ -1105,6 +1105,7 @@ export async function GET(req: NextRequest) {
     const manualCoverageBMap: Record<string, number> = {};
     const producerOverrideMap: Record<string, { producer_name: string; history: any[] }> = {};
     const scenarioAlertMap: Record<string, any> = {};
+    const manualCarrierStatusMap: Record<string, string> = {};
 
     for (const ov of bambooOverrides) {
         if (ov.field_name === 'has_bamboo_coverage' && (ov.new_value === 'true' || ov.new_value === '1')) {
@@ -1189,6 +1190,8 @@ export async function GET(req: NextRequest) {
                 producer_name: ov.new_value,
                 history: hist,
             };
+        } else if (ov.field_name === 'carrier_status' && ov.new_value) {
+            manualCarrierStatusMap[ov.policy_id] = ov.new_value;
         }
     }
 
@@ -1421,7 +1424,9 @@ export async function GET(req: NextRequest) {
             policy_term_id: t.id,
             effective_date: t.effective_date,
             expiration_date: t.expiration_date,
-            carrier_status: t.carrier_status || (policy?.status === 'pending_dec' ? 'Pending DEC' : 'Active'),
+            carrier_status: manualCarrierStatusMap[policyId]
+                || t.carrier_status
+                || (policy?.status === 'pending_dec' ? 'Pending DEC' : (policy?.status === 'cancelled' ? 'CANCELLED' : 'Active')),
             policy_status: policy?.status || 'active',
             annual_premium: manualFairPlanPremiumMap[policyId]
                 ?? (t.annual_premium ? parseFloat(t.annual_premium) : null)
