@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const {
             policyId,
+            clientId,
             policyNumber,
             recipients, // fallback for toRecipients
             recipientNames, // fallback for toNames
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
             subject,
             htmlBody,
             textBody,
+            customNotes,
             selectedAttachments,
         } = body;
 
@@ -363,6 +365,7 @@ export async function POST(req: NextRequest) {
                     sent_by_email: senderEmail,
                     attachments: attachedNames,
                     subject,
+                    custom_notes: customNotes || null,
                 }),
                 actor_id: user.id,
                 updated_at: now,
@@ -400,6 +403,7 @@ export async function POST(req: NextRequest) {
                 subject,
                 bodyText: textBody || htmlBody.replace(/<[^>]*>?/gm, ''),
                 attachments: attachedNames.map(name => ({ name })),
+                customNotes: customNotes || null,
                 sentAt: now,
                 isRead: true,
             });
@@ -445,14 +449,40 @@ export async function POST(req: NextRequest) {
             logger.warn('CFPSendMail', 'Failed to update servicing_email_item', { error: String(e) });
         }
 
-        // 4. Record in activity_events
+        // 4. Save custom notes to policy notes table if non-empty & not already logged
+        if (customNotes && typeof customNotes === 'string' && customNotes.trim()) {
+            try {
+                const trimmedNotes = customNotes.trim();
+                const { data: recentNotes } = await adminClient
+                    .from('notes')
+                    .select('id, body')
+                    .eq('policy_id', policyId)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                const isAlreadyPresent = recentNotes?.some(n => n.body?.trim() === trimmedNotes);
+                if (!isAlreadyPresent) {
+                    await adminClient.from('notes').insert({
+                        client_id: clientId || null,
+                        policy_id: policyId,
+                        body: trimmedNotes,
+                        author_user_id: user.id,
+                        meta: { tags: ['Email', 'General'] },
+                    });
+                }
+            } catch (noteErr) {
+                logger.warn('CFPSendMail', 'Failed to sync note to notes table', { error: String(noteErr) });
+            }
+        }
+
+        // 5. Record in activity_events
         try {
             await adminClient.from('activity_events').insert({
                 policy_id: policyId,
                 actor_user_id: user.id,
                 event_type: 'email.sent',
                 title: 'Document Status Mail Sent',
-                detail: `Sent document availability email to ${fullRecipientSummary} for ${policyNumber || 'policy'}`,
+                detail: `Sent document availability email to ${fullRecipientSummary} for ${policyNumber || 'policy'}${customNotes ? ` (with notes: "${customNotes.slice(0, 50)}...")` : ''}`,
                 meta: {
                     policy_id: policyId,
                     policy_number: policyNumber,
@@ -464,6 +494,7 @@ export async function POST(req: NextRequest) {
                     sent_by: senderName,
                     subject,
                     attachments: attachedNames,
+                    custom_notes: customNotes || null,
                 },
             });
         } catch {
@@ -481,6 +512,7 @@ export async function POST(req: NextRequest) {
             sent_by_email: senderEmail,
             subject,
             attachments: attachedNames,
+            custom_notes: customNotes || null,
         });
 
     } catch (err: any) {

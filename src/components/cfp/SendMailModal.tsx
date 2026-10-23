@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     X,
     Send,
@@ -119,6 +119,7 @@ export interface SentMailDetails {
     sent_at: string;
     subject: string;
     attachments: string[];
+    custom_notes?: string;
 }
 
 interface SendMailModalProps {
@@ -161,6 +162,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [coverageADwelling, setCoverageADwelling] = useState<number | null>((term as any)?.coverage_a || (term as any)?.limit_dwelling || null);
     const [hasAdditionalAlert, setHasAdditionalAlert] = useState<boolean>(false);
     const [additionalAlertText, setAdditionalAlertText] = useState<string>('');
+    const lastOpenPolicyRef = useRef<string | null>(null);
 
     // Scenario Checklist & Client Draft States
     const [activeScenarios, setActiveScenarios] = useState<ScenarioType[]>([]);
@@ -459,27 +461,38 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
     // Initialize subject, notes & pre-selected attachments when modal opens with term
     useEffect(() => {
-        if (!isOpen || !term) return;
-        setIsUrgent(false);
-        setHasAdditionalAlert(false);
-        setAdditionalAlertText('');
-        setSubject(buildDefaultSubject(term, false));
-        setCustomNotes('');
-        setCustomTo('');
-        setCustomCc('');
-        setError(null);
-        setSuccessMsg(null);
-        setRecipientRoles({
-            nancy: 'to',
-            olga: 'to',
-            johnpaul: 'to',
-            esmeralda: 'none',
-            eric: 'none',
-            phoebe: 'none',
-        });
-        // Guardrail: Pre-select all available detected attachments by default
-        setSelectedAttachmentIds(availableAttachments.map(a => a.id));
-    }, [isOpen, term?.policy_term_id, availableAttachments]);
+        if (!isOpen || !term) {
+            lastOpenPolicyRef.current = null;
+            return;
+        }
+
+        // Only run initialization once when modal opens or policy changes (prevents wiping customNotes on re-renders)
+        const isFresh = lastOpenPolicyRef.current !== term.policy_term_id;
+        if (isFresh) {
+            lastOpenPolicyRef.current = term.policy_term_id;
+            setIsUrgent(false);
+            setHasAdditionalAlert(false);
+            setAdditionalAlertText('');
+            setSubject(buildDefaultSubject(term, false));
+            // Pre-populate with policy note preview from CFP Summary if available
+            const initialNote = term.latest_note_preview || term.return_notes || '';
+            setCustomNotes(initialNote);
+            setCustomTo('');
+            setCustomCc('');
+            setError(null);
+            setSuccessMsg(null);
+            setRecipientRoles({
+                nancy: 'to',
+                olga: 'to',
+                johnpaul: 'to',
+                esmeralda: 'none',
+                eric: 'none',
+                phoebe: 'none',
+            });
+            // Pre-select all available detected attachments by default
+            setSelectedAttachmentIds(availableAttachments.map(a => a.id));
+        }
+    }, [isOpen, term?.policy_term_id]);
 
     const handleToggleUrgent = () => {
         setIsUrgent(prev => {
@@ -1340,6 +1353,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                 },
                 body: JSON.stringify({
                     policyId: term.policy_id,
+                    clientId: term.client_id,
                     policyNumber: term.policy_number,
                     toRecipients: toEmails,
                     toNames,
@@ -1349,6 +1363,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     customCc: customCc.trim() || undefined,
                     subject,
                     htmlBody,
+                    customNotes: customNotes.trim() || undefined,
                     selectedAttachments: selectedAttachmentsPayload,
                 }),
             });
@@ -1367,6 +1382,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     sent_at: json.sent_at || new Date().toISOString(),
                     subject: json.subject || subject,
                     attachments: json.attachments || selectedAttachmentsPayload.map(a => a.fileName),
+                    custom_notes: customNotes.trim() || undefined,
                 });
                 setTimeout(() => {
                     onClose();
@@ -1668,13 +1684,42 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
 
                             {/* Additional Notes to Include */}
                             <div className={styles.formSection}>
-                                <label className={styles.fieldLabel}>
-                                    <Edit3 size={14} /> Custom Notes / Remarks to Include (Optional)
-                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                                        <Edit3 size={14} /> Custom Notes / Remarks to Include (Optional)
+                                    </label>
+                                    {term.latest_note_preview && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {customNotes !== term.latest_note_preview ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCustomNotes(term.latest_note_preview || '')}
+                                                    style={{
+                                                        fontSize: '0.72rem',
+                                                        color: '#2563eb',
+                                                        background: '#eff6ff',
+                                                        border: '1px solid #bfdbfe',
+                                                        borderRadius: '4px',
+                                                        padding: '2px 8px',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 600,
+                                                    }}
+                                                    title="Load CFP Summary table note"
+                                                >
+                                                    ↻ Load CFP Summary Note
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>
+                                                    ✓ CFP Summary Note Loaded
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                                 <textarea
                                     className={styles.textareaInput}
                                     placeholder="Add any specific instructions or remarks to Nancy, Olga, or the team..."
-                                    rows={2}
+                                    rows={3}
                                     value={customNotes}
                                     onChange={e => setCustomNotes(e.target.value)}
                                 />

@@ -775,6 +775,7 @@ export function CFPSummaryTable({
         const sentAt = isDetailsObj ? details.sent_at : new Date().toISOString();
         const subject = isDetailsObj ? details.subject : null;
         const attachments = isDetailsObj ? details.attachments : [];
+        const customNotes = isDetailsObj ? (details as any).custom_notes : null;
 
         setFamilies(prev =>
             prev.map(f => {
@@ -796,6 +797,8 @@ export function CFPSummaryTable({
                                   cfp_mail_sent_at: sentAt,
                                   cfp_mail_subject: subject,
                                   cfp_mail_attachments: attachments,
+                                  latest_note_preview: customNotes || t.latest_note_preview,
+                                  note_count: customNotes ? Math.max(t.note_count || 0, 1) : t.note_count,
                               }
                             : t
                     ),
