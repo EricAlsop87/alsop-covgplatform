@@ -68,6 +68,14 @@ export async function getCurrentUserRole(): Promise<string | null> {
 // Notes CRUD
 // ---------------------------------------------------------------------------
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    };
+}
+
 async function attachAuthorNamesToNotes(notes: NoteRow[]) {
     const authorIds = [...new Set(notes.map(n => n.author_user_id).filter(Boolean))] as string[];
     if (authorIds.length > 0) {
@@ -94,6 +102,23 @@ export async function fetchNotes(opts: {
     limit?: number;
     offset?: number;
 }): Promise<NoteRow[]> {
+    try {
+        const headers = await getAuthHeaders();
+        const params = new URLSearchParams();
+        if (opts.clientId) params.set('clientId', opts.clientId);
+        if (opts.policyId) params.set('policyId', opts.policyId);
+        if (opts.includeArchived) params.set('includeArchived', 'true');
+        if (opts.limit) params.set('limit', String(opts.limit));
+
+        const res = await fetch(`/api/notes?${params.toString()}`, { headers });
+        if (res.ok) {
+            const json = await res.json();
+            return (json.notes || []) as NoteRow[];
+        }
+    } catch (apiErr) {
+        logger.warn('Notes', 'Server API fetch failed, falling back to direct query', { error: String(apiErr) });
+    }
+
     try {
         let query = supabase
             .from('notes')
@@ -166,6 +191,26 @@ export async function fetchDocNotes(
     docTag?: DocNoteTag | null,
     includeArchived = false
 ): Promise<NoteRow[]> {
+    try {
+        const headers = await getAuthHeaders();
+        const params = new URLSearchParams();
+        params.set('policyId', policyId);
+        if (docTag) {
+            params.set('docTag', docTag);
+        } else {
+            params.set('docTag', '__general__');
+        }
+        if (includeArchived) params.set('includeArchived', 'true');
+
+        const res = await fetch(`/api/notes?${params.toString()}`, { headers });
+        if (res.ok) {
+            const json = await res.json();
+            return (json.notes || []) as NoteRow[];
+        }
+    } catch (apiErr) {
+        logger.warn('Notes', 'Server API fetch failed, falling back to direct query', { error: String(apiErr) });
+    }
+
     const allNotes = await fetchNotes({ policyId, includeArchived, limit: 100 });
     if (!docTag) {
         // General policy notes (notes without any DOC_NOTE_TAGS)
@@ -186,6 +231,21 @@ export async function createNote(fields: {
     body: string;
     tags?: string[];
 }): Promise<NoteRow | null> {
+    try {
+        const headers = await getAuthHeaders();
+        const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(fields),
+        });
+        if (res.ok) {
+            const json = await res.json();
+            return json.note as NoteRow;
+        }
+    } catch (apiErr) {
+        logger.warn('Notes', 'Server API create note failed, falling back to direct insert', { error: String(apiErr) });
+    }
+
     const userId = await getCurrentUserId();
     const metaPayload: Record<string, unknown> = {};
     if (fields.tags) {
@@ -225,6 +285,20 @@ export async function updateNote(
     noteId: string,
     updates: { body?: string; is_pinned?: boolean; is_archived?: boolean; is_resolved?: boolean; tags?: string[] }
 ): Promise<boolean> {
+    try {
+        const headers = await getAuthHeaders();
+        const res = await fetch('/api/notes', {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ id: noteId, ...updates }),
+        });
+        if (res.ok) {
+            return true;
+        }
+    } catch (apiErr) {
+        logger.warn('Notes', 'Server API update note failed, falling back to direct update', { error: String(apiErr) });
+    }
+
     const payload: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() };
     delete payload.tags; // handled separately below
     delete payload.is_resolved; // handled separately below
