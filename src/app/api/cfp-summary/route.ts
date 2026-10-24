@@ -380,6 +380,7 @@ export interface CFPSummaryStats {
     missing_quotes?: number;
     missing_es: number;
     uploaded_es?: number;
+    total_archived?: number;
 }
 
 // In-memory server cache for instant CFP responses
@@ -596,6 +597,8 @@ export async function GET(req: NextRequest) {
 
     if (view === 'bamboo_pipeline') {
         termsQuery = termsQuery.eq('policies.status', 'pending_dec');
+    } else if (view === 'archived') {
+        termsQuery = termsQuery.or('status.eq.cancelled,carrier_status.ilike.%cancel%', { foreignTable: 'policies' });
     } else if (view === 'all') {
         termsQuery = termsQuery.or('policy_number.ilike.CFP %,policy_number.ilike.CEA %,policy_number.ilike.COM %,policy_number.ilike.DIV %,policy_number.ilike.DWG %,status.eq.pending_dec', { foreignTable: 'policies' });
     } else {
@@ -1749,6 +1752,7 @@ const DEFAULT_BASELINE_STATS: CFPSummaryStats = {
     total_quoted: 655,
     missing_quotes: 2255,
     missing_es: 2240,
+    total_archived: 0,
 };
 
 let cachedGlobalStats: { stats: CFPSummaryStats; timestamp: number } = {
@@ -1757,5 +1761,42 @@ let cachedGlobalStats: { stats: CFPSummaryStats; timestamp: number } = {
 };
 
 async function computeStats(admin: ReturnType<typeof getSupabaseAdmin>): Promise<CFPSummaryStats> {
-    return cachedGlobalStats.stats;
+    try {
+        // Query cancelled policy count from manual_overrides and policies table
+        const [cancelledOverridesRes, cancelledPoliciesRes] = await Promise.all([
+            admin
+                .from('manual_overrides')
+                .select('policy_id')
+                .eq('field_name', 'carrier_status')
+                .ilike('new_value', '%cancel%'),
+            admin
+                .from('policies')
+                .select('id')
+                .eq('status', 'cancelled'),
+        ]);
+
+        const cancelledSet = new Set<string>([
+            ...((cancelledOverridesRes.data || []).map(o => o.policy_id)),
+            ...((cancelledPoliciesRes.data || []).map(p => p.id)),
+        ]);
+        const totalArchived = cancelledSet.size;
+        const baselineTotal = 2910;
+        const totalActive = Math.max(0, baselineTotal - totalArchived);
+
+        const updatedStats: CFPSummaryStats = {
+            ...DEFAULT_BASELINE_STATS,
+            total_policies: totalActive,
+            total_families: totalActive,
+            total_archived: totalArchived,
+        };
+
+        cachedGlobalStats = {
+            stats: updatedStats,
+            timestamp: Date.now(),
+        };
+
+        return updatedStats;
+    } catch {
+        return cachedGlobalStats.stats;
+    }
 }

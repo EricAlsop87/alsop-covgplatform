@@ -69,10 +69,10 @@ function CFPSummaryContent() {
     });
 
     const [search, setSearch] = useState('');
-    const [view, setViewState] = useState<'active_cfp' | 'bamboo_pipeline' | 'all'>(() => {
+    const [view, setViewState] = useState<'active_cfp' | 'bamboo_pipeline' | 'all' | 'archived'>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('ccn_cfp_summary_view');
-            if (saved === 'active_cfp' || saved === 'bamboo_pipeline' || saved === 'all') return saved;
+            if (saved === 'active_cfp' || saved === 'bamboo_pipeline' || saved === 'all' || saved === 'archived') return saved;
         }
         return 'active_cfp';
     });
@@ -118,7 +118,7 @@ function CFPSummaryContent() {
         }
     }, [searchParams]);
 
-    const setView = useCallback((newView: 'active_cfp' | 'bamboo_pipeline' | 'all') => {
+    const setView = useCallback((newView: 'active_cfp' | 'bamboo_pipeline' | 'all' | 'archived') => {
         setViewState(newView);
         if (typeof window !== 'undefined') {
             localStorage.setItem('ccn_cfp_summary_view', newView);

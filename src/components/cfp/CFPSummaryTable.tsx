@@ -33,6 +33,7 @@ import {
     Undo2,
     Mail,
     SearchX,
+    Archive,
 } from 'lucide-react';
 import type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType } from '@/app/api/cfp-summary/route';
 export type { CFPFamily, CFPTermRow, TitleProData, CarrierKey, CarrierQuoteData, CoverageQuoteType };
@@ -147,11 +148,11 @@ interface CFPSummaryTableProps {
     year: string;
     month: string;
     search: string;
-    view?: 'active_cfp' | 'bamboo_pipeline' | 'all';
+    view?: 'active_cfp' | 'bamboo_pipeline' | 'all' | 'archived';
     onYearChange: (y: string) => void;
     onMonthChange: (m: string) => void;
     onSearchChange: (s: string) => void;
-    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'all') => void;
+    onViewChange?: (v: 'active_cfp' | 'bamboo_pipeline' | 'all' | 'archived') => void;
     onRefresh: () => void;
     totalTerms: number;
     totalFamilies: number;
@@ -1126,9 +1127,46 @@ export function CFPSummaryTable({
         }
     };
 
+    // Helper to determine if a term is cancelled / archived
+    const isCancelledTerm = useCallback((t: CFPTermRow) => {
+        const s = (t.carrier_status || '').toLowerCase();
+        return s.includes('cancel') || t.policy_status === 'cancelled';
+    }, []);
+
+    // Total unique policies in the archive (cancelled / no quote needed)
+    const totalArchivedCount = useMemo(() => {
+        const set = new Set<string>();
+        for (const t of allTerms) {
+            if (isCancelledTerm(t)) {
+                set.add(t.policy_id || t.base_policy || t.policy_number);
+            }
+        }
+        return set.size;
+    }, [allTerms, isCancelledTerm]);
+
+    // Total unique policies in active list (excluding cancelled)
+    const totalActiveCount = useMemo(() => {
+        const set = new Set<string>();
+        for (const t of allTerms) {
+            if (!isCancelledTerm(t)) {
+                set.add(t.policy_id || t.base_policy || t.policy_number);
+            }
+        }
+        return set.size;
+    }, [allTerms, isCancelledTerm]);
+
     // Filter terms based on docFilter pill AND column-specific filters
     const filteredTerms = useMemo(() => {
         let result = allTerms;
+
+        // 0. Archive Folder vs Active Policies Filter:
+        // When in 'archived' view, show ONLY cancelled / no quote needed policies.
+        // In all other views, EXCLUDE cancelled policies by default so they do not count or appear in quoting workflow.
+        if (view === 'archived') {
+            result = result.filter(t => isCancelledTerm(t));
+        } else if (columnFilters.status !== 'cancel') {
+            result = result.filter(t => !isCancelledTerm(t));
+        }
 
         // 1. DocFilter pill
         if (docFilter !== 'all') {
@@ -1412,7 +1450,7 @@ export function CFPSummaryTable({
         }
 
         return result;
-    }, [allTerms, docFilter, columnFilters]);
+    }, [allTerms, docFilter, columnFilters, view, isCancelledTerm]);
 
     // Quick summary statistics for the filtered month & year (deduplicated by unique policy)
     const periodStats = useMemo(() => {
@@ -2729,6 +2767,45 @@ export function CFPSummaryTable({
                 >
                     Combined All
                 </button>
+
+                {/* ── Archive Folder Tab (Cancelled / No Quote Needed) ── */}
+                <button
+                    type="button"
+                    onClick={() => {
+                        onViewChange?.('archived');
+                        setCurrentPage(1);
+                    }}
+                    className={`${styles.filterPill} ${view === 'archived' ? styles.active : ''}`}
+                    style={{
+                        fontSize: '0.8125rem',
+                        padding: '0.35rem 0.85rem',
+                        fontWeight: 700,
+                        marginLeft: 'auto',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: view === 'archived' ? '#fee2e2' : '#f8fafc',
+                        color: view === 'archived' ? '#991b1b' : '#64748b',
+                        borderColor: view === 'archived' ? '#fca5a5' : '#e2e8f0',
+                        boxShadow: view === 'archived' ? '0 1px 3px rgba(239,68,68,0.15)' : 'none',
+                    }}
+                    title="View archived & cancelled policies (No Quote Needed)"
+                >
+                    <Archive size={14} style={{ color: view === 'archived' ? '#dc2626' : '#94a3b8' }} />
+                    <span>Archive Folder</span>
+                    <span
+                        style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: '10px',
+                            background: view === 'archived' ? '#ef4444' : '#e2e8f0',
+                            color: view === 'archived' ? '#ffffff' : '#475569',
+                        }}
+                    >
+                        {totalArchivedCount}
+                    </span>
+                </button>
             </div>
 
             {/* ── Controls Card ── */}
@@ -3176,11 +3253,62 @@ export function CFPSummaryTable({
                             💡 <em>Drag headers to reorder • Drag column edges to resize</em>
                         </span>
                         <span className={styles.countsBadge}>
-                            Showing <strong>{filteredUniqueCount.toLocaleString()}</strong> policies {filteredTerms.length !== filteredUniqueCount && `(${filteredTerms.length.toLocaleString()} terms)`}
+                            {view === 'archived' ? (
+                                <>📁 Archived: <strong>{filteredUniqueCount.toLocaleString()}</strong> policies (Cancelled / No Quote Needed)</>
+                            ) : (
+                                <>Showing <strong>{filteredUniqueCount.toLocaleString()}</strong> active policies {filteredTerms.length !== filteredUniqueCount && `(${filteredTerms.length.toLocaleString()} terms)`}</>
+                            )}
                         </span>
                     </div>
                 </div>
             </div>
+
+            {/* ── Archive Folder Info Banner ── */}
+            {view === 'archived' && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#fff1f2',
+                    border: '1.5px solid #fecdd3',
+                    borderRadius: '8px',
+                    padding: '10px 16px',
+                    marginBottom: '12px',
+                    color: '#9f1239',
+                    fontSize: '0.85rem',
+                    boxShadow: '0 1px 3px rgba(225,29,72,0.06)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Archive size={18} color="#e11d48" />
+                        <div>
+                            <strong>Archive Folder:</strong> Showing policies tagged as <strong>CANCELLED</strong> (No Quote Needed). These policies are removed from your active quoting count and stored here for future reference.
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onViewChange?.('active_cfp');
+                            setCurrentPage(1);
+                        }}
+                        style={{
+                            background: '#ffffff',
+                            border: '1.5px solid #fca5a5',
+                            borderRadius: '6px',
+                            padding: '5px 12px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            color: '#9f1239',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        ← Back to Active Policies
+                    </button>
+                </div>
+            )}
 
             {/* ── Table Card ── */}
             <div className={styles.tableCard}>

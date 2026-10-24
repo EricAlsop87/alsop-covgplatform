@@ -37,9 +37,9 @@ export function CFPStatsCards({ stats, loading }: CFPStatsCardsProps) {
 
     const cards = [
         {
-            title: 'Unique Policies',
+            title: 'Active Policies',
             value: (stats.total_families ?? stats.total_policies).toLocaleString(),
-            sublabel: `🌿 ${bambooFloating} Bamboo policies not included • ${uniqueAccounts.toLocaleString()} unique accounts`,
+            sublabel: `${stats.total_archived ? `📁 ${stats.total_archived.toLocaleString()} archived (cancelled) • ` : ''}🌿 ${bambooFloating} Bamboo not included`,
             uploaded: undefined as string | number | undefined,
             color: '#3B82F6',
             bg: 'rgba(59, 130, 246, 0.12)',
