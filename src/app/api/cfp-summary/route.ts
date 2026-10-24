@@ -598,7 +598,7 @@ export async function GET(req: NextRequest) {
     if (view === 'bamboo_pipeline') {
         termsQuery = termsQuery.eq('policies.status', 'pending_dec');
     } else if (view === 'archived') {
-        termsQuery = termsQuery.or('status.eq.cancelled,carrier_status.ilike.%cancel%', { foreignTable: 'policies' });
+        termsQuery = termsQuery.ilike('carrier_status', '%cancel%');
     } else if (view === 'all') {
         termsQuery = termsQuery.or('policy_number.ilike.CFP %,policy_number.ilike.CEA %,policy_number.ilike.COM %,policy_number.ilike.DIV %,policy_number.ilike.DWG %,status.eq.pending_dec', { foreignTable: 'policies' });
     } else {
