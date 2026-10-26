@@ -144,6 +144,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
     const [isTestMail, setIsTestMail] = useState<boolean>(false);
     const [subject, setSubject] = useState('');
     const [customNotes, setCustomNotes] = useState('');
+    const [includeCustomNotes, setIncludeCustomNotes] = useState<boolean>(true);
     const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
     const [previewingId, setPreviewingId] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
@@ -477,6 +478,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             // Pre-populate with policy note preview from CFP Summary if available
             const initialNote = term.latest_note_preview || term.return_notes || '';
             setCustomNotes(initialNote);
+            setIncludeCustomNotes(true);
             setCustomTo('');
             setCustomCc('');
             setError(null);
@@ -803,7 +805,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             currentCfpPremium: effectiveCfpPrem ? Number(effectiveCfpPrem) : null,
             agentName: currentUserName || 'Coverage Check Team',
             agencyName: 'Alsop & Associates Insurance Agency',
-            vaRemarks: customNotes,
+            vaRemarks: includeCustomNotes ? customNotes : '',
         };
 
         return generateCompositeClientEmail(activeScenarios, data);
@@ -820,6 +822,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
         annualSavings,
         currentUserName,
         customNotes,
+        includeCustomNotes,
     ]);
 
     // Build the executive HTML Email Body with professional blue theme
@@ -905,7 +908,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
             </table>`;
         }
 
-        const notesBlock = customNotes.trim()
+        const notesBlock = (includeCustomNotes && customNotes.trim())
             ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;max-width:680px;margin-top:16px;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:4px;">
                  <tr>
                    <td style="padding:12px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -1059,7 +1062,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
           </table>
         </div>
         `;
-    }, [term, docItems, customNotes, availableAttachments, selectedAttachmentIds, currentUserName, activeScenarios, clientEmailDraft, hasAdditionalAlert, additionalAlertText]);
+    }, [term, docItems, customNotes, includeCustomNotes, availableAttachments, selectedAttachmentIds, currentUserName, activeScenarios, clientEmailDraft, hasAdditionalAlert, additionalAlertText]);
 
     if (!isOpen || !term) return null;
 
@@ -1363,7 +1366,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     customCc: customCc.trim() || undefined,
                     subject,
                     htmlBody,
-                    customNotes: customNotes.trim() || undefined,
+                    customNotes: (includeCustomNotes && customNotes.trim()) ? customNotes.trim() : undefined,
                     selectedAttachments: selectedAttachmentsPayload,
                 }),
             });
@@ -1382,7 +1385,7 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                     sent_at: json.sent_at || new Date().toISOString(),
                     subject: json.subject || subject,
                     attachments: json.attachments || selectedAttachmentsPayload.map(a => a.fileName),
-                    custom_notes: customNotes.trim() || undefined,
+                    custom_notes: (includeCustomNotes && customNotes.trim()) ? customNotes.trim() : undefined,
                 });
                 setTimeout(() => {
                     onClose();
@@ -1683,46 +1686,133 @@ export function SendMailModal({ term, isOpen, onClose, onSentSuccess }: SendMail
                             </div>
 
                             {/* Additional Notes to Include */}
-                            <div className={styles.formSection}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                                    <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-                                        <Edit3 size={14} /> Custom Notes / Remarks to Include (Optional)
-                                    </label>
-                                    {term.latest_note_preview && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            {customNotes !== term.latest_note_preview ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setCustomNotes(term.latest_note_preview || '')}
+                            <div className={styles.formSection} style={{
+                                transition: 'all 0.2s ease',
+                                background: !includeCustomNotes ? '#f8fafc' : undefined,
+                                border: !includeCustomNotes ? '1.5px dashed #cbd5e1' : undefined,
+                                borderRadius: !includeCustomNotes ? '8px' : undefined,
+                                padding: !includeCustomNotes ? '10px 12px' : undefined,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <label className={styles.fieldLabel} style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <Edit3 size={14} />
+                                            <span>Custom Notes / Remarks to Include (Optional)</span>
+                                        </label>
+
+                                        {/* Toggle ON/OFF Switch */}
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={includeCustomNotes}
+                                            onClick={() => setIncludeCustomNotes(prev => !prev)}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                padding: '2px 8px 2px 4px',
+                                                borderRadius: '9999px',
+                                                border: includeCustomNotes ? '1.5px solid #2563eb' : '1.5px solid #94a3b8',
+                                                background: includeCustomNotes ? '#eff6ff' : '#f1f5f9',
+                                                color: includeCustomNotes ? '#1d4ed8' : '#475569',
+                                                cursor: 'pointer',
+                                                fontSize: '0.72rem',
+                                                fontWeight: 700,
+                                                transition: 'all 0.2s ease',
+                                                userSelect: 'none',
+                                            }}
+                                            title={includeCustomNotes ? "Notes are included in email. Click to turn OFF." : "Notes are excluded from email. Click to turn ON."}
+                                        >
+                                            <span
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: includeCustomNotes ? 'flex-end' : 'flex-start',
+                                                    width: '26px',
+                                                    height: '14px',
+                                                    borderRadius: '9999px',
+                                                    background: includeCustomNotes ? '#2563eb' : '#94a3b8',
+                                                    padding: '2px',
+                                                    transition: 'background 0.2s ease',
+                                                    boxSizing: 'border-box',
+                                                }}
+                                            >
+                                                <span
                                                     style={{
-                                                        fontSize: '0.72rem',
-                                                        color: '#2563eb',
-                                                        background: '#eff6ff',
-                                                        border: '1px solid #bfdbfe',
-                                                        borderRadius: '4px',
-                                                        padding: '2px 8px',
-                                                        cursor: 'pointer',
-                                                        fontWeight: 600,
+                                                        display: 'block',
+                                                        width: '10px',
+                                                        height: '10px',
+                                                        borderRadius: '50%',
+                                                        background: '#ffffff',
+                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
                                                     }}
-                                                    title="Load CFP Summary table note"
-                                                >
-                                                    ↻ Load CFP Summary Note
-                                                </button>
-                                            ) : (
-                                                <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>
-                                                    ✓ CFP Summary Note Loaded
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
+                                                />
+                                            </span>
+                                            <span>{includeCustomNotes ? 'Include: ON' : 'Include: OFF'}</span>
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        {!includeCustomNotes && (
+                                            <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600, background: '#fee2e2', padding: '2px 8px', borderRadius: '4px' }}>
+                                                ⊘ Excluded from Email
+                                            </span>
+                                        )}
+                                        {term.latest_note_preview && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                {customNotes !== term.latest_note_preview ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setCustomNotes(term.latest_note_preview || '');
+                                                            setIncludeCustomNotes(true);
+                                                        }}
+                                                        style={{
+                                                            fontSize: '0.72rem',
+                                                            color: '#2563eb',
+                                                            background: '#eff6ff',
+                                                            border: '1px solid #bfdbfe',
+                                                            borderRadius: '4px',
+                                                            padding: '2px 8px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 600,
+                                                        }}
+                                                        title="Load CFP Summary table note"
+                                                    >
+                                                        ↻ Load CFP Summary Note
+                                                    </button>
+                                                ) : (
+                                                    <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>
+                                                        ✓ CFP Summary Note Loaded
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <textarea
                                     className={styles.textareaInput}
-                                    placeholder="Add any specific instructions or remarks to Nancy, Olga, or the team..."
+                                    style={!includeCustomNotes ? {
+                                        opacity: 0.6,
+                                        background: '#ffffff',
+                                        borderColor: '#cbd5e1',
+                                        color: '#64748b',
+                                    } : {}}
+                                    placeholder={!includeCustomNotes ? "Remarks are currently toggled OFF (won't be included in email). Click toggle or type to enable." : "Add any specific instructions or remarks to Nancy, Olga, or the team..."}
                                     rows={3}
                                     value={customNotes}
-                                    onChange={e => setCustomNotes(e.target.value)}
+                                    onChange={e => {
+                                        setCustomNotes(e.target.value);
+                                        if (e.target.value.trim() && !includeCustomNotes) {
+                                            setIncludeCustomNotes(true);
+                                        }
+                                    }}
                                 />
+                                {!includeCustomNotes && customNotes.trim() && (
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.72rem', color: '#64748b', fontStyle: 'italic' }}>
+                                        💡 Note is saved above but <strong>turned OFF</strong> — it will not appear in the email. Toggle to <strong>ON</strong> whenever you want to include it.
+                                    </p>
+                                )}
                             </div>
 
                             {/* Scenario Checklist & Smart Client Draft Generator */}
