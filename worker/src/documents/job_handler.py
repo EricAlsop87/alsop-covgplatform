@@ -64,29 +64,16 @@ def classify_document_text(text: str, file_name: str = "") -> str:
         logger.info("Auto-classified document as 'rce'")
         return "rce"
 
-    # 2. Check DIC Quotes across the 4 companion carriers
-    is_dic = (
-        "THIS POLICY DOES NOT COVER THE PERIL OF FIRE" in upper_text or
-        "CALIFORNIA DIC QUOTE" in upper_text or
-        "DIFFERENCE IN CONDITIONS SELECTED" in upper_text or
-        "DIFFERENCE IN CONDITIONS INCLUDED" in upper_text or
-        "DIC - FIRE" in upper_text or
-        "DIC -" in upper_text or
-        "DIFFERENCE IN CONDITIONS" in upper_text or
-        "DIC" in upper_fn
-    )
-    if is_dic:
-        logger.info("Auto-classified document as 'dic_dec_page' (DIC Quote)")
-        return "dic_dec_page"
-
-    # 3. Check California FAIR Plan Dec Page (CFP policy number or CFP headers)
+    # 2. Check California FAIR Plan Dec Page FIRST (before DIC, because CFP renewal offers mention DIC in educational disclosures)
     has_cfp_pn = bool(
         re.search(r'(?:^|[^0-9])010\d{7}(?:[^0-9]|$)', upper_text) or
         re.search(r'(?:^|[^0-9])020\d{7}(?:[^0-9]|$)', upper_text) or
         re.search(r'(?:^|[^0-9])011\d{7}(?:[^0-9]|$)', upper_text) or
+        re.search(r'CFP\s*0[120]\d{7,8}', upper_text) or
         re.search(r'(?:^|[^0-9])010\d{7}(?:[^0-9]|$)', upper_fn) or
         re.search(r'(?:^|[^0-9])020\d{7}(?:[^0-9]|$)', upper_fn) or
-        re.search(r'(?:^|[^0-9])011\d{7}(?:[^0-9]|$)', upper_fn)
+        re.search(r'(?:^|[^0-9])011\d{7}(?:[^0-9]|$)', upper_fn) or
+        "CFP" in upper_fn
     )
 
     cfp_markers = [
@@ -98,16 +85,34 @@ def classify_document_text(text: str, file_name: str = "") -> str:
         "COVERAGES, LIMITS, PERILS AND PREMIUMS",
         "CFPNET.COM",
         "CALIFORNIA FAIR PLAN PROPERTY INSURANCE",
+        "CFP0001",
+        "INSURANCE RENEWAL OFFER",
     ]
     is_companion_marker = any(m in upper_text for m in [
         "GUIDEWIRE@BAMBOO", "BAMBOO WEB SERVICES", "WEBSERVICES@AEGIS",
         "AEGIS WEB SERVICES", "AMERICAN MODERN", "COTALITY", "RCT EXPRESS",
-        "DETAILED REPORT ESTIMATE", "PACIFIC SPECIALTY INSURANCE"
+        "DETAILED REPORT ESTIMATE", "PACIFIC SPECIALTY INSURANCE",
+        "OBSIDIAN PACIFIC", "SAGESURE"
     ])
 
-    if (has_cfp_pn or any(m in upper_text for m in cfp_markers) or "RENEWAL_EMAIL_ATTACHMENT" in upper_fn or "CFP" in upper_fn) and not is_companion_marker:
+    if (has_cfp_pn or any(m in upper_text for m in cfp_markers) or "RENEWAL_EMAIL_ATTACHMENT" in upper_fn) and not is_companion_marker:
         logger.info("Auto-classified document as 'dec_page' (California FAIR Plan)")
         return "dec_page"
+
+    # 3. Check DIC Quotes across companion carriers (only if NOT California FAIR Plan)
+    is_dic = (
+        "THIS POLICY DOES NOT COVER THE PERIL OF FIRE" in upper_text or
+        "CALIFORNIA DIC QUOTE" in upper_text or
+        "DIFFERENCE IN CONDITIONS SELECTED" in upper_text or
+        "DIFFERENCE IN CONDITIONS INCLUDED" in upper_text or
+        "DIC - FIRE" in upper_text or
+        "DIC -" in upper_text or
+        ("DIFFERENCE IN CONDITIONS" in upper_text and not has_cfp_pn) or
+        "DIC" in upper_fn
+    )
+    if is_dic:
+        logger.info("Auto-classified document as 'dic_dec_page' (DIC Quote)")
+        return "dic_dec_page"
 
     # Default to es_doc for Full Quotes
     logger.info("Auto-classified document as 'es_doc' (Full Companion Quote)")

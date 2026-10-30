@@ -288,20 +288,25 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
     }
 
     // ── STEP 2: California FAIR Plan Dec Page (Category 1) ──
+    const collapsedText = upperText.replace(/[\s\-_]+/g, '');
     const hasCfpPolicyNumber = (
         /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])011\d{7}(?:[^0-9]|$)/.test(upperText) ||
         /(?:^|[^0-9])012\d{7}(?:[^0-9]|$)/.test(upperText) ||
-        /CFP\s*0[120]\d{8}/.test(upperText) ||
+        /CFP\s*0[120]\d{7,8}/.test(upperText) ||
+        /010\d{7}/.test(collapsedText) ||
+        /020\d{7}/.test(collapsedText) ||
         /(?:^|[^0-9])010\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
-        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper)
+        /(?:^|[^0-9])020\d{7}(?:[^0-9]|$)/.test(fnUpper) ||
+        fnUpper.includes('CFP')
     );
 
     const hasCfpOrgMarker = (
         upperText.includes('CALIFORNIA FAIR PLAN ASSOCIATION') ||
         upperText.includes('CALIFORNIA FAIR PLAN') ||
-        upperText.includes('CFPNET.COM')
+        upperText.includes('CFPNET.COM') ||
+        collapsedText.includes('CALIFORNIAFAIRPLAN')
     );
 
     const hasCfpDecMarker = (
@@ -310,7 +315,12 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         upperText.includes('DWELLING ENDORSEMENT SUMMARY') ||
         upperText.includes('COVERAGES, LIMITS, PERILS AND PREMIUMS') ||
         upperText.includes('IMPORTANT NOTICE REGARDING CHANGES TO YOUR DWELLING POLICY') ||
-        upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE')
+        upperText.includes('CALIFORNIA FAIR PLAN PROPERTY INSURANCE') ||
+        upperText.includes('INSURANCE RENEWAL OFFER') ||
+        upperText.includes('RENEWAL OFFER') ||
+        upperText.includes('CFP0001') ||
+        upperText.includes('CFP-008A') ||
+        upperText.includes('DWELLING')
     );
 
     const isCompanionCarrierMarker = (
@@ -322,10 +332,11 @@ export function classifyDocument(upperText: string, fileName: string = ''): Clas
         upperText.includes('COTALITY') ||
         upperText.includes('RCT EXPRESS') ||
         upperText.includes('DETAILED REPORT ESTIMATE') ||
-        upperText.includes('PACIFIC SPECIALTY INSURANCE')
+        upperText.includes('PACIFIC SPECIALTY INSURANCE') ||
+        upperText.includes('OBSIDIAN PACIFIC')
     );
 
-    if (hasCfpPolicyNumber && hasCfpOrgMarker && hasCfpDecMarker && !isCompanionCarrierMarker) {
+    if ((hasCfpPolicyNumber && hasCfpOrgMarker && !isCompanionCarrierMarker) || (hasCfpOrgMarker && hasCfpDecMarker && !isCompanionCarrierMarker)) {
         return {
             detectedType: 'dec_page',
             carrier: 'California FAIR Plan',

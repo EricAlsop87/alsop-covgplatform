@@ -3085,6 +3085,7 @@ export interface ActivityFeedItem {
     writeback_status?: string;
     match_confidence?: number;
     file_name?: string;
+    carrier_name?: string | null;
 }
 
 /**
@@ -3136,6 +3137,9 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
                     match_status,
                     created_at,
                     created_by,
+                    doc_data_dic (
+                        carrier_name
+                    ),
                     policies (
                         id,
                         policy_number,
@@ -3253,7 +3257,13 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
 
             let docLabel = 'Document';
             const fn = (p.file_name || '').toUpperCase();
-            if (docType === 'rce') {
+            const dicCarrier = (Array.isArray(p.doc_data_dic) ? p.doc_data_dic[0]?.carrier_name : p.doc_data_dic?.carrier_name || '').toLowerCase();
+            const isCfp = dicCarrier.includes('fair plan') ||
+                          (fn.includes('CFP') && !fn.includes('BAMBOO') && !fn.includes('AEGIS') && !fn.includes('AMERICAN MODERN') && !fn.includes('PSIC') && !fn.includes('SAGESURE'));
+
+            if (isCfp || docType === 'dec_page' || fn.includes('RENEWAL_EMAIL_ATTACHMENT') || fn.includes('CFP DEC')) {
+                docLabel = 'Declaration Page';
+            } else if (docType === 'rce') {
                 docLabel = 'RCE Report';
             } else if (docType === 'es_doc' || fn.includes('FULL') || fn.includes('E&S') || fn.includes('SAGESURE')) {
                 docLabel = 'Full / E&S Quote';
@@ -3261,8 +3271,6 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
                 docLabel = 'DIC Quote';
             } else if (docType === 'quote' || fn.includes('QUOTE')) {
                 docLabel = 'Carrier Quote';
-            } else if (docType === 'dec_page' || fn.includes('RENEWAL_EMAIL_ATTACHMENT') || fn.includes('CFP DEC')) {
-                docLabel = 'Declaration Page';
             }
 
             return {
@@ -3274,6 +3282,7 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
                 storage_path: p.storage_path,
                 bucket: 'cfp-platform-documents',
                 file_name: p.file_name,
+                carrier_name: dicCarrier || null,
                 doc_type: docType,
                 document_id: p.id,
                 policy_id: p.policy_id || undefined,
@@ -3402,7 +3411,13 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
             if (isResolved && (evt.event_type === 'document.needs_review' || evt.event_type === 'document.no_match')) {
                 eventType = 'document.processed';
                 let docLabel = 'Document';
-                if (resolvedDocType === 'rce') {
+                const dicCarrier = (meta?.carrier_name || pDoc?.carrier_name || '').toLowerCase();
+                const isCfp = dicCarrier.includes('fair plan') ||
+                              (fnUpper.includes('CFP') && !fnUpper.includes('BAMBOO') && !fnUpper.includes('AEGIS') && !fnUpper.includes('AMERICAN MODERN') && !fnUpper.includes('PSIC'));
+
+                if (isCfp || resolvedDocType === 'dec_page' || fnUpper.includes('RENEWAL_EMAIL_ATTACHMENT') || fnUpper.includes('CFP DEC')) {
+                    docLabel = 'Declaration Page';
+                } else if (resolvedDocType === 'rce') {
                     docLabel = (fnUpper.includes('AM') || fnUpper.includes('AMERICAN MODERN')) ? 'American Modern RCE Report' : 'RCE Report';
                 } else if (resolvedDocType === 'es_doc' || fnUpper.includes('FULL') || fnUpper.includes('E&S') || fnUpper.includes('SAGESURE')) {
                     docLabel = 'Full / E&S Quote';
@@ -3410,8 +3425,6 @@ export async function fetchActivityFeed(limit = 350): Promise<ActivityFeedItem[]
                     docLabel = 'DIC Quote';
                 } else if (resolvedDocType === 'quote' || fnUpper.includes('QUOTE')) {
                     docLabel = 'Carrier Quote';
-                } else if (resolvedDocType === 'dec_page' || fnUpper.includes('RENEWAL_EMAIL_ATTACHMENT') || fnUpper.includes('CFP DEC')) {
-                    docLabel = 'Declaration Page';
                 }
 
                 eventTitle = `${docLabel} Processed`;

@@ -152,12 +152,15 @@ export function categorizeActivityItem(a: ActivityFeedItem): ActivityFilterType 
     if (isRce) return 'rce';
 
     // 2. Declaration Pages (CFP Dec Pages)
+    const carrierStr = `${a.carrier_name || ''} ${a.meta?.carrier_name || ''}`.toLowerCase();
+    const isCfpCarrier = carrierStr.includes('fair plan') || carrierStr.includes('california fair');
     const isDecPage = a.type === 'upload' ||
         a.bucket === 'cfp-raw-decpage' ||
         docType === 'dec_page' ||
         docType === 'dec' ||
+        isCfpCarrier ||
         fn.includes('RENEWAL_EMAIL_ATTACHMENT') ||
-        (fn.includes('CFP') && (fn.includes('DEC') || fn.includes('DECLARATION')) && !fn.includes('DIC') && !fn.includes('QUOTE') && !fn.includes('BAMBOO') && !fn.includes('AEGIS') && !fn.includes('AMERICAN MODERN') && !fn.includes('PSIC') && !fn.includes('SAGESURE'));
+        (fn.includes('CFP') && (fn.includes('DEC') || fn.includes('DECLARATION')) && !fn.includes('BAMBOO') && !fn.includes('AEGIS') && !fn.includes('AMERICAN MODERN') && !fn.includes('PSIC') && !fn.includes('SAGESURE'));
 
     if (isDecPage) return 'dec';
 
