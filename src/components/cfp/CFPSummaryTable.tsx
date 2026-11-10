@@ -1470,6 +1470,9 @@ export function CFPSummaryTable({
         const uniqueAccounts = new Set<string>();
 
         for (const t of allTerms) {
+            // Exclude cancelled/archived policies from active period stats
+            if (view !== 'archived' && isCancelledTerm(t)) continue;
+
             const pKey = t.policy_id || t.policy_number || t.base_policy;
             if (!uniquePolicyMap.has(pKey)) {
                 uniquePolicyMap.set(pKey, {

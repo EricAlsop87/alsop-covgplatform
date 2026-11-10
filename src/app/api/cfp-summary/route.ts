@@ -5,6 +5,7 @@ import { normalizePolicyNumber } from '@/lib/normalization';
 import { toTitleCase } from './producer/route';
 
 export const dynamic = 'force-dynamic';
+// Cache bust: 2026-11-03
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type CarrierKey = 'bamboo' | 'aegis' | 'am' | 'sagesure' | 'psic';
@@ -426,6 +427,50 @@ async function fetchAllRowsParallel<T>(
     return all;
 }
 
+export interface FetchCFPOptions {
+    year?: string | null;
+    month?: string | null;
+    search?: string;
+    view?: string;
+}
+
+export interface CFPSummaryResponsePayload {
+    success: boolean;
+    families: CFPFamily[];
+    total_terms: number;
+    total_families: number;
+    error?: string;
+}
+
+export function isTermHasRce(t: CFPTermRow): boolean {
+    if (t.rce_carrier === 'Unavailable') return false;
+    return Boolean(
+        t.has_rce ||
+        (t.rce_carrier && t.rce_carrier !== 'Unavailable') ||
+        !!t.rce_storage_path ||
+        !!t.rce_file_name ||
+        (t.rce_replacement_cost != null && Number(t.rce_replacement_cost) > 0)
+    );
+}
+
+export function isTermRceUnable(t: CFPTermRow): boolean {
+    if (isTermHasRce(t)) return false;
+    if (t.rce_carrier === 'Unavailable' || (t as any).rce_unavailable) return true;
+    const b = t.carrier_quotes?.bamboo;
+    const a = t.carrier_quotes?.aegis;
+    const p = t.carrier_quotes?.psic;
+    return Boolean(
+        b?.coverage_type === 'UNAVAILABLE' &&
+        a?.coverage_type === 'UNAVAILABLE' &&
+        p?.coverage_type === 'UNAVAILABLE'
+    );
+}
+
+export function isCancelledTerm(t: CFPTermRow): boolean {
+    const s = (t.carrier_status || '').toLowerCase();
+    return s.includes('cancel') || t.policy_status === 'cancelled';
+}
+
 // ── GET /api/cfp-summary ───────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
     const auth = await authenticateRequest(req, { requiredRole: ['admin', 'service'] });
@@ -454,6 +499,28 @@ export async function GET(req: NextRequest) {
             return NextResponse.json(cached.data);
         }
     }
+
+    const result = await fetchCFPSummaryData({ year, month, search, view }, admin);
+    if (!result.success) {
+        return NextResponse.json(result, { status: 500 });
+    }
+
+    if (!search) {
+        serverSummaryCache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now(),
+        });
+    }
+
+    return NextResponse.json(result);
+}
+
+export async function fetchCFPSummaryData(
+    options: FetchCFPOptions,
+    adminClient?: ReturnType<typeof getSupabaseAdmin>
+): Promise<CFPSummaryResponsePayload> {
+    const admin = adminClient || getSupabaseAdmin();
+    const { year, month, search = '', view = 'active_cfp' } = options;
 
     // ── 2. Main data query ────────────────────────────────────────────────
     // Fetch policy_terms filtered by expiration year/month and view mode
@@ -589,7 +656,7 @@ export async function GET(req: NextRequest) {
 
         const searchPolicyIds = Array.from(matchedPolicyIds);
         if (searchPolicyIds.length === 0) {
-            return NextResponse.json({ success: true, families: [], total_terms: 0, total_families: 0 });
+            return { success: true, families: [], total_terms: 0, total_families: 0 };
         }
 
         termsQuery = termsQuery.in('policy_id', searchPolicyIds);
@@ -644,7 +711,7 @@ export async function GET(req: NextRequest) {
         const to = from + PAGE_CHUNK - 1;
         const { data: chunk, error: pageErr } = await termsQuery.range(from, to);
         if (pageErr) {
-            return NextResponse.json({ success: false, error: pageErr.message }, { status: 500 });
+            return { success: false, error: pageErr.message, families: [], total_terms: 0, total_families: 0 };
         }
         if (!chunk || chunk.length === 0) break;
 
@@ -672,7 +739,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!terms || terms.length === 0) {
-        return NextResponse.json({ success: true, families: [], total_terms: 0 });
+        return { success: true, families: [], total_terms: 0, total_families: 0 };
     }
 
     // ── 3. Gather all policy_ids from result ──────────────────────────────
@@ -1668,21 +1735,14 @@ export async function GET(req: NextRequest) {
 
     const totalActualTerms = families.reduce((acc, f) => acc + f.terms.length, 0);
 
-    const responsePayload = {
+    const responsePayload: CFPSummaryResponsePayload = {
         success: true,
         families,
         total_terms: totalActualTerms,
         total_families: families.length,
     };
 
-    if (!search) {
-        serverSummaryCache.set(cacheKey, {
-            data: responsePayload,
-            timestamp: Date.now(),
-        });
-    }
-
-    return NextResponse.json(responsePayload);
+    return responsePayload;
 }
 
 // ── PATCH /api/cfp-summary — toggle manual overrides (full coverage, no dic) ──

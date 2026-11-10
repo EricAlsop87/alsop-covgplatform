@@ -23,6 +23,7 @@ import {
     Info,
     SlidersHorizontal,
     ShieldOff,
+    Archive,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './CFPMonthlyMatrix.module.scss';
@@ -272,6 +273,7 @@ export function CFPMonthlyMatrix() {
             { header: 'RCE Uploaded', key: 'rce_uploaded', width: 18 },
             { header: 'RCE Not Uploaded', key: 'rce_not_uploaded', width: 20 },
             { header: 'Unable to Get RCE', key: 'rce_unable', width: 20 },
+            { header: 'Archived / Cancelled', key: 'archived', width: 20 },
             { header: 'With Addr', key: 'with_address', width: 16 },
             { header: 'No Addr', key: 'no_address', width: 16 },
             { header: 'Quoted', key: 'quoted', width: 16 },
@@ -298,6 +300,7 @@ export function CFPMonthlyMatrix() {
                 rce_uploaded: row.rceUploaded,
                 rce_not_uploaded: row.rceNotUploaded,
                 rce_unable: row.rceUnable || 0,
+                archived: row.archivedCount || 0,
                 with_address: row.totalWithAddress,
                 no_address: row.totalNoAddress,
                 quoted: row.quotedCount,
@@ -318,6 +321,7 @@ export function CFPMonthlyMatrix() {
                 rce_uploaded: totals.rceUploaded,
                 rce_not_uploaded: totals.rceNotUploaded,
                 rce_unable: totals.rceUnable || 0,
+                archived: totals.archivedCount || 0,
                 with_address: totals.totalWithAddress,
                 no_address: totals.totalNoAddress,
                 quoted: totals.quotedCount,
@@ -431,6 +435,21 @@ export function CFPMonthlyMatrix() {
                             <span className={styles.statSub}>3 Carriers Ineligible</span>
                         </div>
                     </div>
+
+                    {(totals.archivedCount || 0) > 0 && (
+                        <div className={styles.quickStatCard}>
+                            <div className={styles.statIcon} style={{ color: '#64748b', background: '#f1f5f9' }}>
+                                <Archive size={16} />
+                            </div>
+                            <div className={styles.statInfo}>
+                                <span className={styles.statLabel}>Archived / Cancelled</span>
+                                <span className={styles.statVal} style={{ color: '#64748b' }}>
+                                    {(totals.archivedCount || 0).toLocaleString()}
+                                </span>
+                                <span className={styles.statSub}>Excluded from active</span>
+                            </div>
+                        </div>
+                    )}
 
                     {viewMode === 'all' && (
                         <div className={styles.quickStatCard}>

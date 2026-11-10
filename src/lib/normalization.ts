@@ -26,8 +26,8 @@ export function normalizePolicyNumber(rawPolicy: string | null | undefined): Pol
     const prefixMatch = s.match(/^(COM|CFP|DIV|DWG)\b/);
     let prefix = prefixMatch ? prefixMatch[1] : null;
 
-    // Strategy: Optional prefix, exactly 10 digits, optional spaces, optional 2 digits of suffix.
-    const regex = /(?:(?:COM|CFP|DIV|DWG)\s*)?(\d{10})(?:\s*(\d{2}))?\b/;
+    // Strategy: Optional prefix, 9 to 10 digits, optional spaces, optional 2 or 3 digits of suffix.
+    const regex = /(?:(?:COM|CFP|DIV|DWG)\s*)?(\d{9,10})(?:\s*(\d{2,3}))?\b/;
     const match = s.match(regex);
 
     if (match) {
