@@ -71,6 +71,11 @@ function CFPSummaryContent() {
     const [search, setSearch] = useState('');
     const [view, setViewState] = useState<'active_cfp' | 'bamboo_pipeline' | 'all' | 'archived'>(() => {
         if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qView = urlParams.get('view');
+            if (qView === 'active_cfp' || qView === 'bamboo_pipeline' || qView === 'all' || qView === 'archived') {
+                return qView;
+            }
             const saved = localStorage.getItem('ccn_cfp_summary_view');
             if (saved === 'active_cfp' || saved === 'bamboo_pipeline' || saved === 'all' || saved === 'archived') return saved;
         }
@@ -102,10 +107,11 @@ function CFPSummaryContent() {
 
     const searchParams = useSearchParams();
 
-    // Synchronize query parameters (?month=...&year=...) with state and localStorage
+    // Synchronize query parameters (?month=...&year=...&view=...) with state and localStorage
     useEffect(() => {
         const qYear = searchParams.get('year');
         const qMonth = searchParams.get('month');
+        const qView = searchParams.get('view');
         if (qYear !== null) {
             const parsedYear = qYear === 'all' ? '' : qYear;
             setYearState(parsedYear);
@@ -115,6 +121,12 @@ function CFPSummaryContent() {
             const parsedMonth = qMonth === 'all' ? '' : qMonth;
             setMonthState(parsedMonth);
             if (typeof window !== 'undefined') localStorage.setItem('ccn_cfp_summary_month', parsedMonth);
+        }
+        if (qView !== null) {
+            if (qView === 'active_cfp' || qView === 'bamboo_pipeline' || qView === 'all' || qView === 'archived') {
+                setViewState(qView);
+                if (typeof window !== 'undefined') localStorage.setItem('ccn_cfp_summary_view', qView);
+            }
         }
     }, [searchParams]);
 

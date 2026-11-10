@@ -437,7 +437,19 @@ export function CFPMonthlyMatrix() {
                     </div>
 
                     {(totals.archivedCount || 0) > 0 && (
-                        <div className={styles.quickStatCard}>
+                        <Link
+                            href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&view=archived`}
+                            onClick={() => {
+                                if (typeof window !== 'undefined') {
+                                    localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                    localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                    localStorage.setItem('ccn_cfp_summary_view', 'archived');
+                                }
+                            }}
+                            className={styles.quickStatCard}
+                            style={{ textDecoration: 'none', cursor: 'pointer' }}
+                            title="View all archived / cancelled policies in CFP Summary"
+                        >
                             <div className={styles.statIcon} style={{ color: '#64748b', background: '#f1f5f9' }}>
                                 <Archive size={16} />
                             </div>
@@ -448,7 +460,7 @@ export function CFPMonthlyMatrix() {
                                 </span>
                                 <span className={styles.statSub}>Excluded from active</span>
                             </div>
-                        </div>
+                        </Link>
                     )}
 
                     {viewMode === 'all' && (
@@ -653,11 +665,12 @@ export function CFPMonthlyMatrix() {
                                         <tr key={row.month} className={isCurrentMonth ? styles.currentMonthRow : ''}>
                                             <td>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={styles.monthLink}
@@ -670,11 +683,12 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={styles.policyPill}
@@ -686,11 +700,12 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=uploaded`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=uploaded&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.decUploadedPill} ${row.decUploaded === 0 ? styles.zeroValue : ''}`}
@@ -702,11 +717,12 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=missing`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&dec=missing&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.decMissingPill} ${row.decNotUploaded === 0 ? styles.zeroValue : ''}`}
@@ -718,11 +734,12 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=has_rce`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=has_rce&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.rceUploadedPill} ${row.rceUploaded === 0 ? styles.zeroValue : ''}`}
@@ -734,11 +751,12 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=missing`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=missing&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.rceMissingPill} ${row.rceNotUploaded === 0 ? styles.zeroValue : ''}`}
@@ -750,11 +768,12 @@ export function CFPMonthlyMatrix() {
                                             </td>
                                             <td className={styles.center}>
                                                 <Link
-                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=unable`}
+                                                    href={`/cfp-summary?month=${row.month}&year=${paramYear}&rce=unable&view=active_cfp`}
                                                     onClick={() => {
                                                         if (typeof window !== 'undefined') {
                                                             localStorage.setItem('ccn_cfp_summary_month', String(row.month));
                                                             localStorage.setItem('ccn_cfp_summary_year', paramYear);
+                                                            localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
                                                         }
                                                     }}
                                                     className={`${styles.metricLink} ${styles.rceUnablePill} ${(row.rceUnable || 0) === 0 ? styles.zeroValue : ''}`}
@@ -806,8 +825,15 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&view=active_cfp`}
                                                 className={styles.policyPill}
+                                                onClick={() => {
+                                                    if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                                        localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                        localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
+                                                    }
+                                                }}
                                                 title="View all portfolio policies in CFP Summary"
                                             >
                                                 <span>{totals.totalUniquePolicies.toLocaleString()}</span>
@@ -816,8 +842,15 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=uploaded`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=uploaded&view=active_cfp`}
                                                 className={`${styles.footerMetricLink} ${styles.footerDecUploaded}`}
+                                                onClick={() => {
+                                                    if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                                        localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                        localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
+                                                    }
+                                                }}
                                                 title="View all policies with DEC Uploaded"
                                             >
                                                 <span>{totals.decUploaded.toLocaleString()}</span>
@@ -826,8 +859,15 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=missing`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&dec=missing&view=active_cfp`}
                                                 className={`${styles.footerMetricLink} ${styles.footerDecMissing}`}
+                                                onClick={() => {
+                                                    if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                                        localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                        localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
+                                                    }
+                                                }}
                                                 title="View all policies needing DEC Upload"
                                             >
                                                 <span>{totals.decNotUploaded.toLocaleString()}</span>
@@ -836,8 +876,15 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=has_rce`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=has_rce&view=active_cfp`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceUploaded}`}
+                                                onClick={() => {
+                                                    if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                                        localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                        localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
+                                                    }
+                                                }}
                                                 title="View all policies with RCE Uploaded"
                                             >
                                                 <span>{totals.rceUploaded.toLocaleString()}</span>
@@ -846,8 +893,15 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=missing`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=missing&view=active_cfp`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceMissing}`}
+                                                onClick={() => {
+                                                    if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                                        localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                        localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
+                                                    }
+                                                }}
                                                 title={`View all ${totals.rceNotUploaded} policies needing RCE`}
                                             >
                                                 <span>{totals.rceNotUploaded.toLocaleString()}</span>
@@ -856,8 +910,15 @@ export function CFPMonthlyMatrix() {
                                         </td>
                                         <td className={styles.center}>
                                             <Link
-                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=unable`}
+                                                href={`/cfp-summary?month=all&year=${year === 'all' ? '' : year}&rce=unable&view=active_cfp`}
                                                 className={`${styles.footerMetricLink} ${styles.footerRceUnable}`}
+                                                onClick={() => {
+                                                    if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('ccn_cfp_summary_month', 'all');
+                                                        localStorage.setItem('ccn_cfp_summary_year', year === 'all' ? '' : year);
+                                                        localStorage.setItem('ccn_cfp_summary_view', 'active_cfp');
+                                                    }
+                                                }}
                                                 title={`View all ${totals.rceUnable || 0} policies unable to get RCE across portfolio`}
                                             >
                                                 <span>{(totals.rceUnable || 0).toLocaleString()}</span>
